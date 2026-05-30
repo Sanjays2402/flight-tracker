@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #__next { height: 100%; margin: 0; background: #07090d; color: #e2e8f0; font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+* { box-sizing: border-box; }
+
+.leaflet-container { background: #07090d; font-family: inherit; }
+.leaflet-tile-pane { /* tiles are already dark, no filter needed */ }
+.leaflet-control-attribution { background: rgba(7,9,13,0.7) !important; color: #94a3b8 !important; font-size: 10px !important; }
+.leaflet-control-attribution a { color: #38bdf8 !important; }
+.leaflet-control-zoom a { background: #0f172a !important; color: #e2e8f0 !important; border-color: #1e293b !important; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #0f172a !important; color: #e2e8f0 !important; box-shadow: 0 12px 32px rgba(0,0,0,0.5) !important; border: 1px solid #1e293b !important; }
+.leaflet-popup-content { margin: 12px 14px !important; font-size: 12px !important; }
+
+@keyframes pulse-dot { 0%, 100% { opacity: 1 } 50% { opacity: 0.3 } }
+.live-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
