@@ -111,6 +111,7 @@ export default function FlightMap() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [query, setQuery] = useState('')
   const PREFS_KEY = 'ft-prefs-v1'
+const WATCH_KEY = 'ft-watch-v1'
   const loadPrefs = (): Record<string, boolean> => {
     if (typeof window === 'undefined') return {}
     try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') } catch { return {} }
@@ -121,6 +122,13 @@ export default function FlightMap() {
   const [showNight, setShowNight] = useState(prefs.showNight ?? true)
   const [showList, setShowList] = useState(prefs.showList ?? false)
   const [showHeat, setShowHeat] = useState(prefs.showHeat ?? false)
+  const [watchlist, setWatchlist] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return []
+    try { return JSON.parse(localStorage.getItem(WATCH_KEY) || '[]') } catch { return [] }
+  })
+  const [showWatch, setShowWatch] = useState(false)
+  const [watchInput, setWatchInput] = useState('')
+  const knownWatchRef = useRef<Set<string>>(new Set())
   const [showFilters, setShowFilters] = useState(false)
   const [follow, setFollow] = useState(false)
   const [altMin, setAltMin] = useState(0)
@@ -542,6 +550,51 @@ export default function FlightMap() {
     }
   }, [flights])
 
+  /* ---- Persist watchlist ---- */
+  useEffect(() => {
+    try { localStorage.setItem(WATCH_KEY, JSON.stringify(watchlist)) } catch {}
+  }, [watchlist])
+
+  /* ---- Watchlist detection ---- */
+  useEffect(() => {
+    if (!watchlist.length) return
+    const fresh: typeof toasts = []
+    for (const f of flights) {
+      const cs = f.callsign.replace(/\s+/g, '').toUpperCase()
+      const reg = f.registration.replace(/\s+/g, '').toUpperCase()
+      const matched = watchlist.find(w => {
+        const ww = w.toUpperCase()
+        return cs === ww || reg === ww || cs.startsWith(ww) || f.icao.toLowerCase() === w.toLowerCase()
+      })
+      if (!matched) continue
+      const key = 'watch:' + f.icao
+      if (knownWatchRef.current.has(key)) continue
+      knownWatchRef.current.add(key)
+      fresh.push({ id: key, icao: f.icao, cs: f.callsign || matched, sq: matched, lat: f.lat, lng: f.lng, t: Date.now() })
+    }
+    if (fresh.length) {
+      setToasts(prev => [...fresh, ...prev].slice(0, 5))
+      try {
+        const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
+        if (Ctx) {
+          const ctx = new Ctx()
+          const o = ctx.createOscillator(); const g = ctx.createGain()
+          o.connect(g); g.connect(ctx.destination)
+          o.frequency.value = 660; o.type = 'sine'
+          g.gain.setValueAtTime(0.12, ctx.currentTime)
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
+          o.start(); o.stop(ctx.currentTime + 0.35)
+        }
+      } catch {}
+      setTimeout(() => setToasts(prev => prev.filter(t => !fresh.find(f => f.id === t.id))), 15000)
+    }
+    // Clean up watch entries for aircraft no longer in view
+    const visibleIcaos = new Set(flights.map(f => 'watch:' + f.icao))
+    for (const k of Array.from(knownWatchRef.current)) {
+      if (k.startsWith('watch:') && !visibleIcaos.has(k)) knownWatchRef.current.delete(k)
+    }
+  }, [flights, watchlist])
+
   /* ---- Follow mode ---- */
   useEffect(() => {
     if (!follow || !selected) return
@@ -734,6 +787,7 @@ export default function FlightMap() {
             <Toggle on={showNight} onClick={()=>setShowNight(v=>!v)} label="Night" hint="N" />
             <Toggle on={showHeat} onClick={()=>setShowHeat(v=>!v)} label="Heat" hint="H" />
             <Toggle on={showList} onClick={()=>setShowList(v=>!v)} label="List" hint="L" />
+            <Toggle on={showWatch} onClick={()=>setShowWatch(v=>!v)} label={`Watch${watchlist.length?` ${watchlist.length}`:''}`} />
             <Toggle on={showFilters} onClick={()=>setShowFilters(v=>!v)} label="Filter" />
           </div>
           <div className="bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 py-2 shadow-2xl flex items-center gap-2 w-44 sm:w-60">
@@ -1054,6 +1108,62 @@ export default function FlightMap() {
         )
       })()}
 
+      {/* Watchlist panel */}
+      {showWatch && (
+        <aside className="absolute top-16 right-3 z-20 w-[95vw] max-w-[300px] max-h-[60vh] flex flex-col bg-slate-950/95 backdrop-blur-xl border border-sky-700/60 rounded-2xl shadow-2xl shadow-sky-900/40">
+          <div className="p-3 border-b border-slate-800 flex items-baseline justify-between">
+            <div>
+              <div className="text-[10px] uppercase tracking-widest text-sky-400">Watchlist</div>
+              <div className="text-xs text-slate-400 mt-0.5">{watchlist.length} entries · ping on contact</div>
+            </div>
+            <button onClick={()=>setShowWatch(false)} className="text-slate-400 hover:text-slate-100 text-sm">✕</button>
+          </div>
+          <form onSubmit={e=>{
+            e.preventDefault()
+            const v = watchInput.trim().toUpperCase()
+            if (!v || watchlist.includes(v)) return
+            setWatchlist([...watchlist, v])
+            setWatchInput('')
+          }} className="p-2 border-b border-slate-800">
+            <div className="flex gap-2">
+              <input value={watchInput} onChange={e=>setWatchInput(e.target.value)}
+                     placeholder="Callsign or registration"
+                     className="flex-1 bg-slate-900/70 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono placeholder-slate-600 focus:outline-none focus:border-sky-600" />
+              <button type="submit" className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3 rounded-lg">+</button>
+            </div>
+            <div className="text-[9px] text-slate-500 mt-1.5">e.g. UAL123, AAL2401, BAW283, N628TS</div>
+          </form>
+          <div className="flex-1 overflow-y-auto">
+            {watchlist.length === 0 && (
+              <div className="p-4 text-center text-[11px] text-slate-500">
+                Empty. Add a callsign — you'll get audio + visual alert next time it broadcasts.
+              </div>
+            )}
+            {watchlist.map(w => {
+              const live = flights.find(f => {
+                const cs = f.callsign.replace(/\s+/g,'').toUpperCase()
+                const reg = f.registration.replace(/\s+/g,'').toUpperCase()
+                return cs===w || reg===w || cs.startsWith(w)
+              })
+              return (
+                <div key={w} className="px-3 py-2 border-b border-slate-900 flex items-center justify-between gap-2 hover:bg-slate-900/50">
+                  <button onClick={()=>{
+                    if (live) { setSelected(live); mapRef.current?.flyTo([live.lat,live.lng], Math.max(mapRef.current.getZoom(),7)) }
+                  }} className="flex-1 text-left">
+                    <div className="font-mono text-sm text-sky-300 font-bold">{w}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      {live ? <span className="text-emerald-400">● LIVE · {Math.round(live.altitudeFt/100)/10}k ft · {Math.round(live.velocityKts)}kt</span> : <span className="text-slate-600">offline</span>}
+                    </div>
+                  </button>
+                  <button onClick={()=>setWatchlist(watchlist.filter(x=>x!==w))}
+                          className="text-slate-600 hover:text-rose-400 text-xs">✕</button>
+                </div>
+              )
+            })}
+          </div>
+        </aside>
+      )}
+
       {/* Footer */}
       <footer className="absolute bottom-3 left-3 md:left-4 z-10 pointer-events-none">
         <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl px-2.5 py-1 text-[10px] uppercase tracking-widest text-slate-400 shadow-2xl">
@@ -1065,7 +1175,14 @@ export default function FlightMap() {
       {toasts.length > 0 && (
         <div className="absolute bottom-12 left-3 md:left-4 z-40 flex flex-col-reverse gap-2 max-w-[320px]">
           {toasts.map(t => {
-            const label = t.sq === '7500' ? 'HIJACK' : t.sq === '7600' ? 'COMMS LOST' : 'EMERGENCY'
+            const isWatch = t.id.startsWith('watch:')
+            const label = isWatch ? 'WATCH' : t.sq === '7500' ? 'HIJACK' : t.sq === '7600' ? 'COMMS LOST' : 'EMERGENCY'
+            const cls = isWatch
+              ? 'bg-sky-950/95 border-sky-500 shadow-sky-900/60 hover:bg-sky-900 text-sky-100 border-2'
+              : 'bg-rose-950/95 border-rose-500 shadow-rose-900/60 hover:bg-rose-900 animate-pulse border-2'
+            const accent = isWatch ? 'text-sky-300' : 'text-rose-300'
+            const sub = isWatch ? 'text-sky-200' : 'text-rose-200'
+            const dim = isWatch ? 'text-sky-400/70' : 'text-rose-400/70'
             return (
               <button key={t.id}
                 onClick={() => {
@@ -1073,14 +1190,14 @@ export default function FlightMap() {
                   if (f) { setSelected(f); mapRef.current?.flyTo([f.lat, f.lng], Math.max(mapRef.current.getZoom(), 8)) }
                   setToasts(prev => prev.filter(x => x.id !== t.id))
                 }}
-                className="text-left bg-rose-950/95 backdrop-blur-xl border-2 border-rose-500 rounded-xl px-3 py-2 shadow-2xl shadow-rose-900/60 hover:bg-rose-900 animate-pulse"
-                style={{ animationDuration: '1.5s' }}>
+                className={`text-left backdrop-blur-xl rounded-xl px-3 py-2 shadow-2xl ${cls}`}
+                style={isWatch ? {} : { animationDuration: '1.5s' }}>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-rose-300 font-bold text-sm">⚠ {label}</span>
-                  <span className="text-rose-200 font-mono text-xs">SQ {t.sq}</span>
+                  <span className={`${accent} font-bold text-sm`}>{isWatch ? '★' : '⚠'} {label}</span>
+                  {!isWatch && <span className={`${sub} font-mono text-xs`}>SQ {t.sq}</span>}
                 </div>
-                <div className="font-mono text-rose-100 text-xs mt-0.5">{t.cs} · {t.icao.toUpperCase()}</div>
-                <div className="text-[9px] text-rose-400/70 mt-0.5">Click to track →</div>
+                <div className="font-mono text-xs mt-0.5">{t.cs} · {t.icao.toUpperCase()}</div>
+                <div className={`text-[9px] mt-0.5 ${dim}`}>Click to track →</div>
               </button>
             )
           })}
