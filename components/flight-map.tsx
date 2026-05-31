@@ -99,6 +99,8 @@ export default function FlightMap() {
   const [selectedAirport, setSelectedAirport] = useState<AirportPin | null>(null)
   const [mapZoom, setMapZoom] = useState(4)
   const [mapBounds, setMapBounds] = useState<{n:number,s:number,e:number,w:number} | null>(null)
+  const [toasts, setToasts] = useState<{id:string; icao:string; cs:string; sq:string; lat:number; lng:number; t:number}[]>([])
+  const knownEmergRef = useRef<Set<string>>(new Set())
   const [route, setRoute] = useState<Route | null>(null)
   const [photo, setPhoto] = useState<string | null>(null)
   const [status, setStatus] = useState<'loading'|'live'|'error'>('loading')
@@ -425,6 +427,39 @@ export default function FlightMap() {
       layer.addLayer(m)
     }
   }, [visibleAirports, mapZoom])
+
+  /* ---- Emergency squawk alerting ---- */
+  useEffect(() => {
+    const fresh: typeof toasts = []
+    for (const f of flights) {
+      if (!f.emergency || !f.squawk) continue
+      if (!['7500','7600','7700'].includes(f.squawk)) continue
+      const key = f.icao + ':' + f.squawk
+      if (knownEmergRef.current.has(key)) continue
+      knownEmergRef.current.add(key)
+      fresh.push({ id: key, icao: f.icao, cs: f.callsign || f.icao.toUpperCase(), sq: f.squawk, lat: f.lat, lng: f.lng, t: Date.now() })
+    }
+    if (fresh.length) {
+      setToasts(prev => [...fresh, ...prev].slice(0, 5))
+      // Beep
+      try {
+        const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
+        if (Ctx) {
+          const ctx = new Ctx()
+          const o = ctx.createOscillator(); const g = ctx.createGain()
+          o.connect(g); g.connect(ctx.destination)
+          o.frequency.value = 880; o.type = 'sine'
+          g.gain.setValueAtTime(0.18, ctx.currentTime)
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45)
+          o.start(); o.stop(ctx.currentTime + 0.5)
+        }
+      } catch {}
+      // Auto-dismiss after 12s
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => !fresh.find(f => f.id === t.id)))
+      }, 12000)
+    }
+  }, [flights])
 
   /* ---- Follow mode ---- */
   useEffect(() => {
@@ -920,6 +955,32 @@ export default function FlightMap() {
           8s refresh · /=search · esc · t·w·n·l·f
         </div>
       </footer>
+
+      {/* Emergency squawk toasts */}
+      {toasts.length > 0 && (
+        <div className="absolute bottom-12 left-3 md:left-4 z-40 flex flex-col-reverse gap-2 max-w-[320px]">
+          {toasts.map(t => {
+            const label = t.sq === '7500' ? 'HIJACK' : t.sq === '7600' ? 'COMMS LOST' : 'EMERGENCY'
+            return (
+              <button key={t.id}
+                onClick={() => {
+                  const f = flights.find(x => x.icao === t.icao)
+                  if (f) { setSelected(f); mapRef.current?.flyTo([f.lat, f.lng], Math.max(mapRef.current.getZoom(), 8)) }
+                  setToasts(prev => prev.filter(x => x.id !== t.id))
+                }}
+                className="text-left bg-rose-950/95 backdrop-blur-xl border-2 border-rose-500 rounded-xl px-3 py-2 shadow-2xl shadow-rose-900/60 hover:bg-rose-900 animate-pulse"
+                style={{ animationDuration: '1.5s' }}>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-rose-300 font-bold text-sm">⚠ {label}</span>
+                  <span className="text-rose-200 font-mono text-xs">SQ {t.sq}</span>
+                </div>
+                <div className="font-mono text-rose-100 text-xs mt-0.5">{t.cs} · {t.icao.toUpperCase()}</div>
+                <div className="text-[9px] text-rose-400/70 mt-0.5">Click to track →</div>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
