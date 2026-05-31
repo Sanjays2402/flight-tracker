@@ -129,6 +129,8 @@ const WATCH_KEY = 'ft-watch-v1'
   const [showWatch, setShowWatch] = useState(false)
   const [watchInput, setWatchInput] = useState('')
   const [shareCopied, setShareCopied] = useState(false)
+  const [compareList, setCompareList] = useState<Flight[]>([])
+  const [showCompare, setShowCompare] = useState(false)
   const knownWatchRef = useRef<Set<string>>(new Set())
   const [showFilters, setShowFilters] = useState(false)
   const [follow, setFollow] = useState(false)
@@ -596,6 +598,12 @@ const WATCH_KEY = 'ft-watch-v1'
     }
   }, [flights, watchlist])
 
+  /* ---- Refresh compare list from live flights ---- */
+  useEffect(() => {
+    if (!compareList.length) return
+    setCompareList(prev => prev.map(p => flights.find(f => f.icao === p.icao) || p))
+  }, [flights])
+
   /* ---- Follow mode ---- */
   useEffect(() => {
     if (!follow || !selected) return
@@ -789,6 +797,9 @@ const WATCH_KEY = 'ft-watch-v1'
             <Toggle on={showHeat} onClick={()=>setShowHeat(v=>!v)} label="Heat" hint="H" />
             <Toggle on={showList} onClick={()=>setShowList(v=>!v)} label="List" hint="L" />
             <Toggle on={showWatch} onClick={()=>setShowWatch(v=>!v)} label={`Watch${watchlist.length?` ${watchlist.length}`:''}`} />
+            {compareList.length > 0 && (
+              <Toggle on={showCompare} onClick={()=>setShowCompare(v=>!v)} label={`⇄ ${compareList.length}`} />
+            )}
             <Toggle on={showFilters} onClick={()=>setShowFilters(v=>!v)} label="Filter" />
           </div>
           <div className="bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 py-2 shadow-2xl flex items-center gap-2 w-44 sm:w-60">
@@ -992,7 +1003,19 @@ const WATCH_KEY = 'ft-watch-v1'
             )}
 
             {/* Export / share row */}
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  if (compareList.find(c => c.icao === selected.icao)) {
+                    setCompareList(prev => prev.filter(c => c.icao !== selected.icao))
+                  } else if (compareList.length < 4) {
+                    setCompareList(prev => [...prev, selected])
+                    setShowCompare(true)
+                  }
+                }}
+                className={`flex-1 min-w-[60px] text-center text-[10px] uppercase tracking-widest font-bold rounded-xl py-2 transition ${compareList.find(c=>c.icao===selected.icao)?'bg-violet-600 text-white hover:bg-violet-500':'bg-slate-800 text-slate-200 hover:bg-slate-700'}`}>
+                {compareList.find(c=>c.icao===selected.icao) ? '✓ COMPARE' : '⇄ COMPARE'}
+              </button>
               <button
                 onClick={() => {
                   const trail = trailsRef.current.get(selected.icao) || []
@@ -1216,6 +1239,63 @@ const WATCH_KEY = 'ft-watch-v1'
                 </div>
               )
             })}
+          </div>
+        </aside>
+      )}
+
+      {/* Compare panel */}
+      {showCompare && compareList.length > 0 && (
+        <aside className="absolute left-1/2 -translate-x-1/2 bottom-12 z-30 w-[95vw] max-w-[820px] bg-slate-950/95 backdrop-blur-xl border border-violet-700/50 rounded-2xl shadow-2xl shadow-violet-900/30">
+          <div className="px-4 py-2 border-b border-slate-800 flex items-baseline justify-between">
+            <div className="text-[10px] uppercase tracking-widest text-violet-400">Compare · {compareList.length} aircraft</div>
+            <div className="flex items-center gap-3">
+              <button onClick={()=>setCompareList([])} className="text-[10px] text-slate-500 hover:text-rose-400 uppercase tracking-wider">Clear</button>
+              <button onClick={()=>setShowCompare(false)} className="text-slate-400 hover:text-slate-100 text-sm">✕</button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-[9px] uppercase tracking-wider text-slate-500 bg-slate-900/40">
+                  <th className="text-left px-3 py-2 font-medium">Metric</th>
+                  {compareList.map(f => (
+                    <th key={f.icao} className="text-left px-3 py-2 font-medium">
+                      <button onClick={()=>{setSelected(f); mapRef.current?.flyTo([f.lat,f.lng],Math.max(mapRef.current.getZoom(),7))}}
+                              className="hover:text-violet-300">
+                        <span className="font-mono text-violet-300 font-bold normal-case tracking-normal text-xs">{f.callsign}</span>
+                      </button>
+                      <button onClick={()=>setCompareList(prev=>prev.filter(c=>c.icao!==f.icao))}
+                              className="ml-1.5 text-slate-600 hover:text-rose-400">✕</button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="font-mono">
+                {([
+                  ['Type',        (f: Flight) => f.type],
+                  ['Registration',(f: Flight) => f.registration],
+                  ['Operator',    (f: Flight) => f.operator],
+                  ['Altitude',    (f: Flight) => f.ground ? 'Ground' : `${Math.round(f.altitudeFt).toLocaleString()} ft`],
+                  ['Speed',       (f: Flight) => `${Math.round(f.velocityKts)} kt`],
+                  ['Heading',     (f: Flight) => `${Math.round(f.track)}°`],
+                  ['V/Speed',     (f: Flight) => f.vertRate != null ? `${f.vertRate>0?'▲':f.vertRate<0?'▼':'–'} ${Math.abs(Math.round(f.vertRate))} fpm` : '—'],
+                  ['IAS',         (f: Flight) => f.ias ? `${Math.round(f.ias)} kt` : '—'],
+                  ['Mach',        (f: Flight) => f.mach ? f.mach.toFixed(2) : '—'],
+                  ['Wind',        (f: Flight) => (f.windKts && f.windDir!=null && !isNaN(f.windDir)) ? `${Math.round(f.windDir)}° @ ${Math.round(f.windKts)} kt` : '—'],
+                  ['OAT',         (f: Flight) => (f.oat!=null && !isNaN(f.oat)) ? `${f.oat}°C` : '—'],
+                  ['A/P Target',  (f: Flight) => f.navAlt ? `${Math.round(f.navAlt).toLocaleString()} ft` : '—'],
+                  ['Squawk',      (f: Flight) => f.squawk || '—'],
+                  ['Source',      (f: Flight) => f.dataSource],
+                ] as Array<[string, (f: Flight) => any]>).map(([label, getter]) => (
+                  <tr key={label} className="border-t border-slate-900 hover:bg-slate-900/30">
+                    <td className="text-[10px] uppercase tracking-widest text-slate-500 px-3 py-1.5 font-sans">{label}</td>
+                    {compareList.map(f => (
+                      <td key={f.icao} className="px-3 py-1.5 text-slate-200">{String(getter(f))}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </aside>
       )}
