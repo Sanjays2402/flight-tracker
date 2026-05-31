@@ -18,12 +18,22 @@ interface AcRaw {
   alt_baro?: number | 'ground'
   alt_geom?: number
   gs?: number
+  ias?: number
+  tas?: number
+  mach?: number
   track?: number
+  baro_rate?: number   // ft/min
+  geom_rate?: number
+  nav_altitude_mcp?: number
+  wd?: number          // wind dir
+  ws?: number          // wind speed (kt)
+  oat?: number         // outside air temp °C
   squawk?: string
   category?: string
   lat: number
   lon: number
   emergency?: string
+  dbFlags?: number     // bit 0 = military
 }
 interface Flight {
   icao: string
@@ -36,6 +46,13 @@ interface Flight {
   altitudeFt: number
   ground: boolean
   velocityKts: number
+  ias: number
+  mach: number
+  vertRate: number      // ft/min
+  navAlt: number        // autopilot target ft (0 = unknown)
+  windDir: number
+  windKts: number
+  oat: number
   track: number
   squawk: string
   category: string
@@ -82,10 +99,16 @@ export default function FlightMap() {
   const [status, setStatus] = useState<'loading'|'live'|'error'>('loading')
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [query, setQuery] = useState('')
-  const [showWeather, setShowWeather] = useState(false)
-  const [showTrails, setShowTrails] = useState(true)
-  const [showNight, setShowNight] = useState(true)
-  const [showList, setShowList] = useState(false)
+  const PREFS_KEY = 'ft-prefs-v1'
+  const loadPrefs = (): Record<string, boolean> => {
+    if (typeof window === 'undefined') return {}
+    try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') } catch { return {} }
+  }
+  const prefs = loadPrefs()
+  const [showWeather, setShowWeather] = useState(prefs.showWeather ?? false)
+  const [showTrails, setShowTrails] = useState(prefs.showTrails ?? true)
+  const [showNight, setShowNight] = useState(prefs.showNight ?? true)
+  const [showList, setShowList] = useState(prefs.showList ?? false)
   const [showFilters, setShowFilters] = useState(false)
   const [follow, setFollow] = useState(false)
   const [altMin, setAltMin] = useState(0)
@@ -231,9 +254,16 @@ export default function FlightMap() {
             lng: a.lon, lat: a.lat,
             altitudeFt: altFt, ground,
             velocityKts: a.gs ?? 0,
+            ias: a.ias ?? 0,
+            mach: a.mach ?? 0,
+            vertRate: a.geom_rate ?? a.baro_rate ?? 0,
+            navAlt: a.nav_altitude_mcp ?? 0,
+            windDir: a.wd ?? 0,
+            windKts: a.ws ?? 0,
+            oat: typeof a.oat === 'number' ? a.oat : NaN,
             track: a.track ?? 0,
             squawk: sq, category: a.category || '',
-            emergency, military,
+            emergency, military: military || !!(a.dbFlags && (a.dbFlags & 1)),
           }
         })
       // Update trails
@@ -353,12 +383,20 @@ export default function FlightMap() {
     if (f) mapRef.current?.panTo([f.lat, f.lng], { animate: true, duration: 0.4 })
   }, [follow, selected, flights])
 
+  /* ---- Persist UI preferences ---- */
+  useEffect(() => {
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ showWeather, showTrails, showNight, showList }))
+    } catch {}
+  }, [showWeather, showTrails, showNight, showList])
+
   /* ---- Route + photo on selection ---- */
   useEffect(() => {
     setRoute(null); setPhoto(null)
     if (routeLayerRef.current) routeLayerRef.current.clearLayers()
     if (!selected) return
     const flight = selected
+    drawRoute(null, flight)  // immediate heading projection while route loads
     // Route via routeset
     const cs = flight.callsign.replace(/\s+/g, '')
     if (cs && cs.length >= 3 && cs !== flight.registration && cs !== flight.icao.toUpperCase()) {
@@ -419,7 +457,22 @@ export default function FlightMap() {
   const drawRoute = (r: Route | null, flight: Flight) => {
     const layer = routeLayerRef.current; if (!layer) return
     layer.clearLayers()
-    if (!r?.airports?.length) return
+    // If no route data, project a 10-minute heading line from current position/velocity
+    if (!r?.airports?.length) {
+      if (!flight.ground && flight.velocityKts > 30) {
+        const distNm = (flight.velocityKts / 60) * 10  // 10 min ahead
+        const R = 3440.065
+        const brg = flight.track * Math.PI/180
+        const lat1 = flight.lat * Math.PI/180, lon1 = flight.lng * Math.PI/180
+        const dR = distNm / R
+        const lat2 = Math.asin(Math.sin(lat1)*Math.cos(dR) + Math.cos(lat1)*Math.sin(dR)*Math.cos(brg))
+        const lon2 = lon1 + Math.atan2(Math.sin(brg)*Math.sin(dR)*Math.cos(lat1), Math.cos(dR) - Math.sin(lat1)*Math.sin(lat2))
+        L.polyline([[flight.lat, flight.lng], [lat2*180/Math.PI, lon2*180/Math.PI]], {
+          color: '#fbbf24', weight: 1.5, dashArray: '4 6', opacity: 0.7, interactive: false,
+        }).addTo(layer)
+      }
+      return
+    }
     const aps = r.airports
     const planePos: [number, number] = [flight.lat, flight.lng]
     // Pre-route (origin -> plane), post-route (plane -> dest)
@@ -622,31 +675,61 @@ export default function FlightMap() {
               </div>
             </div>
 
-            {route?.airports && route.airports.length >= 2 && (
-              <div className="mt-4 bg-slate-900/60 border border-slate-800 rounded-xl p-3">
-                <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Route</div>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-center flex-1">
-                    <div className="text-xl font-bold font-mono text-emerald-400">{route.airports[0].iata || route.airports[0].icao}</div>
-                    <div className="text-[10px] text-slate-500 truncate">{route.airports[0].location}</div>
-                  </div>
-                  <div className="text-sky-400 text-xl">→</div>
-                  <div className="text-center flex-1">
-                    <div className="text-xl font-bold font-mono text-sky-400">{route.airports[route.airports.length-1].iata || route.airports[route.airports.length-1].icao}</div>
-                    <div className="text-[10px] text-slate-500 truncate">{route.airports[route.airports.length-1].location}</div>
+            {route?.airports && route.airports.length >= 2 && (() => {
+              const orig = route.airports[0], dest = route.airports[route.airports.length-1]
+              const hav = (a:number,b:number,c:number,d:number) => {
+                const R=3440.065, toRad=(x:number)=>x*Math.PI/180
+                const dLat=toRad(c-a), dLon=toRad(d-b)
+                const s=Math.sin(dLat/2)**2 + Math.cos(toRad(a))*Math.cos(toRad(c))*Math.sin(dLon/2)**2
+                return 2*R*Math.asin(Math.sqrt(s))  // nm
+              }
+              const total = hav(orig.lat,orig.lon,dest.lat,dest.lon)
+              const remain = hav(selected.lat,selected.lng,dest.lat,dest.lon)
+              const flown = Math.max(0, total - remain)
+              const progress = total > 0 ? Math.min(1, flown/total) : 0
+              const etaMin = selected.velocityKts > 50 ? Math.round(remain / selected.velocityKts * 60) : 0
+              const etaText = etaMin > 0 ? (etaMin >= 60 ? `${Math.floor(etaMin/60)}h ${etaMin%60}m` : `${etaMin}m`) : '—'
+              return (
+                <div className="mt-4 bg-slate-900/60 border border-slate-800 rounded-xl p-3">
+                  <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">Route {route.airline && <span className="text-slate-400 normal-case ml-1">· {route.airline}</span>}</div>
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="text-center flex-1 min-w-0">
+                      <div className="text-xl font-bold font-mono text-emerald-400">{orig.iata || orig.icao}</div>
+                      <div className="text-[10px] text-slate-500 truncate">{orig.location}</div>
+                    </div>
+                    <div className="flex-[2] min-w-0">
+                      <div className="relative h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-500 to-sky-400 rounded-full" style={{width:`${progress*100}%`}} />
+                        <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-base" style={{left:`${progress*100}%`}}>✈</div>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+                        <span>{Math.round(flown).toLocaleString()} nm</span>
+                        <span className="text-amber-400">ETA {etaText}</span>
+                        <span>{Math.round(remain).toLocaleString()} nm</span>
+                      </div>
+                    </div>
+                    <div className="text-center flex-1 min-w-0">
+                      <div className="text-xl font-bold font-mono text-sky-400">{dest.iata || dest.icao}</div>
+                      <div className="text-[10px] text-slate-500 truncate">{dest.location}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
             <div className="mt-4 grid grid-cols-2 gap-2.5 text-sm">
               <Field k="Altitude"   v={selected.ground ? 'Ground' : `${Math.round(selected.altitudeFt).toLocaleString()} ft`} />
-              <Field k="Speed"      v={`${Math.round(selected.velocityKts)} kt`} />
+              <Field k="V/Speed"    v={selected.vertRate ? `${selected.vertRate>0?'▲':'▼'} ${Math.abs(Math.round(selected.vertRate)).toLocaleString()} fpm` : '—'}
+                     accent={selected.vertRate>200?'text-emerald-400':selected.vertRate<-200?'text-rose-400':undefined} />
+              <Field k="Ground Spd" v={`${Math.round(selected.velocityKts)} kt`} />
+              <Field k="IAS / Mach" v={selected.ias || selected.mach ? `${selected.ias?Math.round(selected.ias)+' kt':'—'} / ${selected.mach?selected.mach.toFixed(2):'—'}` : '—'} />
               <Field k="Heading"    v={`${Math.round(selected.track)}° ${compass(selected.track)}`} />
               <Field k="Squawk"     v={selected.squawk || '—'} accent={selected.emergency ? 'text-rose-400' : undefined} />
-              <Field k="Position"   v={`${selected.lat.toFixed(3)}, ${selected.lng.toFixed(3)}`} wide />
+              <Field k="Wind"       v={selected.windKts ? `${Math.round(selected.windDir)}° @ ${Math.round(selected.windKts)} kt` : '—'} />
+              <Field k="OAT"        v={Number.isFinite(selected.oat) ? `${Math.round(selected.oat)}°C` : '—'} />
+              <Field k="A/P Target" v={selected.navAlt ? `${Math.round(selected.navAlt).toLocaleString()} ft` : '—'} />
               <Field k="ICAO"       v={selected.icao.toUpperCase()} />
-              <Field k="Vert" v="—" />
+              <Field k="Position"   v={`${selected.lat.toFixed(3)}, ${selected.lng.toFixed(3)}`} wide />
             </div>
 
             <div className="mt-4 flex gap-2">
