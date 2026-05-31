@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
+import { AIRPORTS, AirportPin } from './airports'
 
 /* ============================================================
    Flight Tracker — competing with FR24
@@ -83,6 +84,7 @@ export default function FlightMap() {
   const mapEl = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const planeLayerRef = useRef<L.LayerGroup | null>(null)
+  const airportLayerRef = useRef<L.LayerGroup | null>(null)
   const trailLayerRef = useRef<L.LayerGroup | null>(null)
   const routeLayerRef = useRef<L.LayerGroup | null>(null)
   const weatherLayerRef = useRef<L.TileLayer | null>(null)
@@ -94,6 +96,9 @@ export default function FlightMap() {
 
   const [flights, setFlights] = useState<Flight[]>([])
   const [selected, setSelected] = useState<Flight | null>(null)
+  const [selectedAirport, setSelectedAirport] = useState<AirportPin | null>(null)
+  const [mapZoom, setMapZoom] = useState(4)
+  const [mapBounds, setMapBounds] = useState<{n:number,s:number,e:number,w:number} | null>(null)
   const [route, setRoute] = useState<Route | null>(null)
   const [photo, setPhoto] = useState<string | null>(null)
   const [status, setStatus] = useState<'loading'|'live'|'error'>('loading')
@@ -143,19 +148,24 @@ export default function FlightMap() {
     trailLayerRef.current = L.layerGroup().addTo(map)
     routeLayerRef.current = L.layerGroup().addTo(map)
     planeLayerRef.current = L.layerGroup().addTo(map)
+    airportLayerRef.current = L.layerGroup().addTo(map)
     mapRef.current = map
 
-    // Persist to URL on move
+    // Persist to URL on move + sync bounds/zoom for airport rendering
     const saveUrl = () => {
       const c = map.getCenter()
+      const b = map.getBounds()
       const q = new URLSearchParams()
       q.set('lat', c.lat.toFixed(3))
       q.set('lng', c.lng.toFixed(3))
       q.set('z', String(map.getZoom()))
       if (selectedIcaoRef.current) q.set('icao', selectedIcaoRef.current)
       window.history.replaceState(null, '', `#${q.toString()}`)
+      setMapZoom(map.getZoom())
+      setMapBounds({ n: b.getNorth(), s: b.getSouth(), e: b.getEast(), w: b.getWest() })
     }
     map.on('moveend zoomend', saveUrl)
+    saveUrl()  // initial
 
     // Stash focus icao for first-fetch select
     if (focusIcao) initialFocusRef.current = focusIcao.toLowerCase()
@@ -376,6 +386,46 @@ export default function FlightMap() {
     }
   }, [filtered, selected, showTrails, flights])
 
+  /* ---- Render airport pins (zoom ≥ 5, in viewport) ---- */
+  const visibleAirports = useMemo(() => {
+    if (!mapBounds || mapZoom < 5) return []
+    const { n, s, e, w } = mapBounds
+    const wrapW = w < -180 ? w + 360 : w
+    const wrapE = e > 180 ? e - 360 : e
+    return AIRPORTS.filter(ap =>
+      ap.lat >= s && ap.lat <= n &&
+      (w <= e ? (ap.lon >= wrapW && ap.lon <= wrapE) : (ap.lon >= wrapW || ap.lon <= wrapE))
+    )
+  }, [mapBounds, mapZoom])
+
+  useEffect(() => {
+    const layer = airportLayerRef.current; if (!layer) return
+    layer.clearLayers()
+    if (mapZoom < 5) return
+    const size = mapZoom < 7 ? 6 : mapZoom < 9 ? 9 : 12
+    const fontSize = mapZoom < 7 ? 7 : mapZoom < 9 ? 9 : 11
+    for (const ap of visibleAirports) {
+      const icon = L.divIcon({
+        className: '',
+        iconSize: [size, size],
+        iconAnchor: [size/2, size/2],
+        html: `<div style="
+          width:${size}px;height:${size}px;
+          border-radius:3px;background:rgba(15,23,42,0.85);
+          border:1.5px solid #38bdf8;
+          display:flex;align-items:center;justify-content:center;
+          font-family:monospace;font-weight:700;font-size:${fontSize}px;
+          color:#7dd3fc;line-height:1;cursor:pointer;
+          box-shadow:0 0 6px rgba(56,189,248,0.4);
+        ">✈</div>`,
+      })
+      const m = L.marker([ap.lat, ap.lon], { icon, interactive: true, keyboard: false, riseOnHover: true, zIndexOffset: -100 })
+        .bindTooltip(`<b>${ap.a}</b> · ${ap.n}<br/><span style="opacity:.6">${ap.m}</span>`, { direction: 'top', offset: [0, -size/2] })
+        .on('click', () => { setSelectedAirport(ap); setSelected(null) })
+      layer.addLayer(m)
+    }
+  }, [visibleAirports, mapZoom])
+
   /* ---- Follow mode ---- */
   useEffect(() => {
     if (!follow || !selected) return
@@ -511,7 +561,7 @@ export default function FlightMap() {
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA') return
       if (e.key === '/') { e.preventDefault(); (document.getElementById('search-input') as HTMLInputElement)?.focus() }
-      else if (e.key === 'Escape') { setSelected(null); setShowFilters(false) }
+      else if (e.key === 'Escape') { setSelected(null); setSelectedAirport(null); setShowFilters(false) }
       else if (e.key.toLowerCase() === 'w') setShowWeather(v => !v)
       else if (e.key.toLowerCase() === 't') setShowTrails(v => !v)
       else if (e.key.toLowerCase() === 'n') setShowNight(v => !v)
@@ -748,6 +798,121 @@ export default function FlightMap() {
           </div>
         </aside>
       )}
+
+      {selectedAirport && (() => {
+        const ap = selectedAirport
+        const hav = (a:number,b:number,c:number,d:number) => {
+          const R=3440.065, toRad=(x:number)=>x*Math.PI/180
+          const dLat=toRad(c-a), dLon=toRad(d-b)
+          const s=Math.sin(dLat/2)**2 + Math.cos(toRad(a))*Math.cos(toRad(c))*Math.sin(dLon/2)**2
+          return 2*R*Math.asin(Math.sqrt(s))
+        }
+        // Bearing from airport TO flight
+        const bear = (lat1:number,lon1:number,lat2:number,lon2:number) => {
+          const toRad=(x:number)=>x*Math.PI/180
+          const dLon = toRad(lon2-lon1)
+          const y = Math.sin(dLon)*Math.cos(toRad(lat2))
+          const x = Math.cos(toRad(lat1))*Math.sin(toRad(lat2)) - Math.sin(toRad(lat1))*Math.cos(toRad(lat2))*Math.cos(dLon)
+          return (Math.atan2(y,x)*180/Math.PI + 360) % 360
+        }
+        const angDiff = (a:number,b:number) => { const d=Math.abs(a-b)%360; return d>180?360-d:d }
+
+        // Derive arrivals (inbound, descending, close) + departures (outbound, climbing, close)
+        // Plus known route matches from cache
+        const arrivals: {f: Flight; distNm: number; etaMin: number; tag: string}[] = []
+        const departures: {f: Flight; distNm: number; tag: string}[] = []
+        for (const f of flights) {
+          // Cached route match: definitive
+          const cs = f.callsign.replace(/\s+/g, '')
+          const cached = routeCacheRef.current.get(cs)
+          if (cached?.airports?.length) {
+            const orig = cached.airports[0], dest = cached.airports[cached.airports.length-1]
+            if (dest.icao === ap.i || dest.iata === ap.a) {
+              const d = hav(f.lat,f.lng,ap.lat,ap.lon)
+              const eta = f.velocityKts > 50 ? Math.round(d/f.velocityKts*60) : 0
+              arrivals.push({f, distNm: d, etaMin: eta, tag: orig.iata || orig.icao})
+              continue
+            }
+            if (orig.icao === ap.i || orig.iata === ap.a) {
+              const d = hav(f.lat,f.lng,ap.lat,ap.lon)
+              departures.push({f, distNm: d, tag: dest.iata || dest.icao})
+              continue
+            }
+          }
+          // Heuristic: within 80 nm
+          const d = hav(f.lat,f.lng,ap.lat,ap.lon)
+          if (d > 80 || f.ground) continue
+          const bFromAp = bear(ap.lat, ap.lon, f.lat, f.lng)
+          // Heading roughly opposite of bearing-from-airport => inbound
+          const inbound = angDiff(f.track, (bFromAp+180)%360) < 50
+          const outbound = angDiff(f.track, bFromAp) < 50
+          if (inbound && f.vertRate < 200 && f.altitudeFt < 15000) {
+            const eta = f.velocityKts > 50 ? Math.round(d/f.velocityKts*60) : 0
+            arrivals.push({f, distNm: d, etaMin: eta, tag: '?'})
+          } else if (outbound && f.vertRate > 200 && f.altitudeFt < 20000) {
+            departures.push({f, distNm: d, tag: '?'})
+          }
+        }
+        arrivals.sort((a,b)=> a.distNm - b.distNm)
+        departures.sort((a,b)=> a.distNm - b.distNm)
+
+        return (
+          <aside className="absolute top-3 right-3 z-20 w-[95vw] max-w-[340px] max-h-[calc(100vh-100px)] overflow-hidden flex flex-col bg-slate-950/95 backdrop-blur-xl border border-sky-700/60 rounded-2xl shadow-2xl shadow-sky-900/50">
+            <button onClick={()=>setSelectedAirport(null)} className="absolute top-3 right-3 size-7 rounded-lg bg-slate-900/70 hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-100 transition z-10">✕</button>
+            <div className="p-4 pb-2 border-b border-slate-800">
+              <div className="text-[10px] uppercase tracking-widest text-sky-400 mb-1">Airport</div>
+              <div className="text-2xl font-bold font-mono text-sky-300">{ap.a}</div>
+              <div className="text-sm text-slate-300 truncate">{ap.n}</div>
+              <div className="text-[11px] text-slate-500 truncate">{ap.m} · {ap.i}</div>
+            </div>
+            <div className="flex border-b border-slate-800 text-[10px] uppercase tracking-widest">
+              <div className="flex-1 py-2 text-center text-emerald-400 font-bold border-r border-slate-800">
+                ↓ Arrivals <span className="text-slate-500 ml-1">{arrivals.length}</span>
+              </div>
+              <div className="flex-1 py-2 text-center text-amber-400 font-bold">
+                ↑ Departures <span className="text-slate-500 ml-1">{departures.length}</span>
+              </div>
+            </div>
+            <div className="flex flex-1 overflow-hidden">
+              <div className="flex-1 overflow-y-auto border-r border-slate-800">
+                {arrivals.length === 0 && <div className="p-3 text-[11px] text-slate-500 text-center">None inbound</div>}
+                {arrivals.slice(0, 30).map(({f, distNm, etaMin, tag}) => (
+                  <button key={f.icao} onClick={()=>{ setSelected(f); mapRef.current?.panTo([f.lat,f.lng]) }}
+                          className="w-full text-left px-2.5 py-1.5 hover:bg-slate-900 border-b border-slate-900 transition">
+                    <div className="flex items-baseline justify-between gap-1">
+                      <span className="font-mono font-bold text-emerald-300 text-[11px]">{f.callsign}</span>
+                      <span className="text-[9px] text-amber-400 font-mono">{etaMin>0?`${etaMin}m`:'—'}</span>
+                    </div>
+                    <div className="flex items-baseline justify-between text-[9px] text-slate-500 font-mono">
+                      <span>{tag!=='?'? `from ${tag}` : 'inbound'}</span>
+                      <span>{Math.round(distNm)}nm · {Math.round(f.altitudeFt/1000)}k</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                {departures.length === 0 && <div className="p-3 text-[11px] text-slate-500 text-center">None outbound</div>}
+                {departures.slice(0, 30).map(({f, distNm, tag}) => (
+                  <button key={f.icao} onClick={()=>{ setSelected(f); mapRef.current?.panTo([f.lat,f.lng]) }}
+                          className="w-full text-left px-2.5 py-1.5 hover:bg-slate-900 border-b border-slate-900 transition">
+                    <div className="flex items-baseline justify-between gap-1">
+                      <span className="font-mono font-bold text-amber-300 text-[11px]">{f.callsign}</span>
+                      <span className="text-[9px] text-sky-400 font-mono">▲ {Math.round(f.vertRate)}fpm</span>
+                    </div>
+                    <div className="flex items-baseline justify-between text-[9px] text-slate-500 font-mono">
+                      <span>{tag!=='?'? `to ${tag}` : 'outbound'}</span>
+                      <span>{Math.round(distNm)}nm · {Math.round(f.altitudeFt/1000)}k</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="text-[9px] text-slate-600 text-center py-1.5 border-t border-slate-800">
+              Derived from live ADS-B + cached routes
+            </div>
+          </aside>
+        )
+      })()}
 
       {/* Footer */}
       <footer className="absolute bottom-3 left-3 md:left-4 z-10 pointer-events-none">
