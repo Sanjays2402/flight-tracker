@@ -128,6 +128,7 @@ const WATCH_KEY = 'ft-watch-v1'
   })
   const [showWatch, setShowWatch] = useState(false)
   const [watchInput, setWatchInput] = useState('')
+  const [shareCopied, setShareCopied] = useState(false)
   const knownWatchRef = useRef<Set<string>>(new Set())
   const [showFilters, setShowFilters] = useState(false)
   const [follow, setFollow] = useState(false)
@@ -989,6 +990,61 @@ const WATCH_KEY = 'ft-watch-v1'
             {!photo && (
               <div className="mt-3 text-[10px] text-slate-600 text-center">Photo via planespotters.net — none on file for this aircraft</div>
             )}
+
+            {/* Export / share row */}
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => {
+                  const trail = trailsRef.current.get(selected.icao) || []
+                  const coords = trail.map(([la,ln,ts]) => `${ln},${la},${0}`).join(' ')
+                  const kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+<name>${selected.callsign} (${selected.icao.toUpperCase()})</name>
+<description>Tracked via sanjays2402.github.io/flight-tracker · ${new Date().toISOString()}</description>
+<Style id="t"><LineStyle><color>ff00d4ff</color><width>3</width></LineStyle></Style>
+<Placemark><name>Trail</name><styleUrl>#t</styleUrl><LineString><coordinates>${coords}</coordinates></LineString></Placemark>
+<Placemark><name>Current</name><Point><coordinates>${selected.lng},${selected.lat},${selected.altitudeFt*0.3048}</coordinates></Point></Placemark>
+</Document></kml>`
+                  const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url; a.download = `${selected.callsign || selected.icao}.kml`
+                  a.click(); URL.revokeObjectURL(url)
+                }}
+                className="flex-1 text-center text-[10px] uppercase tracking-widest bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl py-2 transition">
+                ↓ KML
+              </button>
+              <button
+                onClick={() => {
+                  const json = {
+                    captured: new Date().toISOString(),
+                    aircraft: selected,
+                    trail: trailsRef.current.get(selected.icao) || [],
+                    route: routeCacheRef.current.get(selected.callsign?.toUpperCase()) || null,
+                  }
+                  const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url; a.download = `${selected.callsign || selected.icao}.json`
+                  a.click(); URL.revokeObjectURL(url)
+                }}
+                className="flex-1 text-center text-[10px] uppercase tracking-widest bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl py-2 transition">
+                ↓ JSON
+              </button>
+              <button
+                onClick={async () => {
+                  const url = `${location.origin}${location.pathname}#lat=${selected.lat.toFixed(3)}&lng=${selected.lng.toFixed(3)}&z=8&icao=${selected.icao}`
+                  try {
+                    await navigator.clipboard.writeText(url)
+                    setShareCopied(true)
+                    setTimeout(()=>setShareCopied(false), 1800)
+                  } catch {}
+                }}
+                className="flex-1 text-center text-[10px] uppercase tracking-widest bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl py-2 transition">
+                {shareCopied ? '✓ COPIED' : '↗ SHARE'}
+              </button>
+            </div>
           </div>
         </aside>
       )}
