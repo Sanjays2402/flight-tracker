@@ -11,6 +11,7 @@ import { AIRPORTS, AirportPin } from './airports'
 
 interface AcRaw {
   hex: string
+  type?: string  // data source: adsb_icao, adsb_other, mlat, tisb_other, mode_s, etc.
   flight?: string
   r?: string
   t?: string
@@ -58,6 +59,7 @@ interface Flight {
   squawk: string
   category: string
   emergency: boolean
+  dataSource: string
   military: boolean
 }
 interface Airport {
@@ -265,6 +267,7 @@ export default function FlightMap() {
             callsign: (a.flight || '').trim() || a.r || a.hex.toUpperCase(),
             registration: a.r || '—',
             type: a.t || a.desc || '—',
+            dataSource: a.type || 'unknown',
             operator: a.ownOp || '—',
             lng: a.lon, lat: a.lat,
             altitudeFt: altFt, ground,
@@ -834,6 +837,28 @@ export default function FlightMap() {
                 <div className="text-2xl font-bold tracking-tight mt-0.5 font-mono">{selected.callsign}</div>
                 <div className="text-xs text-slate-400 mt-1">{selected.registration} · {selected.type}</div>
                 {selected.operator !== '—' && <div className="text-xs text-slate-500 mt-0.5">{selected.operator}</div>}
+                {/* Data source badge */}
+                {(() => {
+                  const ds = selected.dataSource
+                  const map: Record<string,{l:string,c:string,t:string}> = {
+                    adsb_icao:   {l:'ADS-B',  c:'bg-emerald-500/20 text-emerald-300 border-emerald-500/40', t:'Direct ADS-B w/ ICAO addr (most accurate)'},
+                    adsb_other:  {l:'ADS-B?', c:'bg-emerald-500/15 text-emerald-300/80 border-emerald-500/30', t:'ADS-B w/ non-ICAO addr'},
+                    adsr_icao:   {l:'ADS-R',  c:'bg-teal-500/20 text-teal-300 border-teal-500/40', t:'ADS-R rebroadcast'},
+                    tisb_icao:   {l:'TIS-B',  c:'bg-sky-500/20 text-sky-300 border-sky-500/40', t:'TIS-B (FAA radar relay)'},
+                    tisb_other:  {l:'TIS-B?', c:'bg-sky-500/15 text-sky-300/80 border-sky-500/30', t:'TIS-B non-ICAO'},
+                    tisb_trackfile: {l:'TIS-B', c:'bg-sky-500/15 text-sky-300/80 border-sky-500/30', t:'TIS-B trackfile'},
+                    mlat:        {l:'MLAT',   c:'bg-amber-500/20 text-amber-300 border-amber-500/40', t:'Multilateration (no ADS-B, position triangulated)'},
+                    mode_s:      {l:'Mode-S', c:'bg-slate-600/30 text-slate-300 border-slate-500/40', t:'Mode-S only (no position broadcast, limited data)'},
+                  }
+                  const info = map[ds] || {l: ds.toUpperCase(), c:'bg-slate-700/30 text-slate-300 border-slate-600/40', t: ds}
+                  return (
+                    <div className="mt-1.5 inline-flex items-center gap-1">
+                      <span title={info.t} className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${info.c} uppercase tracking-wider font-mono`}>
+                        {info.l}
+                      </span>
+                    </div>
+                  )
+                })()}
                 {selected.category && CAT_LABEL[selected.category] && (
                   <div className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-widest">{CAT_LABEL[selected.category]}</div>
                 )}
