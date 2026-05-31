@@ -88,6 +88,8 @@ export default function FlightMap() {
   const trailLayerRef = useRef<L.LayerGroup | null>(null)
   const routeLayerRef = useRef<L.LayerGroup | null>(null)
   const weatherLayerRef = useRef<L.TileLayer | null>(null)
+  const heatLayerRef = useRef<L.Layer | null>(null)
+  const heatCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const terminatorLayerRef = useRef<L.Polygon | null>(null)
   const markersRef = useRef<Map<string, L.Marker>>(new Map())
   const trailsRef = useRef<Map<string, Array<[number, number, number]>>>(new Map())  // icao -> [lat, lng, ts]
@@ -116,6 +118,7 @@ export default function FlightMap() {
   const [showTrails, setShowTrails] = useState(prefs.showTrails ?? true)
   const [showNight, setShowNight] = useState(prefs.showNight ?? true)
   const [showList, setShowList] = useState(prefs.showList ?? false)
+  const [showHeat, setShowHeat] = useState(prefs.showHeat ?? false)
   const [showFilters, setShowFilters] = useState(false)
   const [follow, setFollow] = useState(false)
   const [altMin, setAltMin] = useState(0)
@@ -388,6 +391,81 @@ export default function FlightMap() {
     }
   }, [filtered, selected, showTrails, flights])
 
+  /* ---- Density heatmap (canvas overlay) ---- */
+  useEffect(() => {
+    const map = mapRef.current; if (!map) return
+    if (!showHeat) {
+      if (heatLayerRef.current) { map.removeLayer(heatLayerRef.current); heatLayerRef.current = null }
+      heatCanvasRef.current = null
+      return
+    }
+    const HeatLayer = (L.Layer as any).extend({
+      onAdd(map: L.Map) {
+        const canvas = document.createElement('canvas')
+        canvas.style.position = 'absolute'
+        canvas.style.pointerEvents = 'none'
+        canvas.style.opacity = '0.7'
+        canvas.style.mixBlendMode = 'screen'
+        canvas.style.zIndex = '180'
+        this._canvas = canvas
+        heatCanvasRef.current = canvas
+        const pane = map.getPane('overlayPane')
+        if (pane) pane.appendChild(canvas)
+        map.on('moveend zoomend resize', this._redraw, this)
+        map.on('move', this._reposition, this)
+        this._redraw()
+        return this
+      },
+      onRemove(map: L.Map) {
+        map.off('moveend zoomend resize', this._redraw, this)
+        map.off('move', this._reposition, this)
+        this._canvas?.remove()
+      },
+      _reposition() {
+        const map = this._map
+        const topLeft = map.containerPointToLayerPoint([0, 0])
+        L.DomUtil.setPosition(this._canvas, topLeft)
+      },
+      _redraw() {
+        const map = this._map; if (!map || !this._canvas) return
+        const size = map.getSize()
+        this._canvas.width = size.x; this._canvas.height = size.y
+        this._reposition()
+        const ctx = this._canvas.getContext('2d')
+        if (!ctx) return
+        ctx.clearRect(0, 0, size.x, size.y)
+        // For each flight in view, draw a radial gradient
+        const radius = Math.max(15, 35 - map.getZoom() * 2)
+        for (const f of flightsRef.current) {
+          if (f.ground) continue
+          const pt = map.latLngToContainerPoint([f.lat, f.lng])
+          if (pt.x < -radius || pt.x > size.x + radius || pt.y < -radius || pt.y > size.y + radius) continue
+          const g = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, radius)
+          // Color by altitude
+          const a = f.altitudeFt
+          const col = a < 10000 ? '255,80,40' : a < 25000 ? '255,180,40' : a < 35000 ? '120,220,80' : '80,180,255'
+          g.addColorStop(0, `rgba(${col},0.55)`)
+          g.addColorStop(1, `rgba(${col},0)`)
+          ctx.fillStyle = g
+          ctx.beginPath()
+          ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      },
+    })
+    const layer = new HeatLayer()
+    map.addLayer(layer)
+    heatLayerRef.current = layer
+    return () => { if (heatLayerRef.current) { map.removeLayer(heatLayerRef.current); heatLayerRef.current = null } }
+  }, [showHeat])
+
+  // Redraw heatmap when flights update
+  const flightsRef = useRef<Flight[]>([])
+  useEffect(() => {
+    flightsRef.current = flights
+    if (showHeat && heatLayerRef.current) (heatLayerRef.current as any)._redraw?.()
+  }, [flights, showHeat])
+
   /* ---- Render airport pins (zoom ≥ 5, in viewport) ---- */
   const visibleAirports = useMemo(() => {
     if (!mapBounds || mapZoom < 5) return []
@@ -471,9 +549,9 @@ export default function FlightMap() {
   /* ---- Persist UI preferences ---- */
   useEffect(() => {
     try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ showWeather, showTrails, showNight, showList }))
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ showWeather, showTrails, showNight, showList, showHeat }))
     } catch {}
-  }, [showWeather, showTrails, showNight, showList])
+  }, [showWeather, showTrails, showNight, showList, showHeat])
 
   /* ---- Route + photo on selection ---- */
   useEffect(() => {
@@ -600,6 +678,7 @@ export default function FlightMap() {
       else if (e.key.toLowerCase() === 'w') setShowWeather(v => !v)
       else if (e.key.toLowerCase() === 't') setShowTrails(v => !v)
       else if (e.key.toLowerCase() === 'n') setShowNight(v => !v)
+      else if (e.key.toLowerCase() === 'h') setShowHeat(v => !v)
       else if (e.key.toLowerCase() === 'l') setShowList(v => !v)
       else if (e.key.toLowerCase() === 'f' && selected) setFollow(v => !v)
     }
@@ -650,6 +729,7 @@ export default function FlightMap() {
             <Toggle on={showTrails} onClick={()=>setShowTrails(v=>!v)} label="Trails" hint="T" />
             <Toggle on={showWeather} onClick={()=>setShowWeather(v=>!v)} label="Weather" hint="W" />
             <Toggle on={showNight} onClick={()=>setShowNight(v=>!v)} label="Night" hint="N" />
+            <Toggle on={showHeat} onClick={()=>setShowHeat(v=>!v)} label="Heat" hint="H" />
             <Toggle on={showList} onClick={()=>setShowList(v=>!v)} label="List" hint="L" />
             <Toggle on={showFilters} onClick={()=>setShowFilters(v=>!v)} label="Filter" />
           </div>
@@ -952,7 +1032,7 @@ export default function FlightMap() {
       {/* Footer */}
       <footer className="absolute bottom-3 left-3 md:left-4 z-10 pointer-events-none">
         <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl px-2.5 py-1 text-[10px] uppercase tracking-widest text-slate-400 shadow-2xl">
-          8s refresh · /=search · esc · t·w·n·l·f
+          8s refresh · /=search · esc · t·w·n·h·l·f
         </div>
       </footer>
 
