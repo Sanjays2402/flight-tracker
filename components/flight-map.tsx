@@ -550,20 +550,61 @@ export default function FlightMap() {
     try {
       const m = mapRef.current
       let lat = 40.7, lon = -74, distNm = 250
+      const tiles: Array<{lat:number; lon:number; dist:number}> = []
       if (m) {
         const c = m.getCenter()
         lat = c.lat; lon = c.lng
         const b = m.getBounds()
         const halfH = (b.getNorth() - b.getSouth()) / 2 * 60
         const halfW = (b.getEast() - b.getWest()) / 2 * 60 * Math.cos(lat * Math.PI / 180)
-        // adsb.lol allows up to dist=25000nm. Scale with viewport so world view returns everything.
-        distNm = Math.min(25000, Math.max(50, Math.ceil(Math.max(halfH, halfW) * 1.15)))
+        const maxHalf = Math.max(halfH, halfW)
+        // adsb.lol caps payload at ~dist=2000nm. If viewport demands more, tile it.
+        const CAP = 1800
+        if (maxHalf * 1.15 <= CAP) {
+          distNm = Math.max(50, Math.ceil(maxHalf * 1.15))
+        } else {
+          // tile the visible bounds into a grid of ~CAP-sized chunks
+          const dLat = (CAP * 2) / 60                         // nm -> deg lat
+          const south = b.getSouth(), north = b.getNorth()
+          const west  = b.getWest(),  east  = b.getEast()
+          for (let la = south; la < north; la += dLat) {
+            const midLa = Math.min(north, la + dLat/2)
+            const dLon = (CAP * 2) / (60 * Math.cos(midLa * Math.PI / 180))
+            for (let lo = west; lo < east; lo += dLon) {
+              tiles.push({
+                lat: Math.min(north, la + dLat/2),
+                lon: Math.min(east, lo + dLon/2),
+                dist: CAP,
+              })
+            }
+          }
+          // safety: cap to 12 parallel calls
+          if (tiles.length > 12) tiles.length = 12
+        }
       }
-      const target = `https://api.adsb.lol/v2/lat/${lat.toFixed(4)}/lon/${lon.toFixed(4)}/dist/${distNm}`
-      const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(target)}`, { cache: 'no-store' })
-      if (!res.ok) throw new Error(`adsb.lol HTTP ${res.status}`)
-      const json = await res.json() as { ac?: AcRaw[] }
-      const raw: AcRaw[] = json.ac ?? []
+
+      let raw: AcRaw[] = []
+      if (tiles.length) {
+        const results = await Promise.all(tiles.map(async t => {
+          try {
+            const target = `https://api.adsb.lol/v2/lat/${t.lat.toFixed(4)}/lon/${t.lon.toFixed(4)}/dist/${t.dist}`
+            const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(target)}`, { cache: 'no-store' })
+            if (!r.ok) return [] as AcRaw[]
+            const j = await r.json() as { ac?: AcRaw[] }
+            return j.ac ?? []
+          } catch { return [] as AcRaw[] }
+        }))
+        const seen = new Set<string>()
+        for (const arr of results) for (const a of arr) {
+          if (a.hex && !seen.has(a.hex)) { seen.add(a.hex); raw.push(a) }
+        }
+      } else {
+        const target = `https://api.adsb.lol/v2/lat/${lat.toFixed(4)}/lon/${lon.toFixed(4)}/dist/${distNm}`
+        const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(target)}`, { cache: 'no-store' })
+        if (!res.ok) throw new Error(`adsb.lol HTTP ${res.status}`)
+        const json = await res.json() as { ac?: AcRaw[] }
+        raw = json.ac ?? []
+      }
       const parsed: Flight[] = raw
         .filter(a => typeof a.lat === 'number' && typeof a.lon === 'number')
         .map(a => {
