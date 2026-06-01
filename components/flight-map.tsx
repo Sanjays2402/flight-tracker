@@ -1480,7 +1480,7 @@ export default function FlightMap() {
 
       {/* Stats strip */}
       <div className="absolute top-[60px] md:top-[68px] left-3 md:left-4 z-20 pointer-events-none">
-        <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-2.5 md:p-3 shadow-2xl grid grid-cols-2 sm:grid-cols-4 gap-2.5 md:gap-3 w-[min(96vw,520px)]">
+        <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 md:px-4 py-2.5 md:py-3 shadow-2xl grid grid-cols-2 sm:grid-cols-4 gap-x-5 md:gap-x-6 gap-y-2.5 w-[min(96vw,600px)]">
           <Stat label="Shown" value={stats.total.toLocaleString()} color="text-sky-400" />
           <Stat label="Airborne" value={stats.airborne.toLocaleString()} color="text-emerald-400" />
           <Stat label="Avg alt" value={`${(stats.avgAlt/1000).toFixed(1)}k ft`} color="text-violet-400" />
@@ -2507,9 +2507,9 @@ export default function FlightMap() {
 
 function Stat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div>
-      <div className="text-[9px] uppercase tracking-widest text-slate-500">{label}</div>
-      <div className={`text-base md:text-lg font-bold tabular-nums leading-tight ${color}`}>{value}</div>
+    <div className="min-w-0">
+      <div className="text-[9px] uppercase tracking-widest text-slate-500 whitespace-nowrap">{label}</div>
+      <div className={`text-base md:text-lg font-bold tabular-nums leading-tight whitespace-nowrap ${color}`}>{value}</div>
     </div>
   )
 }
