@@ -1,0 +1,17 @@
+{
+  "name": "Flight Tracker — Live aircraft positions",
+  "short_name": "Flight Tracker",
+  "description": "Real-time global flight tracker. Live aircraft positions, routes, weather, and statistics — free, no signup.",
+  "start_url": "/flight-tracker/",
+  "scope": "/flight-tracker/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#020617",
+  "theme_color": "#0ea5e9",
+  "categories": ["travel", "navigation", "utilities"],
+  "icons": [
+    { "src": "/flight-tracker/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/flight-tracker/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/flight-tracker/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

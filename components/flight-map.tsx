@@ -172,6 +172,12 @@ export default function FlightMap() {
   const [showStats, setShowStats] = useState(false)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
+  const [welcome, setWelcome] = useState(false)
+  const [about, setAbout] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!localStorage.getItem('ft-onboarded')) setWelcome(true)
+  }, [])
   const [follow, setFollow] = useState(false)
   const [altMin, setAltMin] = useState(0)
   const [altMax, setAltMax] = useState(50000)
@@ -1795,6 +1801,94 @@ export default function FlightMap() {
           </aside>
         )
       })()}
+
+      {/* Welcome modal (first visit) */}
+      {welcome && (
+        <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-md grid place-items-center p-4 pointer-events-auto" onClick={() => { localStorage.setItem('ft-onboarded','1'); setWelcome(false) }}>
+          <div onClick={(e)=>e.stopPropagation()} className="w-full max-w-md bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-3xl shadow-2xl shadow-sky-900/30 overflow-hidden">
+            <div className="relative h-32 bg-gradient-to-br from-sky-500 via-indigo-500 to-violet-600 overflow-hidden">
+              <div className="absolute inset-0 opacity-30" style={{backgroundImage:'radial-gradient(circle at 20% 30%, rgba(255,255,255,0.4), transparent 40%), radial-gradient(circle at 80% 70%, rgba(255,255,255,0.3), transparent 40%)'}}/>
+              <div className="absolute inset-0 grid place-items-center">
+                <div className="size-16 rounded-2xl bg-white/15 backdrop-blur-lg grid place-items-center shadow-2xl">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="white"><path d="M5 16 L19 9 L18 12 L13 13 L14 18 L12 19 L11 14 L6 17 Z"/></svg>
+                </div>
+              </div>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="text-center space-y-1">
+                <h2 className="text-xl font-bold tracking-tight">Welcome to Flight Tracker</h2>
+                <p className="text-sm text-slate-400">25,000+ aircraft. Live, free, no signup.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                {[
+                  ['Tap a plane', 'Route, altitude, photo'],
+                  ['Drag to rotate', 'Tilt the world in 3D'],
+                  ['Search', 'Callsign, type, operator'],
+                  ['Watchlist', 'Notify on return'],
+                ].map(([t, d]) => (
+                  <div key={t} className="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5">
+                    <div className="font-semibold text-slate-200">{t}</div>
+                    <div className="text-slate-500 mt-0.5 leading-tight">{d}</div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={()=>{ localStorage.setItem('ft-onboarded','1'); setWelcome(false) }}
+                className="w-full bg-sky-500 hover:bg-sky-400 active:scale-[0.98] text-slate-950 font-bold py-3 rounded-xl transition shadow-lg shadow-sky-900/40">
+                Start tracking →
+              </button>
+              <button onClick={()=>{ localStorage.setItem('ft-onboarded','1'); setWelcome(false); setAbout(true) }}
+                className="w-full text-xs text-slate-500 hover:text-slate-300 transition py-1">
+                Data sources & privacy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* About / Data / Privacy panel */}
+      {about && (
+        <div className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-md grid place-items-center p-4 pointer-events-auto" onClick={()=>setAbout(false)}>
+          <div onClick={(e)=>e.stopPropagation()} className="w-full max-w-lg max-h-[85vh] overflow-y-auto bg-slate-950 border border-slate-800 rounded-3xl shadow-2xl">
+            <header className="sticky top-0 bg-slate-950/95 backdrop-blur border-b border-slate-800 px-5 py-3.5 flex items-center justify-between">
+              <h3 className="text-base font-bold">About Flight Tracker</h3>
+              <button onClick={()=>setAbout(false)} className="size-7 rounded-lg hover:bg-slate-800 grid place-items-center text-slate-400 text-sm">✕</button>
+            </header>
+            <div className="p-5 space-y-5 text-sm text-slate-300">
+              <p>A free, open, real-time view of every aircraft transmitting ADS-B or Mode-S. No accounts, no ads, no tracking, no paid tier.</p>
+              <div>
+                <div className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-2">Data sources</div>
+                <ul className="space-y-1.5 text-[13px]">
+                  <li>• <a className="text-sky-400 hover:underline" href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a> — aircraft positions, routes, airport DB (community feed, no API key)</li>
+                  <li>• <a className="text-sky-400 hover:underline" href="https://www.planespotters.net" target="_blank" rel="noopener">planespotters.net</a> — aircraft photos</li>
+                  <li>• <a className="text-sky-400 hover:underline" href="https://www.rainviewer.com" target="_blank" rel="noopener">RainViewer</a> — weather radar overlay</li>
+                  <li>• <a className="text-sky-400 hover:underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> + <a className="text-sky-400 hover:underline" href="https://carto.com/attribution" target="_blank" rel="noopener">CARTO</a> — basemap</li>
+                  <li>• <a className="text-sky-400 hover:underline" href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">AWS Terrain Tiles</a> — 3D elevation</li>
+                </ul>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-2">Privacy</div>
+                <p className="text-[13px] leading-relaxed">No servers, no logs, no analytics. Your map preferences and watchlist live only in your browser&apos;s local storage. Aircraft data is fetched directly from public ADS-B feeds — nothing flows through us.</p>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-2">Limitations</div>
+                <p className="text-[13px] leading-relaxed">Coverage depends on community ADS-B receivers. Sparse areas (oceans, polar regions, military airspace) may show fewer aircraft. Position data is delayed 5–30 seconds and should never be used for navigation or safety-critical purposes.</p>
+              </div>
+              <div className="text-[11px] text-slate-500 pt-3 border-t border-slate-800 flex items-center justify-between flex-wrap gap-2">
+                <span>Open source · MIT-licensed</span>
+                <a href="https://github.com/Sanjays2402/flight-tracker" target="_blank" rel="noopener" className="text-sky-400 hover:underline">View on GitHub →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* About link in bottom-left, only when nothing selected */}
+      {!selected && !about && !welcome && (
+        <button onClick={()=>setAbout(true)}
+          className="absolute bottom-12 right-3 md:right-4 z-10 text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-300 bg-slate-950/70 backdrop-blur border border-slate-800 rounded-lg px-2 py-1 transition">
+          About · Privacy
+        </button>
+      )}
 
       {/* Footer keybind hints — only when nothing selected (avoids ticker collision) */}
       {!selected && (

@@ -1,92 +1,93 @@
-# Flight Tracker
+# ✈️ Flight Tracker
 
-Real-time global aircraft tracking. Free, open, no signup. Built to compete with Flightradar24 — and beat them on the features they paywall.
+> Real-time global flight tracker. 25,000+ aircraft live. Free, no signup.
 
-**Live → https://sanjays2402.github.io/flight-tracker/**
+**Live:** https://sanjays2402.github.io/flight-tracker/
 
-## What it does
+A single-page web app showing every aircraft transmitting ADS-B or Mode-S, anywhere on Earth, refreshed every 8 seconds. No servers, no accounts, no analytics, no ads — just a map and the planes in the sky.
 
-- **Live aircraft positions** worldwide via [adsb.lol](https://adsb.lol) (community ADS-B feed)
-- **8-second refresh** — fresh feed every cycle, smooth animations between updates
-- **Trails** — last 60 fixes per aircraft, fading by age
-- **Click any plane** → full detail panel with photo, route, EHS broadcast data
+![Flight Tracker preview](public/og.svg)
 
-## Features (vs. FR24)
+## Features
 
-| Capability | This tracker | FR24 Free | FR24 Premium |
-|---|---|---|---|
-| Live positions | ✓ | ✓ | ✓ |
-| Aircraft trails | ✓ | partial | ✓ |
-| Photos (planespotters/adsbdb) | ✓ | ✓ | ✓ |
-| Route origin → destination | ✓ | ✓ | ✓ |
-| **Vertical speed (color-coded)** | ✓ | — | ✓ |
-| **ETA + animated progress bar** | ✓ | — | ✓ |
-| **IAS / Mach** | ✓ | — | ✓ |
-| **Wind direction + speed (derived)** | ✓ | — | ✓ |
-| **Outside air temp** | ✓ | — | ✓ |
-| **Autopilot target altitude** | ✓ | — | ✓ |
-| **Heading projection (10-min)** | ✓ | — | ✓ |
-| **Airport overlays (1,167 airports)** | ✓ | partial | ✓ |
-| **Derived arrivals / departures** | ✓ | — | ✓ |
-| **Emergency squawk alerts (7500/7600/7700)** | ✓ + audio | — | ✓ |
-| **Callsign watchlist + audio ping** | ✓ | — | ✓ |
-| **Density heatmap (altitude-coded)** | ✓ | — | partial |
-| **MLAT / ADS-B / TIS-B source badge** | ✓ | — | — |
-| **KML export** | ✓ | — | ✓ |
-| **JSON export** | ✓ | — | — |
-| **Deep-link share** | ✓ | partial | ✓ |
-| Weather radar | ✓ (RainViewer) | — | ✓ |
-| Day/night terminator | ✓ | — | ✓ |
-| Filters (altitude, military, emergency) | ✓ | — | ✓ |
-| **Cost** | $0 | $0 + ads | $4-$50/mo |
+**Map**
+- Live aircraft positions worldwide (adsb.lol community feed)
+- 3D terrain with adjustable tilt + chase cam
+- Dark Carto basemap, weather radar overlay, night-side shading
+- Heatmap, contrail trails, motion smoothing (rAF dead-reckoning)
 
-## Stack
+**Aircraft details**
+- Routes (origin → destination with airport names)
+- Aircraft photos (planespotters.net)
+- Altitude / speed / heading / squawk
+- Type, registration, operator
+- Watchlist with browser notifications when a plane returns
 
-- Next.js 14 (static export, GitHub Pages)
-- Leaflet + Carto dark basemap
-- Pure TypeScript, no extra map libraries
-- Bundle: **~104 KB first-load**
+**Discovery**
+- Live filter: type, altitude band, military, helicopter, heavy
+- Search: callsign / hex / type / operator / registration
+- List view, compare two flights side-by-side
+- Live stats panel: histograms, top operators, busiest airports, country breakdown
+- Ticker: fastest / highest / steepest climber / descender / military
+
+**Mobile**
+- Installable as PWA (Add to Home Screen)
+- Hamburger menu + slide-in search
+- Touch-optimized zoom/pan/tilt
 
 ## Data sources
 
-- **[adsb.lol](https://adsb.lol)** — positions, EHS data, airport bounds, route resolution
-- **[adsbdb.com](https://adsbdb.com)** — route fallback, photos
-- **[planespotters.net](https://planespotters.net)** — aircraft photos
-- **[RainViewer](https://rainviewer.com)** — global weather radar tiles
-- **[OpenStreetMap](https://openstreetmap.org)** + **CARTO** — basemap
+| Source | Purpose | Cost |
+|---|---|---|
+| [adsb.lol](https://adsb.lol) | Aircraft positions, routes, airport DB | Free, community-hosted |
+| [planespotters.net](https://www.planespotters.net) | Aircraft photos | Free public API |
+| [RainViewer](https://www.rainviewer.com) | Weather radar | Free |
+| [OpenStreetMap](https://www.openstreetmap.org) + [CARTO](https://carto.com) | Basemap | Free |
+| [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) | 3D elevation | Free public dataset |
 
-## Keyboard shortcuts
+No API keys required.
 
-| Key | Action |
-|---|---|
-| `/` | Focus search |
-| `T` | Toggle trails |
-| `W` | Toggle weather |
-| `N` | Toggle night terminator |
-| `H` | Toggle heat overlay |
-| `L` | Toggle aircraft list |
-| `F` | Follow selected aircraft |
-| `Esc` | Close panels |
+## Privacy
 
-## Run locally
+- No backend, no servers, no logs.
+- No analytics, no trackers, no cookies.
+- Preferences and watchlist stored only in `localStorage`.
+- Data fetched directly from public ADS-B endpoints — nothing flows through us.
+
+## Stack
+
+- Next.js 14 (app router, static export)
+- React + TypeScript
+- MapLibre GL JS
+- Tailwind CSS
+- Deployed via GitHub Pages
+
+**Bundle size:** 1.44 kB route / 105 kB first-load shared.
+
+## Develop
 
 ```bash
 git clone https://github.com/Sanjays2402/flight-tracker
 cd flight-tracker
 npm install
-npm run dev
+npm run dev      # http://localhost:3000
+npm run build    # static export → ./out
 ```
-
-Open http://localhost:3000
 
 ## Deploy
 
-GitHub Actions auto-deploys to GitHub Pages on push to `main`. See `.github/workflows/`.
+Pushes to `main` auto-deploy to GitHub Pages via `.github/workflows/deploy.yml`.
 
-## Privacy
+## Caveats
 
-No accounts, no tracking, no cookies, no analytics. All data calls go straight from your browser to the source APIs — nothing routed through any server I control.
+- Coverage depends on community ADS-B receivers. Oceans, polar regions, and military airspace may show fewer aircraft.
+- Position data is delayed 5–30 seconds.
+- **Never use this for navigation or safety-critical purposes.**
 
 ## License
 
-MIT — fork it, improve it, ship it.
+MIT — see [LICENSE](LICENSE)
+
+---
+
+Built by [@Sanjays2402](https://github.com/Sanjays2402). Issues + PRs welcome.
