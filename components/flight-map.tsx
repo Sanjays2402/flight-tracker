@@ -155,6 +155,9 @@ export default function FlightMap() {
   const [showList, setShowList] = useState(prefs.showList ?? false)
   const [showHeat, setShowHeat] = useState(prefs.showHeat ?? false)
   const [show3D, setShow3D] = useState<boolean>((prefs as any).show3D ?? false)
+  const [chase, setChase] = useState<boolean>(false)
+  const chaseRef = useRef(false)
+  useEffect(() => { chaseRef.current = chase && !!selectedIcaoRef.current }, [chase])
   const [watchlist, setWatchlist] = useState<string[]>(() => {
     if (typeof window === 'undefined') return []
     try { return JSON.parse(localStorage.getItem(WATCH_KEY) || '[]') } catch { return [] }
@@ -625,49 +628,98 @@ export default function FlightMap() {
     })
   }, [flights, query, hideGround, onlyMil, onlyEmerg, altMin, altMax])
 
-  /* ---- Render planes (symbol layer) ---- */
+  /* ---- Render planes (symbol layer) + 60fps dead-reckon interpolation ---- */
+  // Snapshot of last-known authoritative positions per icao
+  const lastPosRef = useRef<Map<string, { lng:number; lat:number; t:number; track:number; gs:number; ground:boolean; altFt:number; emergency:boolean; isSel:boolean; heli:boolean; color:string }>>(new Map())
+
   useEffect(() => {
     const m = mapRef.current; if (!m || !mapReady) return
-    const src = m.getSource('planes') as maplibregl.GeoJSONSource | undefined
-    if (!src) return
-    const features = filtered.map((f) => {
+    const now = performance.now()
+    const next = new Map<string, any>()
+    for (const f of filtered) {
       const isSel = selected?.icao === f.icao
       const heli = f.category === 'A7'
       const color = f.emergency ? '#f43f5e' : f.ground ? '#64748b' : isSel ? '#fbbf24' : altColor(f.altitudeFt)
-      return {
-        type: 'Feature' as const,
-        geometry: { type: 'Point' as const, coordinates: [f.lng, f.lat] },
-        properties: {
-          icao: f.icao,
-          track: f.track || 0,
-          icon: iconKey(color, heli, isSel),
-          ground: f.ground,
-        },
-      }
-    })
-    src.setData({ type: 'FeatureCollection', features } as any)
+      next.set(f.icao, {
+        lng: f.lng, lat: f.lat, t: now,
+        track: f.track || 0, gs: f.velocityKts || 0,
+        ground: f.ground, altFt: f.altitudeFt, emergency: f.emergency,
+        isSel, heli, color,
+      })
+    }
+    lastPosRef.current = next
+  }, [filtered, selected, mapReady])
 
-    // Altitude columns — tiny square footprint, height = altitude meters
-    const colSrc = m.getSource('alt-columns') as maplibregl.GeoJSONSource | undefined
-    if (colSrc) {
-      const cols = filtered.filter(f => !f.ground && f.altitudeFt > 0).map(f => {
-        const d = 0.003 // ~330m square footprint
-        const isSel = selected?.icao === f.icao
-        const color = f.emergency ? '#f43f5e' : isSel ? '#fbbf24' : altColor(f.altitudeFt)
-        const ring = [
-          [f.lng - d, f.lat - d], [f.lng + d, f.lat - d],
-          [f.lng + d, f.lat + d], [f.lng - d, f.lat + d],
-          [f.lng - d, f.lat - d],
-        ]
-        return {
-          type: 'Feature' as const,
-          geometry: { type: 'Polygon' as const, coordinates: [ring] },
-          properties: { icao: f.icao, color, h: f.altitudeFt * 0.3048 },
+  // RAF loop: dead-reckon current position from last + velocity*elapsed
+  useEffect(() => {
+    const m = mapRef.current; if (!m || !mapReady) return
+    let raf = 0
+    let pulse = 0
+    const step = () => {
+      pulse += 0.06
+      const now = performance.now()
+      const src = m.getSource('planes') as maplibregl.GeoJSONSource | undefined
+      const colSrc = m.getSource('alt-columns') as maplibregl.GeoJSONSource | undefined
+      if (!src) { raf = requestAnimationFrame(step); return }
+
+      const planeFeats: any[] = []
+      const colFeats: any[] = []
+      lastPosRef.current.forEach((p, icao) => {
+        const dt = Math.min((now - p.t) / 1000, 12) // seconds, clamp 12
+        // forward project along track at gs knots → degrees
+        let lat = p.lat, lng = p.lng
+        if (!p.ground && p.gs > 5) {
+          const distNm = p.gs * dt / 3600
+          const distDeg = distNm / 60
+          const rad = (p.track * Math.PI) / 180
+          lat = p.lat + Math.cos(rad) * distDeg
+          lng = p.lng + (Math.sin(rad) * distDeg) / Math.max(Math.cos(p.lat*Math.PI/180), 0.0001)
+        }
+        // Pulse emergency icons via icon-size? simpler: bump color brightness via separate layer would be heavy.
+        // Keep icon, but for emergency we'll oscillate via altitude column height visualisation instead.
+        planeFeats.push({
+          type: 'Feature', geometry: { type: 'Point', coordinates: [lng, lat] },
+          properties: { icao, track: p.track, icon: iconKey(p.color, p.heli, p.isSel), ground: p.ground },
+        })
+        if (!p.ground && p.altFt > 0) {
+          const d = 0.003
+          const ring = [
+            [lng - d, lat - d], [lng + d, lat - d],
+            [lng + d, lat + d], [lng - d, lat + d],
+            [lng - d, lat - d],
+          ]
+          let h = p.altFt * 0.3048
+          if (p.emergency) h *= 1 + 0.4 * Math.sin(pulse * 4)
+          colFeats.push({
+            type: 'Feature', geometry: { type: 'Polygon', coordinates: [ring] },
+            properties: { icao, color: p.color, h },
+          })
         }
       })
-      colSrc.setData({ type: 'FeatureCollection', features: cols } as any)
+      src.setData({ type: 'FeatureCollection', features: planeFeats } as any)
+      if (colSrc) colSrc.setData({ type: 'FeatureCollection', features: colFeats } as any)
+
+      // Chase camera: if chaseRef on, fly to selected plane current interpolated pos
+      if (chaseRef.current && selectedIcaoRef.current) {
+        const p = lastPosRef.current.get(selectedIcaoRef.current)
+        if (p) {
+          const dt = Math.min((now - p.t) / 1000, 12)
+          let lat = p.lat, lng = p.lng
+          if (!p.ground && p.gs > 5) {
+            const distNm = p.gs * dt / 3600
+            const distDeg = distNm / 60
+            const rad = (p.track * Math.PI) / 180
+            lat = p.lat + Math.cos(rad) * distDeg
+            lng = p.lng + (Math.sin(rad) * distDeg) / Math.max(Math.cos(p.lat*Math.PI/180), 0.0001)
+          }
+          m.jumpTo({ center: [lng, lat], bearing: p.track, pitch: 70, zoom: Math.max(m.getZoom(), 10.5) })
+        }
+      }
+      raf = requestAnimationFrame(step)
     }
-  }, [filtered, selected, mapReady])
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [mapReady])
 
   /* ---- Render trails ---- */
   useEffect(() => {
@@ -1044,6 +1096,7 @@ export default function FlightMap() {
             <Toggle on={showNight} onClick={()=>setShowNight(v=>!v)} label="Night" hint="N" />
             <Toggle on={showHeat} onClick={()=>setShowHeat(v=>!v)} label="Heat" hint="H" />
             <Toggle on={show3D} onClick={()=>setShow3D(v=>!v)} label="3D" />
+            <Toggle on={chase} onClick={()=>{ if(!selected){return} setChase(v=>{ const nv=!v; chaseRef.current=nv; if(nv){setShow3D(true)} return nv }) }} label="Chase" />
             <Toggle on={showList} onClick={()=>setShowList(v=>!v)} label="List" hint="L" />
             <Toggle on={showWatch} onClick={()=>setShowWatch(v=>!v)} label={`Watch${watchlist.length?` ${watchlist.length}`:''}`} />
             {compareList.length > 0 && (
@@ -1542,12 +1595,50 @@ export default function FlightMap() {
         </aside>
       )}
 
-      {/* Footer */}
-      <footer className="absolute bottom-3 left-3 md:left-4 z-10 pointer-events-none">
-        <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl px-2.5 py-1 text-[10px] uppercase tracking-widest text-slate-400 shadow-2xl">
-          8s refresh · /=search · esc · t·w·n·h·l·f · drag-rotate for 3D
-        </div>
-      </footer>
+      {/* Footer keybind hints — only when nothing selected (avoids ticker collision) */}
+      {!selected && (
+        <footer className="absolute bottom-12 left-3 md:left-4 z-10 pointer-events-none">
+          <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl px-2.5 py-1 text-[10px] uppercase tracking-widest text-slate-400 shadow-2xl">
+            8s refresh · /=search · esc · t·w·n·h·l·f · drag-rotate · select a plane then CHASE
+          </div>
+        </footer>
+      )}
+
+      {/* Live Leaderboard Ticker — scrolling bottom bar */}
+      {(() => {
+        const air = filtered.filter(f => !f.ground)
+        if (air.length === 0) return null
+        const fastest = [...air].sort((a,b)=>b.velocityKts-a.velocityKts)[0]
+        const highest = [...air].sort((a,b)=>b.altitudeFt-a.altitudeFt)[0]
+        const climbing = [...air].filter(f=>f.vertRate>0).sort((a,b)=>b.vertRate-a.vertRate)[0]
+        const descending = [...air].filter(f=>f.vertRate<0).sort((a,b)=>a.vertRate-b.vertRate)[0]
+        const emerg = filtered.filter(f=>f.emergency)[0]
+        const mil = filtered.filter(f=>f.military)[0]
+        const items: Array<{icon:string;label:string;value:string;color:string;flight:any}> = []
+        if (emerg) items.push({icon:'🚨', label:'EMERGENCY', value:`${emerg.callsign||emerg.icao} sq${emerg.squawk}`, color:'text-rose-400', flight:emerg})
+        items.push({icon:'⚡', label:'FASTEST', value:`${fastest.callsign||fastest.icao} ${Math.round(fastest.velocityKts)}kt`, color:'text-amber-400', flight:fastest})
+        items.push({icon:'⬆', label:'HIGHEST', value:`${highest.callsign||highest.icao} FL${Math.round(highest.altitudeFt/100)}`, color:'text-violet-400', flight:highest})
+        if (climbing) items.push({icon:'🚀', label:'CLIMB', value:`${climbing.callsign||climbing.icao} +${Math.round(climbing.vertRate)}fpm`, color:'text-emerald-400', flight:climbing})
+        if (descending) items.push({icon:'⬇', label:'DESCEND', value:`${descending.callsign||descending.icao} ${Math.round(descending.vertRate)}fpm`, color:'text-sky-400', flight:descending})
+        if (mil) items.push({icon:'🛡', label:'MIL', value:`${mil.callsign||mil.icao} ${mil.type||''}`, color:'text-orange-400', flight:mil})
+        return (
+          <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none overflow-hidden">
+            <div className="bg-gradient-to-t from-slate-950/95 via-slate-950/80 to-transparent pt-2 pb-2 pl-16 pr-3">
+              <div className="pointer-events-auto flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                <span className="text-[9px] uppercase tracking-widest text-slate-500 font-mono shrink-0 pr-2">LIVE</span>
+                {items.map((it, i) => (
+                  <button key={i} onClick={()=>{ setSelected(it.flight); setSelectedAirport(null); mapRef.current?.flyTo({center:[it.flight.lng, it.flight.lat], zoom:9, duration:1200}) }}
+                    className="shrink-0 flex items-center gap-1.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-full px-2.5 py-1 text-[10px] font-mono transition group">
+                    <span className="text-sm leading-none">{it.icon}</span>
+                    <span className="text-slate-500 uppercase tracking-wider">{it.label}</span>
+                    <span className={`${it.color} font-bold`}>{it.value}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Emergency squawk toasts */}
       {toasts.length > 0 && (
