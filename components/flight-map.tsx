@@ -182,10 +182,39 @@ export default function FlightMap() {
   const [follow, setFollow] = useState(false)
   const [altMin, setAltMin] = useState(0)
   const [altMax, setAltMax] = useState(50000)
+  const [spdMin, setSpdMin] = useState(0)
   const [onlyMil, setOnlyMil] = useState(false)
   const [onlyEmerg, setOnlyEmerg] = useState(false)
   const [hideGround, setHideGround] = useState(false)
+  const [airlinePrefix, setAirlinePrefix] = useState('')
   const [listSort, setListSort] = useState<'callsign'|'alt'|'spd'>('alt')
+  type Units = { alt: 'ft'|'m'; spd: 'kt'|'mph'|'kmh' }
+  const [units, setUnits] = useState<Units>(() => {
+    if (typeof window === 'undefined') return { alt: 'ft', spd: 'kt' }
+    try { return JSON.parse(localStorage.getItem('ft-units-v1') || '') as Units } catch { return { alt: 'ft', spd: 'kt' } }
+  })
+  useEffect(() => { try { localStorage.setItem('ft-units-v1', JSON.stringify(units)) } catch {} }, [units])
+  const [colorBy, setColorBy] = useState<'alt'|'spd'|'cat'|'mil'>(() => {
+    if (typeof window === 'undefined') return 'alt'
+    return (localStorage.getItem('ft-colorby-v1') as any) || 'alt'
+  })
+  useEffect(() => { try { localStorage.setItem('ft-colorby-v1', colorBy) } catch {} }, [colorBy])
+  const [mapStyle, setMapStyle] = useState<'dark'|'light'|'sat'>(() => {
+    if (typeof window === 'undefined') return 'dark'
+    return (localStorage.getItem('ft-mapstyle-v1') as any) || 'dark'
+  })
+  const [showHelp, setShowHelp] = useState(false)
+  const [showStyles, setShowStyles] = useState(false)
+  const [audioOn, setAudioOn] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('ft-audio-v1') === '1'
+  })
+  useEffect(() => { try { localStorage.setItem('ft-audio-v1', audioOn ? '1' : '0') } catch {} }, [audioOn])
+  const audioOnRef = useRef(audioOn); useEffect(() => { audioOnRef.current = audioOn }, [audioOn])
+  const [userLoc, setUserLoc] = useState<{lat:number; lng:number} | null>(null)
+  const [emergLog, setEmergLog] = useState<{icao:string; cs:string; sq:string; lat:number; lng:number; t:number}[]>([])
+  const [showEmergLog, setShowEmergLog] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   const selectedIcaoRef = useRef<string | null>(null)
   const initialFocusRef = useRef<string | null>(null)
@@ -457,6 +486,9 @@ export default function FlightMap() {
     const q = new URLSearchParams(window.location.hash.replace(/^#/, ''))
     if (selected) q.set('icao', selected.icao); else q.delete('icao')
     window.history.replaceState(null, '', `#${q.toString()}`)
+    if (typeof document !== 'undefined') {
+      document.title = selected ? `${selected.callsign} · ${selected.type} · Flight Tracker` : 'Flight Tracker'
+    }
   }, [selected])
 
   /* ---- 3D pitch + terrain + extrusions toggle ---- */
@@ -686,19 +718,30 @@ export default function FlightMap() {
   }, [fetchOnce])
 
   /* ---- Filtered list ---- */
+  const watchSet = useMemo(() => new Set(watchlist.map(w => w.toUpperCase())), [watchlist])
+  const isWatched = useCallback((f: Flight) => {
+    const cs = f.callsign.replace(/\s+/g,'').toUpperCase()
+    const reg = f.registration.replace(/\s+/g,'').toUpperCase()
+    if (watchSet.has(cs) || watchSet.has(reg) || watchSet.has(f.icao.toUpperCase())) return true
+    for (const w of watchSet) if (cs.startsWith(w) && w.length >= 3) return true
+    return false
+  }, [watchSet])
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
+    const ap = airlinePrefix.trim().toUpperCase()
     return flights.filter(f => {
       if (hideGround && f.ground) return false
       if (onlyMil && !f.military) return false
       if (onlyEmerg && !f.emergency) return false
       if (!f.ground && (f.altitudeFt < altMin || f.altitudeFt > altMax)) return false
+      if (spdMin > 0 && f.velocityKts < spdMin) return false
+      if (ap && !f.callsign.toUpperCase().startsWith(ap)) return false
       if (!q) return true
       return f.callsign.toLowerCase().includes(q) || f.registration.toLowerCase().includes(q) ||
              f.type.toLowerCase().includes(q) || f.operator.toLowerCase().includes(q) ||
              f.icao.includes(q) || f.squawk.includes(q)
     })
-  }, [flights, query, hideGround, onlyMil, onlyEmerg, altMin, altMax])
+  }, [flights, query, hideGround, onlyMil, onlyEmerg, altMin, altMax, spdMin, airlinePrefix])
 
   /* ---- Render planes (symbol layer) + 60fps dead-reckon interpolation ---- */
   // Snapshot of last-known authoritative positions per icao
@@ -711,7 +754,13 @@ export default function FlightMap() {
     for (const f of filtered) {
       const isSel = selected?.icao === f.icao
       const heli = f.category === 'A7'
-      const color = f.emergency ? '#f43f5e' : f.ground ? '#64748b' : isSel ? '#fbbf24' : altColor(f.altitudeFt)
+      const watched = isWatched(f)
+      let baseColor: string
+      if (colorBy === 'spd') baseColor = speedColor(f.velocityKts)
+      else if (colorBy === 'cat') baseColor = catColor(f.category)
+      else if (colorBy === 'mil') baseColor = f.military ? '#fb923c' : altColor(f.altitudeFt)
+      else baseColor = altColor(f.altitudeFt)
+      const color = f.emergency ? '#f43f5e' : f.ground ? '#64748b' : isSel ? '#fbbf24' : watched ? '#22d3ee' : isNotable(f.callsign) ? '#a78bfa' : baseColor
       next.set(f.icao, {
         lng: f.lng, lat: f.lat, t: now,
         track: f.track || 0, gs: f.velocityKts || 0,
@@ -720,7 +769,7 @@ export default function FlightMap() {
       })
     }
     lastPosRef.current = next
-  }, [filtered, selected, mapReady])
+  }, [filtered, selected, mapReady, colorBy, isWatched])
 
   // RAF loop: dead-reckon current position from last + velocity*elapsed
   useEffect(() => {
@@ -884,18 +933,21 @@ export default function FlightMap() {
     }
     if (fresh.length) {
       setToasts(prev => [...fresh, ...prev].slice(0, 5))
-      try {
-        const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
-        if (Ctx) {
-          const ctx = new Ctx()
-          const o = ctx.createOscillator(); const g = ctx.createGain()
-          o.connect(g); g.connect(ctx.destination)
-          o.frequency.value = 880; o.type = 'sine'
-          g.gain.setValueAtTime(0.18, ctx.currentTime)
-          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45)
-          o.start(); o.stop(ctx.currentTime + 0.5)
-        }
-      } catch {}
+      setEmergLog(prev => [...fresh, ...prev].slice(0, 20))
+      if (audioOnRef.current) {
+        try {
+          const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
+          if (Ctx) {
+            const ctx = new Ctx()
+            const o = ctx.createOscillator(); const g = ctx.createGain()
+            o.connect(g); g.connect(ctx.destination)
+            o.frequency.value = 880; o.type = 'sine'
+            g.gain.setValueAtTime(0.18, ctx.currentTime)
+            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45)
+            o.start(); o.stop(ctx.currentTime + 0.5)
+          }
+        } catch {}
+      }
       setTimeout(() => {
         setToasts(prev => prev.filter(t => !fresh.find(f => f.id === t.id)))
       }, 12000)
@@ -926,18 +978,20 @@ export default function FlightMap() {
     }
     if (fresh.length) {
       setToasts(prev => [...fresh, ...prev].slice(0, 5))
-      try {
-        const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
-        if (Ctx) {
-          const ctx = new Ctx()
-          const o = ctx.createOscillator(); const g = ctx.createGain()
-          o.connect(g); g.connect(ctx.destination)
-          o.frequency.value = 660; o.type = 'sine'
-          g.gain.setValueAtTime(0.12, ctx.currentTime)
-          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
-          o.start(); o.stop(ctx.currentTime + 0.35)
-        }
-      } catch {}
+      if (audioOnRef.current) {
+        try {
+          const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
+          if (Ctx) {
+            const ctx = new Ctx()
+            const o = ctx.createOscillator(); const g = ctx.createGain()
+            o.connect(g); g.connect(ctx.destination)
+            o.frequency.value = 660; o.type = 'sine'
+            g.gain.setValueAtTime(0.12, ctx.currentTime)
+            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
+            o.start(); o.stop(ctx.currentTime + 0.35)
+          }
+        } catch {}
+      }
       setTimeout(() => setToasts(prev => prev.filter(t => !fresh.find(f => f.id === t.id))), 15000)
     }
     const visibleIcaos = new Set(flights.map(f => 'watch:' + f.icao))
@@ -1119,10 +1173,41 @@ export default function FlightMap() {
       else if (e.key.toLowerCase() === 'h') setShowHeat(v => !v)
       else if (e.key.toLowerCase() === 'l') setShowList(v => !v)
       else if (e.key.toLowerCase() === 'f' && selected) setFollow(v => !v)
+      else if (e.key === '?' || (e.shiftKey && e.key === '/')) { e.preventDefault(); setShowHelp(v => !v) }
+      else if (e.key.toLowerCase() === 'm') setShowStyles(v => !v)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [selected])
+
+  /* ---- Map style switcher ---- */
+  useEffect(() => {
+    const m = mapRef.current; if (!m || !mapReady) return
+    const tileSets: Record<string, string[]> = {
+      dark: [
+        'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+        'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+      ],
+      light: [
+        'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+        'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+        'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+        'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+      ],
+      sat: [
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      ],
+    }
+    try {
+      if (m.getLayer('basemap')) m.removeLayer('basemap')
+      if (m.getSource('carto-dark')) m.removeSource('carto-dark')
+      m.addSource('carto-dark', { type: 'raster', tiles: tileSets[mapStyle], tileSize: 256 } as any)
+      m.addLayer({ id: 'basemap', type: 'raster', source: 'carto-dark' }, m.getLayer('hillshade') ? 'hillshade' : undefined)
+      try { localStorage.setItem('ft-mapstyle-v1', mapStyle) } catch {}
+    } catch {}
+  }, [mapStyle, mapReady])
 
   /* ---- Sorted list ---- */
   const sortedList = useMemo(() => {
@@ -1178,12 +1263,31 @@ export default function FlightMap() {
             <Toggle on={showFilters} onClick={()=>setShowFilters(v=>!v)} label="Filter" />
             <Toggle on={showStats} onClick={()=>setShowStats(v=>!v)} label="Stats" />
           </div>
-          <div className="bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 py-2 shadow-2xl items-center gap-2 w-44 sm:w-60 hidden sm:flex">
+          <div className="relative hidden sm:block">
+          <div className="bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 py-2 shadow-2xl items-center gap-2 w-44 sm:w-60 flex">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-slate-400 shrink-0"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/><path d="m20 20-3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-            <input id="search-input" value={query} onChange={e=>setQuery(e.target.value)}
+            <input id="search-input" value={query} onChange={e=>{setQuery(e.target.value); setSearchOpen(true)}}
+                   onFocus={()=>setSearchOpen(true)} onBlur={()=>setTimeout(()=>setSearchOpen(false), 200)}
                    placeholder="Search (press /)"
                    className="bg-transparent text-sm placeholder:text-slate-500 outline-none flex-1 text-slate-100" />
             {query && <button onClick={()=>setQuery('')} className="text-slate-500 hover:text-slate-200 text-xs">✕</button>}
+          </div>
+          {searchOpen && query.trim().length >= 1 && (
+            <div className="absolute top-full mt-1 right-0 w-64 max-h-72 overflow-y-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl z-30">
+              {filtered.slice(0, 12).map(f => (
+                <button key={f.icao} onMouseDown={()=>{ setSelected(f); flyToLatLng(f.lat, f.lng, Math.max(mapRef.current?.getZoom() ?? 0, 8)); setSearchOpen(false) }}
+                  className="w-full text-left px-3 py-2 hover:bg-slate-800/60 border-b border-slate-900 last:border-0 flex items-center gap-2">
+                  <span className="text-xs">{regFlag(f.registration)?.flag || '\u2708'}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-mono text-xs font-bold text-slate-100 truncate">{f.callsign}</div>
+                    <div className="text-[10px] text-slate-500 truncate">{f.registration} · {f.type}</div>
+                  </div>
+                  <div className="text-[10px] font-mono" style={{color: altColor(f.altitudeFt)}}>{f.ground?'GND':(f.altitudeFt/1000).toFixed(0)+'k'}</div>
+                </button>
+              ))}
+              {filtered.length === 0 && <div className="px-3 py-4 text-xs text-slate-500 text-center">No matches</div>}
+            </div>
+          )}
           </div>
           {/* Mobile: search icon */}
           <button onClick={()=>setMobileSearch(v=>!v)} aria-label="Search"
@@ -1263,9 +1367,72 @@ export default function FlightMap() {
                 <input type="range" min={0} max={50000} step={1000} value={altMax} onChange={e=>setAltMax(Math.max(+e.target.value, altMin+1000))} className="flex-1 accent-sky-500" />
               </div>
             </div>
+            <div>
+              <div className="flex justify-between text-[10px] uppercase tracking-widest text-slate-500 mb-1">
+                <span>Min ground speed (kt)</span><span className="font-mono text-slate-300">{spdMin}</span>
+              </div>
+              <input type="range" min={0} max={600} step={10} value={spdMin} onChange={e=>setSpdMin(+e.target.value)} className="w-full accent-sky-500" />
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Airline / callsign prefix</div>
+              <input value={airlinePrefix} onChange={e=>setAirlinePrefix(e.target.value)} placeholder="e.g. UAL, BAW, SWA"
+                className="w-full bg-slate-900/70 border border-slate-800 rounded-lg px-2 py-1 text-xs font-mono uppercase placeholder-slate-600 focus:outline-none focus:border-sky-600" />
+            </div>
             <CheckRow label="Hide on-ground" checked={hideGround} onChange={setHideGround} />
             <CheckRow label="Only military" checked={onlyMil} onChange={setOnlyMil} />
             <CheckRow label="Only emergency squawks (7500/7600/7700)" checked={onlyEmerg} onChange={setOnlyEmerg} />
+            <div className="pt-2 border-t border-slate-800">
+              <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Color planes by</div>
+              <div className="flex gap-1">
+                {([['alt','Altitude'],['spd','Speed'],['cat','Category'],['mil','Military']] as const).map(([k,l]) => (
+                  <button key={k} onClick={()=>setColorBy(k)}
+                    className={`flex-1 px-2 py-1.5 rounded-md text-[10px] uppercase tracking-wider font-semibold border ${colorBy===k?'bg-sky-500 text-slate-950 border-sky-400':'bg-slate-900/70 text-slate-300 border-slate-800'}`}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Units</div>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <div className="text-[9px] text-slate-600 mb-0.5">Altitude</div>
+                  <div className="flex gap-1">
+                    {(['ft','m'] as const).map(u => (
+                      <button key={u} onClick={()=>setUnits(prev=>({...prev, alt:u}))}
+                        className={`flex-1 px-2 py-1 rounded text-[10px] font-mono ${units.alt===u?'bg-sky-500 text-slate-950':'bg-slate-900/70 text-slate-300 border border-slate-800'}`}>{u}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="text-[9px] text-slate-600 mb-0.5">Speed</div>
+                  <div className="flex gap-1">
+                    {(['kt','mph','kmh'] as const).map(u => (
+                      <button key={u} onClick={()=>setUnits(prev=>({...prev, spd:u}))}
+                        className={`flex-1 px-2 py-1 rounded text-[10px] font-mono ${units.spd===u?'bg-sky-500 text-slate-950':'bg-slate-900/70 text-slate-300 border border-slate-800'}`}>{u}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <CheckRow label="Audio chime on emergency / watch alerts" checked={audioOn} onChange={setAudioOn} />
+            <div className="pt-2 border-t border-slate-800 flex gap-2">
+              <button onClick={()=>{
+                if (!navigator.geolocation) return
+                navigator.geolocation.getCurrentPosition(p => {
+                  const loc = { lat: p.coords.latitude, lng: p.coords.longitude }
+                  setUserLoc(loc); flyToLatLng(loc.lat, loc.lng, 9)
+                }, () => {}, { enableHighAccuracy: false, timeout: 8000 })
+              }} className="flex-1 text-[10px] uppercase tracking-widest bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg py-2">
+                {userLoc ? '✓ Located' : 'Use my location'}
+              </button>
+              <button onClick={()=>{
+                const rows = [['callsign','registration','type','operator','icao','lat','lng','alt_ft','speed_kt','track','squawk','ground','emergency']]
+                for (const f of filtered) rows.push([f.callsign, f.registration, f.type, f.operator, f.icao, String(f.lat), String(f.lng), String(Math.round(f.altitudeFt)), String(Math.round(f.velocityKts)), String(Math.round(f.track)), f.squawk, String(f.ground), String(f.emergency)])
+                const csv = rows.map(r => r.map(c => /[",\n]/.test(c)?`"${c.replace(/"/g,'""')}"`:c).join(',')).join('\n')
+                const blob = new Blob([csv], { type: 'text/csv' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a'); a.href = url; a.download = `flights-${Date.now()}.csv`; a.click(); URL.revokeObjectURL(url)
+              }} className="flex-1 text-[10px] uppercase tracking-widest bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-lg py-2">↓ CSV</button>
+            </div>
           </div>
         </div>
       )}
@@ -1324,7 +1491,12 @@ export default function FlightMap() {
                   {selected.emergency ? <span className="text-rose-400 font-bold">⚠ Emergency · {selected.squawk}</span> :
                    selected.ground ? 'On ground' : 'In flight'}
                 </div>
-                <div className="text-2xl font-bold tracking-tight mt-0.5 font-mono">{selected.callsign}</div>
+                <div className="text-2xl font-bold tracking-tight mt-0.5 font-mono flex items-center gap-2">
+                  {(() => { const fl = regFlag(selected.registration); return fl ? <span className="text-xl leading-none" title={fl.code}>{fl.flag}</span> : null })()}
+                  <span>{selected.callsign}</span>
+                  {isNotable(selected.callsign) && <span className="text-[9px] bg-violet-500/20 text-violet-300 border border-violet-500/40 rounded px-1.5 py-0.5 uppercase tracking-wider">Notable</span>}
+                  {isWatched(selected) && <span className="text-[9px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded px-1.5 py-0.5 uppercase tracking-wider">Watched</span>}
+                </div>
                 <div className="text-xs text-slate-400 mt-1">{selected.registration} · {selected.type}</div>
                 {selected.operator !== '—' && <div className="text-xs text-slate-500 mt-0.5">{selected.operator}</div>}
                 {(() => {
@@ -1397,17 +1569,27 @@ export default function FlightMap() {
             })()}
 
             <div className="mt-4 grid grid-cols-2 gap-2.5 text-sm">
-              <Field k="Altitude"   v={selected.ground ? 'Ground' : `${Math.round(selected.altitudeFt).toLocaleString()} ft`} />
+              <Field k="Altitude"   v={selected.ground ? 'Ground' : fmtAlt(selected.altitudeFt, units.alt)} />
               <Field k="V/Speed"    v={selected.vertRate ? `${selected.vertRate>0?'▲':'▼'} ${Math.abs(Math.round(selected.vertRate)).toLocaleString()} fpm` : '—'}
                      accent={selected.vertRate>200?'text-emerald-400':selected.vertRate<-200?'text-rose-400':undefined} />
-              <Field k="Ground Spd" v={`${Math.round(selected.velocityKts)} kt`} />
-              <Field k="IAS / Mach" v={selected.ias || selected.mach ? `${selected.ias?Math.round(selected.ias)+' kt':'—'} / ${selected.mach?selected.mach.toFixed(2):'—'}` : '—'} />
+              <Field k="Ground Spd" v={fmtSpd(selected.velocityKts, units.spd)} />
+              <Field k="IAS / Mach" v={selected.ias || selected.mach ? `${selected.ias?fmtSpd(selected.ias, units.spd):'—'} / ${selected.mach?selected.mach.toFixed(2):'—'}` : '—'} />
               <Field k="Heading"    v={`${Math.round(selected.track)}° ${compass(selected.track)}`} />
               <Field k="Squawk"     v={selected.squawk || '—'} accent={selected.emergency ? 'text-rose-400' : undefined} />
-              <Field k="Wind"       v={selected.windKts ? `${Math.round(selected.windDir)}° @ ${Math.round(selected.windKts)} kt` : '—'} />
+              <Field k="Wind"       v={selected.windKts ? `${Math.round(selected.windDir)}° @ ${fmtSpd(selected.windKts, units.spd)}` : '—'} />
               <Field k="OAT"        v={Number.isFinite(selected.oat) ? `${Math.round(selected.oat)}°C` : '—'} />
-              <Field k="A/P Target" v={selected.navAlt ? `${Math.round(selected.navAlt).toLocaleString()} ft` : '—'} />
+              <Field k="A/P Target" v={selected.navAlt ? fmtAlt(selected.navAlt, units.alt) : '—'} />
               <Field k="ICAO"       v={selected.icao.toUpperCase()} />
+              {userLoc && (() => {
+                const R = 3440.065, toRad = (x:number)=>x*Math.PI/180
+                const dLat = toRad(selected.lat - userLoc.lat), dLon = toRad(selected.lng - userLoc.lng)
+                const s = Math.sin(dLat/2)**2 + Math.cos(toRad(userLoc.lat))*Math.cos(toRad(selected.lat))*Math.sin(dLon/2)**2
+                const distNm = 2*R*Math.asin(Math.sqrt(s))
+                const y = Math.sin(toRad(selected.lng-userLoc.lng))*Math.cos(toRad(selected.lat))
+                const x = Math.cos(toRad(userLoc.lat))*Math.sin(toRad(selected.lat)) - Math.sin(toRad(userLoc.lat))*Math.cos(toRad(selected.lat))*Math.cos(toRad(selected.lng-userLoc.lng))
+                const bearing = (Math.atan2(y,x)*180/Math.PI + 360) % 360
+                return <Field k="From you" v={`${Math.round(distNm).toLocaleString()} nm · ${Math.round(bearing)}° ${compass(bearing)}`} wide />
+              })()}
               <Field k="Position"   v={`${selected.lat.toFixed(3)}, ${selected.lng.toFixed(3)}`} wide />
             </div>
 
@@ -2053,6 +2235,86 @@ export default function FlightMap() {
           })}
         </div>
       )}
+
+      {/* Help / shortcuts modal */}
+      {showHelp && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4" onClick={()=>setShowHelp(false)}>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-md w-full shadow-2xl" onClick={e=>e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold tracking-widest uppercase text-sky-400">Keyboard Shortcuts</h3>
+              <button onClick={()=>setShowHelp(false)} className="text-slate-500 hover:text-slate-200 text-lg leading-none">×</button>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+              {[['/', 'Focus search'],['Esc','Close panel / search'],['L','Toggle list'],['F','Toggle filters'],['W','Watchlist'],['S','Stats'],['T','Trails'],['H','Heat'],['N','Night'],['3','3D view'],['C','Chase cam'],['M','Map style'],['?','This help']].map(([k,d]) => (
+                <div key={k} className="contents">
+                  <kbd className="font-mono text-slate-300 bg-slate-800 px-1.5 py-0.5 rounded text-[10px] justify-self-start">{k}</kbd>
+                  <span className="text-slate-400">{d}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Map style chooser */}
+      {showStyles && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4" onClick={()=>setShowStyles(false)}>
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-sm w-full shadow-2xl" onClick={e=>e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold tracking-widest uppercase text-sky-400">Map Style</h3>
+              <button onClick={()=>setShowStyles(false)} className="text-slate-500 hover:text-slate-200 text-lg leading-none">×</button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {([['dark','Dark','#0f172a'],['light','Light','#e2e8f0'],['sat','Satellite','#1e3a2b']] as const).map(([k,l,bg]) => (
+                <button key={k} onClick={()=>{ setMapStyle(k); setShowStyles(false) }}
+                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border ${mapStyle===k?'border-sky-400 ring-2 ring-sky-400/30':'border-slate-800'} hover:border-slate-600`}>
+                  <div className="w-full h-12 rounded-md" style={{background:bg}} />
+                  <span className={`text-[10px] font-bold uppercase tracking-wider ${mapStyle===k?'text-sky-400':'text-slate-300'}`}>{l}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Emergency log drawer */}
+      {showEmergLog && (
+        <div className="absolute right-3 top-20 z-40 w-72 bg-slate-900/95 backdrop-blur-xl border border-rose-900/60 rounded-xl shadow-2xl">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
+            <span className="text-[10px] font-bold tracking-widest uppercase text-rose-400">Recent Emergencies</span>
+            <button onClick={()=>setShowEmergLog(false)} className="text-slate-500 hover:text-slate-200 text-sm leading-none">×</button>
+          </div>
+          <div className="max-h-72 overflow-y-auto">
+            {emergLog.length === 0 ? (
+              <div className="px-3 py-6 text-center text-[11px] text-slate-500">No emergencies this session.</div>
+            ) : emergLog.map((e,i) => (
+              <button key={`${e.icao}-${e.t}-${i}`} onClick={()=>{
+                const f = flightsRef.current.find(x => x.icao === e.icao)
+                if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 9) } else { flyToLatLng(e.lat, e.lng, 9) }
+                setShowEmergLog(false)
+              }} className="w-full text-left px-3 py-2 border-b border-slate-800/60 hover:bg-rose-950/30">
+                <div className="flex items-baseline justify-between">
+                  <span className="font-mono text-xs text-rose-300 font-bold">{e.cs || e.icao.toUpperCase()}</span>
+                  <span className="font-mono text-[10px] text-slate-500">SQ {e.sq}</span>
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5">{new Date(e.t).toLocaleTimeString()}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Floating utility buttons (bottom-right) */}
+      <div className="absolute bottom-4 right-4 z-30 flex flex-col gap-1.5">
+        <button onClick={()=>setShowStyles(true)} title="Map style (m)"
+          className="w-9 h-9 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-700 text-sm font-bold shadow-xl">◐</button>
+        <button onClick={()=>setShowEmergLog(v=>!v)} title="Recent emergencies"
+          className={`relative w-9 h-9 rounded-lg bg-slate-900/90 backdrop-blur border text-sm font-bold shadow-xl ${emergLog.length?'border-rose-700 text-rose-400':'border-slate-800 text-slate-500'}`}>
+          ⚠{emergLog.length>0 && <span className="absolute -top-1 -right-1 bg-rose-500 text-slate-950 text-[9px] font-mono rounded-full w-4 h-4 flex items-center justify-center">{emergLog.length}</span>}
+        </button>
+        <button onClick={()=>setShowHelp(true)} title="Help (?)"
+          className="w-9 h-9 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-700 text-sm font-bold shadow-xl">?</button>
+      </div>
     </div>
   )
 }
@@ -2105,6 +2367,68 @@ function altColor(ft: number): string {
   if (ft < 42000)  return '#38bdf8'
   return '#a78bfa'
 }
+function speedColor(kt: number): string {
+  if (kt < 50) return '#64748b'
+  if (kt < 150) return '#f43f5e'
+  if (kt < 300) return '#f97316'
+  if (kt < 450) return '#facc15'
+  if (kt < 550) return '#22d3ee'
+  return '#a78bfa'
+}
+function catColor(cat: string): string {
+  if (cat === 'A7') return '#10b981'        // heli
+  if (cat === 'B1') return '#a78bfa'        // glider
+  if (['A5','A6'].includes(cat)) return '#38bdf8' // heavy/highperf
+  if (['A1','A2'].includes(cat)) return '#facc15' // light/small
+  if (['A3','A4'].includes(cat)) return '#f97316' // large
+  return '#94a3b8'
+}
+const REG_FLAG: Array<[RegExp, string, string]> = [
+  [/^N/, 'US', '\u{1F1FA}\u{1F1F8}'],
+  [/^G-/, 'GB', '\u{1F1EC}\u{1F1E7}'],
+  [/^D-/, 'DE', '\u{1F1E9}\u{1F1EA}'],
+  [/^F-/, 'FR', '\u{1F1EB}\u{1F1F7}'],
+  [/^C-/, 'CA', '\u{1F1E8}\u{1F1E6}'],
+  [/^JA/, 'JP', '\u{1F1EF}\u{1F1F5}'],
+  [/^VH-/, 'AU', '\u{1F1E6}\u{1F1FA}'],
+  [/^VT-/, 'IN', '\u{1F1EE}\u{1F1F3}'],
+  [/^EC-/, 'ES', '\u{1F1EA}\u{1F1F8}'],
+  [/^EI-/, 'IE', '\u{1F1EE}\u{1F1EA}'],
+  [/^OO-/, 'BE', '\u{1F1E7}\u{1F1EA}'],
+  [/^PH-/, 'NL', '\u{1F1F3}\u{1F1F1}'],
+  [/^LN-/, 'NO', '\u{1F1F3}\u{1F1F4}'],
+  [/^SE-/, 'SE', '\u{1F1F8}\u{1F1EA}'],
+  [/^A6-/, 'AE', '\u{1F1E6}\u{1F1EA}'],
+  [/^A7-/, 'QA', '\u{1F1F6}\u{1F1E6}'],
+  [/^B-/, 'CN', '\u{1F1E8}\u{1F1F3}'],
+  [/^HL/, 'KR', '\u{1F1F0}\u{1F1F7}'],
+  [/^(PR-|PT-|PP-)/, 'BR', '\u{1F1E7}\u{1F1F7}'],
+  [/^(XA-|XB-|XC-)/, 'MX', '\u{1F1F2}\u{1F1FD}'],
+  [/^(I-|I)/, 'IT', '\u{1F1EE}\u{1F1F9}'],
+  [/^(OE-)/, 'AT', '\u{1F1E6}\u{1F1F9}'],
+  [/^(HB-)/, 'CH', '\u{1F1E8}\u{1F1ED}'],
+  [/^(CC-)/, 'CL', '\u{1F1E8}\u{1F1F1}'],
+  [/^(LV-)/, 'AR', '\u{1F1E6}\u{1F1F7}'],
+  [/^(ZK-)/, 'NZ', '\u{1F1F3}\u{1F1FF}'],
+  [/^(ZS-)/, 'ZA', '\u{1F1FF}\u{1F1E6}'],
+]
+function regFlag(reg: string): { flag: string; code: string } | null {
+  const r = (reg || '').toUpperCase()
+  for (const [re, code, flag] of REG_FLAG) if (re.test(r)) return { flag, code }
+  return null
+}
+function fmtAlt(ft: number, u: 'ft'|'m'): string {
+  if (u === 'm') return `${Math.round(ft * 0.3048).toLocaleString()} m`
+  return `${Math.round(ft).toLocaleString()} ft`
+}
+function fmtSpd(kt: number, u: 'kt'|'mph'|'kmh'): string {
+  if (u === 'mph') return `${Math.round(kt * 1.15078)} mph`
+  if (u === 'kmh') return `${Math.round(kt * 1.852)} km/h`
+  return `${Math.round(kt)} kt`
+}
+const NOTABLE_RE = /^(AF1|AIRFORCE1|FORCE0?1|SAM\d+|SPAR\d+|RCH\d+|JANET\d*|VENUS\d+|GAF\d+|BLKHWK\d*|MUSTER\d*)$/i
+function isNotable(cs: string): boolean { return NOTABLE_RE.test((cs || '').replace(/\s+/g, '')) }
+
 function PlaneLogo() {
   return (
     <div className="size-9 rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 flex items-center justify-center shadow-lg shadow-sky-500/30">
