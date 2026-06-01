@@ -169,6 +169,7 @@ export default function FlightMap() {
   const [showCompare, setShowCompare] = useState(false)
   const knownWatchRef = useRef<Set<string>>(new Set())
   const [showFilters, setShowFilters] = useState(false)
+  const [showStats, setShowStats] = useState(false)
   const [follow, setFollow] = useState(false)
   const [altMin, setAltMin] = useState(0)
   const [altMax, setAltMax] = useState(50000)
@@ -1103,6 +1104,7 @@ export default function FlightMap() {
               <Toggle on={showCompare} onClick={()=>setShowCompare(v=>!v)} label={`⇄ ${compareList.length}`} />
             )}
             <Toggle on={showFilters} onClick={()=>setShowFilters(v=>!v)} label="Filter" />
+            <Toggle on={showStats} onClick={()=>setShowStats(v=>!v)} label="Stats" />
           </div>
           <div className="bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 py-2 shadow-2xl flex items-center gap-2 w-44 sm:w-60">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-slate-400 shrink-0"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/><path d="m20 20-3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -1594,6 +1596,155 @@ export default function FlightMap() {
           </div>
         </aside>
       )}
+
+      {/* Stats Dashboard */}
+      {showStats && (() => {
+        // Top operators
+        const opCounts = new Map<string, number>()
+        for (const f of filtered) { const k = (f.operator||'—').trim(); if(!k||k==='—') continue; opCounts.set(k,(opCounts.get(k)||0)+1) }
+        const topOps = [...opCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6)
+        // Aircraft type
+        const typeCounts = new Map<string, number>()
+        for (const f of filtered) { const k = (f.type||'').trim(); if(!k) continue; typeCounts.set(k,(typeCounts.get(k)||0)+1) }
+        const topTypes = [...typeCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6)
+        // Country (first 3 chars of icao24 hex → country, complex; fallback: registration prefix)
+        const countryCounts = new Map<string, number>()
+        for (const f of filtered) {
+          const r = (f.registration||'').toUpperCase()
+          let cc = '—'
+          if (r.startsWith('N')) cc='🇺🇸 US'
+          else if (r.startsWith('G-')) cc='🇬🇧 UK'
+          else if (r.startsWith('D-')) cc='🇩🇪 DE'
+          else if (r.startsWith('F-')) cc='🇫🇷 FR'
+          else if (r.startsWith('C-')) cc='🇨🇦 CA'
+          else if (r.startsWith('JA')) cc='🇯🇵 JP'
+          else if (r.startsWith('VH-')) cc='🇦🇺 AU'
+          else if (r.startsWith('VT-')) cc='🇮🇳 IN'
+          else if (r.startsWith('EC-')) cc='🇪🇸 ES'
+          else if (r.startsWith('EI-')) cc='🇮🇪 IE'
+          else if (r.startsWith('OO-')) cc='🇧🇪 BE'
+          else if (r.startsWith('PH-')) cc='🇳🇱 NL'
+          else if (r.startsWith('LN-')) cc='🇳🇴 NO'
+          else if (r.startsWith('SE-')) cc='🇸🇪 SE'
+          else if (r.startsWith('A6-')) cc='🇦🇪 AE'
+          else if (r.startsWith('B-')) cc='🇨🇳 CN'
+          else if (r.startsWith('HL')) cc='🇰🇷 KR'
+          else if (r.startsWith('PR-')||r.startsWith('PT-')||r.startsWith('PP-')) cc='🇧🇷 BR'
+          else if (r.startsWith('XA-')||r.startsWith('XB-')) cc='🇲🇽 MX'
+          if (cc!=='—') countryCounts.set(cc,(countryCounts.get(cc)||0)+1)
+        }
+        const topCountries = [...countryCounts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6)
+        // Altitude buckets
+        const bands = [
+          { l: 'GND', min:-1, max:1 },
+          { l: '<10k', min:1, max:10000 },
+          { l: '10-20k', min:10000, max:20000 },
+          { l: '20-30k', min:20000, max:30000 },
+          { l: '30-40k', min:30000, max:40000 },
+          { l: '40k+', min:40000, max:99999 },
+        ].map(b=>{
+          const n = filtered.filter(f=> b.l==='GND'? f.ground : (!f.ground && f.altitudeFt>=b.min && f.altitudeFt<b.max)).length
+          return { ...b, n }
+        })
+        const maxBand = Math.max(1, ...bands.map(b=>b.n))
+        // Busiest airport in view (by proximity to flights within 25 nm)
+        const apCounts = new Map<string, {ap: typeof visibleAirports[0], n:number}>()
+        for (const f of filtered.filter(x=>!x.ground)) {
+          let best: typeof visibleAirports[0] | null = null
+          let bestD = 25 // nm
+          for (const ap of visibleAirports) {
+            const dLat=(f.lat-ap.lat)*60, dLon=(f.lng-ap.lon)*60*Math.cos(ap.lat*Math.PI/180)
+            const d = Math.sqrt(dLat*dLat+dLon*dLon)
+            if (d<bestD) { bestD=d; best=ap }
+          }
+          if (best) {
+            const k = best.i
+            const cur = apCounts.get(k)||{ap:best,n:0}; cur.n++; apCounts.set(k,cur)
+          }
+        }
+        const topAirports = [...apCounts.values()].sort((a,b)=>b.n-a.n).slice(0,5)
+        // Avg speed/alt
+        const air = filtered.filter(f=>!f.ground)
+        const avgAlt = air.length? Math.round(air.reduce((s,f)=>s+f.altitudeFt,0)/air.length):0
+        const avgSpd = air.length? Math.round(air.reduce((s,f)=>s+f.velocityKts,0)/air.length):0
+        const heavy = filtered.filter(f=>['A5','A6'].includes(f.category||'')).length
+        const heli = filtered.filter(f=>f.category==='A7').length
+        const mil = filtered.filter(f=>f.military).length
+
+        const Bar = ({label, n, max, color='bg-sky-500'}:{label:string;n:number;max:number;color?:string}) => (
+          <div className="flex items-center gap-2 text-[11px]">
+            <span className="w-16 shrink-0 text-slate-400 font-mono">{label}</span>
+            <div className="flex-1 h-4 bg-slate-900 rounded overflow-hidden relative">
+              <div className={`h-full ${color} transition-all`} style={{width:`${Math.max(2,(n/max)*100)}%`}}/>
+              <span className="absolute inset-0 flex items-center justify-end pr-1.5 font-mono text-[10px] text-white drop-shadow">{n}</span>
+            </div>
+          </div>
+        )
+
+        return (
+          <aside className="absolute z-20 left-3 md:left-4 top-24 md:top-32 w-[min(94vw,360px)] max-h-[calc(100vh-200px)] overflow-y-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl">
+            <header className="sticky top-0 bg-slate-950/95 backdrop-blur-xl border-b border-slate-800 px-3 py-2 flex items-center justify-between">
+              <h3 className="text-xs uppercase tracking-widest text-slate-300 font-semibold">Live Statistics</h3>
+              <button onClick={()=>setShowStats(false)} className="text-slate-500 hover:text-slate-300 text-sm">✕</button>
+            </header>
+            <div className="p-3 space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-slate-900/60 rounded-lg p-2"><div className="text-[9px] text-slate-500 uppercase tracking-wider">Heavy</div><div className="text-lg font-bold text-violet-400 font-mono">{heavy}</div></div>
+                <div className="bg-slate-900/60 rounded-lg p-2"><div className="text-[9px] text-slate-500 uppercase tracking-wider">Heli</div><div className="text-lg font-bold text-emerald-400 font-mono">{heli}</div></div>
+                <div className="bg-slate-900/60 rounded-lg p-2"><div className="text-[9px] text-slate-500 uppercase tracking-wider">Military</div><div className="text-lg font-bold text-orange-400 font-mono">{mil}</div></div>
+                <div className="bg-slate-900/60 rounded-lg p-2 col-span-1"><div className="text-[9px] text-slate-500 uppercase tracking-wider">Avg Alt</div><div className="text-base font-bold text-sky-400 font-mono">{(avgAlt/1000).toFixed(1)}k</div></div>
+                <div className="bg-slate-900/60 rounded-lg p-2 col-span-2"><div className="text-[9px] text-slate-500 uppercase tracking-wider">Avg Speed</div><div className="text-base font-bold text-amber-400 font-mono">{avgSpd} kt</div></div>
+              </div>
+
+              <div>
+                <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5 font-semibold">Altitude Distribution</div>
+                <div className="space-y-1">{bands.map(b=> <Bar key={b.l} label={b.l} n={b.n} max={maxBand} color={b.l==='GND'?'bg-slate-600':b.l.includes('40')?'bg-violet-500':b.l.includes('30')?'bg-fuchsia-500':b.l.includes('20')?'bg-amber-500':b.l.includes('10')?'bg-emerald-500':'bg-sky-500'} />)}</div>
+              </div>
+
+              {topOps.length>0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5 font-semibold">Top Operators</div>
+                  <div className="space-y-1">{topOps.map(([op,n])=> <Bar key={op} label={op.slice(0,12)} n={n} max={topOps[0][1]} color="bg-cyan-500" />)}</div>
+                </div>
+              )}
+
+              {topTypes.length>0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5 font-semibold">Top Aircraft Types</div>
+                  <div className="space-y-1">{topTypes.map(([t,n])=> <Bar key={t} label={t} n={n} max={topTypes[0][1]} color="bg-rose-500" />)}</div>
+                </div>
+              )}
+
+              {topAirports.length>0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5 font-semibold">Busiest Airports (≤25 nm)</div>
+                  <div className="space-y-1">
+                    {topAirports.map(({ap,n})=>(
+                      <button key={ap.i} onClick={()=>mapRef.current?.flyTo({center:[ap.lon,ap.lat],zoom:11,duration:1200})}
+                        className="w-full flex items-center gap-2 text-[11px] bg-slate-900/60 hover:bg-slate-800 rounded px-2 py-1.5 transition text-left">
+                        <span className="font-mono text-amber-400 font-bold w-12 shrink-0">{ap.a||ap.i}</span>
+                        <span className="text-slate-400 flex-1 truncate">{ap.m}</span>
+                        <span className="font-mono text-white font-bold">{n}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {topCountries.length>0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5 font-semibold">Country (by registration)</div>
+                  <div className="flex flex-wrap gap-1">
+                    {topCountries.map(([c,n])=>(
+                      <span key={c} className="text-[11px] bg-slate-900/80 border border-slate-800 rounded-full px-2 py-0.5 font-mono">{c} <span className="text-slate-400">{n}</span></span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </aside>
+        )
+      })()}
 
       {/* Footer keybind hints — only when nothing selected (avoids ticker collision) */}
       {!selected && (
