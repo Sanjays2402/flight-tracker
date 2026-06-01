@@ -376,7 +376,7 @@ export default function FlightMap() {
         },
       })
 
-      // Planes (symbol)
+      // Planes (symbol) — floats at altitude in 3D mode via symbol-z-elevate
       map.addLayer({
         id: 'planes-layer',
         type: 'symbol',
@@ -389,7 +389,8 @@ export default function FlightMap() {
           'icon-allow-overlap': true,
           'icon-ignore-placement': true,
           'icon-size': 1,
-        },
+          'symbol-z-elevate': true,
+        } as any,
       })
 
       // Altitude columns (3D fill-extrusion ground→aircraft, shown only when 3D pitched)
@@ -464,7 +465,7 @@ export default function FlightMap() {
       try { m.setTerrain({ source: 'terrain-dem', exaggeration: 1.4 } as any) } catch {}
       if (m.getLayer('hillshade')) m.setLayoutProperty('hillshade', 'visibility', 'visible')
       if (m.getLayer('alt-columns-layer')) m.setLayoutProperty('alt-columns-layer', 'visibility', 'visible')
-      m.easeTo({ pitch: 60, bearing: m.getBearing(), duration: 800 })
+      m.easeTo({ pitch: 70, bearing: m.getBearing(), duration: 800 })
     } else {
       try { m.setTerrain(null as any) } catch {}
       if (m.getLayer('hillshade')) m.setLayoutProperty('hillshade', 'visibility', 'none')
@@ -686,9 +687,10 @@ export default function FlightMap() {
         }
         // Pulse emergency icons via icon-size? simpler: bump color brightness via separate layer would be heavy.
         // Keep icon, but for emergency we'll oscillate via altitude column height visualisation instead.
+        const altM = (!p.ground && p.altFt > 0) ? p.altFt * 0.3048 : 0
         planeFeats.push({
-          type: 'Feature', geometry: { type: 'Point', coordinates: [lng, lat] },
-          properties: { icao, track: p.track, icon: iconKey(p.color, p.heli, p.isSel), ground: p.ground },
+          type: 'Feature', geometry: { type: 'Point', coordinates: [lng, lat, altM] },
+          properties: { icao, track: p.track, icon: iconKey(p.color, p.heli, p.isSel), ground: p.ground, altM },
         })
         if (!p.ground && p.altFt > 0) {
           const d = 0.003
