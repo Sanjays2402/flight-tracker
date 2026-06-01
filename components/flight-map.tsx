@@ -133,6 +133,7 @@ export default function FlightMap() {
   const [flights, setFlights] = useState<Flight[]>([])
   const [selected, setSelected] = useState<Flight | null>(null)
   const [selectedAirport, setSelectedAirport] = useState<AirportPin | null>(null)
+  const [airportMetar, setAirportMetar] = useState<{rawOb:string; temp:number; dewp:number; wdir:number; wspd:number; visib:string; altim:number; fltCat:string; clouds?:{cover:string;base:number}[]} | null>(null)
   const [mapZoom, setMapZoom] = useState(4)
   const [mapBounds, setMapBounds] = useState<{n:number,s:number,e:number,w:number} | null>(null)
   const [toasts, setToasts] = useState<{id:string; icao:string; cs:string; sq:string; lat:number; lng:number; t:number}[]>([])
@@ -525,11 +526,32 @@ export default function FlightMap() {
     return () => clearInterval(id)
   }, [showNight, mapReady])
 
+  /* ---- Airport METAR weather fetch ---- */
+  useEffect(() => {
+    if (!selectedAirport) { setAirportMetar(null); return }
+    const ap = selectedAirport
+    setAirportMetar(null)
+    let cancelled = false
+    ;(async () => {
+      try {
+        const target = `https://aviationweather.gov/api/data/metar?ids=${encodeURIComponent(ap.i)}&format=json`
+        const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(target)}`, { cache: 'no-store' })
+        if (!res.ok) return
+        const arr = await res.json() as Array<{rawOb:string; temp:number; dewp:number; wdir:number; wspd:number; visib:string; altim:number; fltCat:string; clouds?:{cover:string;base:number}[]}>
+        if (cancelled || !arr?.length) return
+        setAirportMetar(arr[0])
+      } catch { /* swallow */ }
+    })()
+    return () => { cancelled = true }
+  }, [selectedAirport])
+
   /* ---- Fetch loop ---- */
   const fetchOnce = useCallback(async () => {
     try {
       const m = mapRef.current
       let lat = 40.7, lon = -74, distNm = 250
+      let useGlobal = false
+      let bbox: {lamin:number; lamax:number; lomin:number; lomax:number} | null = null
       if (m) {
         const c = m.getCenter()
         lat = c.lat; lon = c.lng
@@ -537,13 +559,55 @@ export default function FlightMap() {
         const halfH = (b.getNorth() - b.getSouth()) / 2 * 60
         const halfW = (b.getEast() - b.getWest()) / 2 * 60 * Math.cos(lat * Math.PI / 180)
         distNm = Math.min(250, Math.max(50, Math.ceil(Math.max(halfH, halfW))))
+        const z = m.getZoom()
+        // At low zoom, switch to OpenSky bbox for true global coverage
+        if (z < 6) {
+          useGlobal = true
+          bbox = {
+            lamin: Math.max(-90, b.getSouth()),
+            lamax: Math.min(90, b.getNorth()),
+            lomin: Math.max(-180, b.getWest()),
+            lomax: Math.min(180, b.getEast()),
+          }
+        }
       }
-      const target = `https://api.adsb.lol/v2/lat/${lat.toFixed(4)}/lon/${lon.toFixed(4)}/dist/${distNm}`
-      const url = `https://corsproxy.io/?${encodeURIComponent(target)}`
-      const res = await fetch(url, { cache: 'no-store' })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const json = await res.json() as { ac?: AcRaw[] }
-      const parsed: Flight[] = (json.ac ?? [])
+
+      let raw: AcRaw[] = []
+      if (useGlobal && bbox) {
+        const u = `https://opensky-network.org/api/states/all?lamin=${bbox.lamin.toFixed(3)}&lomin=${bbox.lomin.toFixed(3)}&lamax=${bbox.lamax.toFixed(3)}&lomax=${bbox.lomax.toFixed(3)}`
+        const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(u)}`, { cache: 'no-store' })
+        if (!res.ok) throw new Error(`OpenSky HTTP ${res.status}`)
+        const j = await res.json() as { states?: Array<unknown[]> }
+        raw = (j.states ?? []).map(s => {
+          const [icao24, cs, country, , , lng, latv, baroAlt, onGround, vel, trk, vRate, , geoAlt, sq] = s as [string, string|null, string, number|null, number|null, number|null, number|null, number|null, boolean, number|null, number|null, number|null, unknown, number|null, string|null]
+          const m2ft = 3.28084
+          const ms2kt = 1.94384
+          return {
+            hex: icao24,
+            flight: (cs || '').trim(),
+            t: '—',
+            r: '—',
+            desc: country || '',
+            ownOp: '—',
+            lat: latv ?? 0, lon: lng ?? 0,
+            alt_baro: onGround ? 'ground' : (baroAlt != null ? Math.round(baroAlt * m2ft) : 0),
+            alt_geom: geoAlt != null ? Math.round(geoAlt * m2ft) : undefined,
+            gs: vel != null ? Math.round(vel * ms2kt) : 0,
+            geom_rate: vRate != null ? Math.round(vRate * m2ft * 60) : 0,
+            track: trk ?? 0,
+            squawk: sq || '',
+            category: '',
+            type: 'opensky',
+          } as AcRaw
+        }).filter(a => a.lat !== 0 || a.lon !== 0)
+      } else {
+        const target = `https://api.adsb.lol/v2/lat/${lat.toFixed(4)}/lon/${lon.toFixed(4)}/dist/${distNm}`
+        const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(target)}`, { cache: 'no-store' })
+        if (!res.ok) throw new Error(`adsb.lol HTTP ${res.status}`)
+        const json = await res.json() as { ac?: AcRaw[] }
+        raw = json.ac ?? []
+      }
+      const parsed: Flight[] = raw
         .filter(a => typeof a.lat === 'number' && typeof a.lon === 'number')
         .map(a => {
           const ground = a.alt_baro === 'ground'
@@ -1492,6 +1556,27 @@ export default function FlightMap() {
               <div className="text-2xl font-bold font-mono text-sky-300">{ap.a}</div>
               <div className="text-sm text-slate-300 truncate">{ap.n}</div>
               <div className="text-[11px] text-slate-500 truncate">{ap.m} · {ap.i}</div>
+              {airportMetar && (
+                <div className="mt-3 pt-3 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[10px] uppercase tracking-widest text-amber-400">METAR · Live wx</div>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                      airportMetar.fltCat === 'VFR' ? 'bg-emerald-500/15 text-emerald-300' :
+                      airportMetar.fltCat === 'MVFR' ? 'bg-sky-500/15 text-sky-300' :
+                      airportMetar.fltCat === 'IFR' ? 'bg-amber-500/15 text-amber-300' :
+                      'bg-rose-500/15 text-rose-300'
+                    }`}>{airportMetar.fltCat || '—'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                    <div><span className="text-slate-500">Temp</span> <span className="text-slate-200 font-mono">{airportMetar.temp?.toFixed?.(0) ?? '—'}°C</span></div>
+                    <div><span className="text-slate-500">Dew</span> <span className="text-slate-200 font-mono">{airportMetar.dewp?.toFixed?.(0) ?? '—'}°C</span></div>
+                    <div><span className="text-slate-500">Wind</span> <span className="text-slate-200 font-mono">{airportMetar.wdir ?? '—'}° / {airportMetar.wspd ?? '—'}kt</span></div>
+                    <div><span className="text-slate-500">Vis</span> <span className="text-slate-200 font-mono">{airportMetar.visib ?? '—'} sm</span></div>
+                    <div className="col-span-2"><span className="text-slate-500">Altim</span> <span className="text-slate-200 font-mono">{airportMetar.altim?.toFixed?.(1) ?? '—'} hPa</span></div>
+                  </div>
+                  <div className="mt-2 text-[10px] font-mono text-slate-500 break-all leading-relaxed">{airportMetar.rawOb}</div>
+                </div>
+              )}
             </div>
             <div className="flex border-b border-slate-800 text-[10px] uppercase tracking-widest">
               <div className="flex-1 py-2 text-center text-emerald-400 font-bold border-r border-slate-800">
@@ -1861,6 +1946,8 @@ export default function FlightMap() {
                 <div className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-2">Data sources</div>
                 <ul className="space-y-1.5 text-[13px]">
                   <li>• <a className="text-sky-400 hover:underline" href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a> — aircraft positions, routes, airport DB (community feed, no API key)</li>
+                  <li>• <a className="text-sky-400 hover:underline" href="https://opensky-network.org" target="_blank" rel="noopener">OpenSky Network</a> — global aircraft state vectors (used at world view)</li>
+                  <li>• <a className="text-sky-400 hover:underline" href="https://aviationweather.gov" target="_blank" rel="noopener">aviationweather.gov</a> — METAR airport weather (NOAA/AWC, no key)</li>
                   <li>• <a className="text-sky-400 hover:underline" href="https://www.planespotters.net" target="_blank" rel="noopener">planespotters.net</a> — aircraft photos</li>
                   <li>• <a className="text-sky-400 hover:underline" href="https://www.rainviewer.com" target="_blank" rel="noopener">RainViewer</a> — weather radar overlay</li>
                   <li>• <a className="text-sky-400 hover:underline" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> + <a className="text-sky-400 hover:underline" href="https://carto.com/attribution" target="_blank" rel="noopener">CARTO</a> — basemap</li>
