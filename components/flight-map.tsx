@@ -170,6 +170,8 @@ export default function FlightMap() {
   const knownWatchRef = useRef<Set<string>>(new Set())
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
+  const [mobileMenu, setMobileMenu] = useState(false)
+  const [mobileSearch, setMobileSearch] = useState(false)
   const [follow, setFollow] = useState(false)
   const [altMin, setAltMin] = useState(0)
   const [altMax, setAltMax] = useState(50000)
@@ -1106,15 +1108,63 @@ export default function FlightMap() {
             <Toggle on={showFilters} onClick={()=>setShowFilters(v=>!v)} label="Filter" />
             <Toggle on={showStats} onClick={()=>setShowStats(v=>!v)} label="Stats" />
           </div>
-          <div className="bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 py-2 shadow-2xl flex items-center gap-2 w-44 sm:w-60">
+          <div className="bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 py-2 shadow-2xl items-center gap-2 w-44 sm:w-60 hidden sm:flex">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-slate-400 shrink-0"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/><path d="m20 20-3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
             <input id="search-input" value={query} onChange={e=>setQuery(e.target.value)}
                    placeholder="Search (press /)"
                    className="bg-transparent text-sm placeholder:text-slate-500 outline-none flex-1 text-slate-100" />
             {query && <button onClick={()=>setQuery('')} className="text-slate-500 hover:text-slate-200 text-xs">✕</button>}
           </div>
+          {/* Mobile: search icon */}
+          <button onClick={()=>setMobileSearch(v=>!v)} aria-label="Search"
+            className="sm:hidden bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl size-10 flex items-center justify-center text-slate-300 active:bg-slate-800 shadow-2xl">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/><path d="m20 20-3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          </button>
+          {/* Mobile: hamburger */}
+          <button onClick={()=>setMobileMenu(v=>!v)} aria-label="Menu"
+            className="sm:hidden bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl size-10 flex items-center justify-center text-slate-300 active:bg-slate-800 shadow-2xl">
+            {mobileMenu ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            )}
+          </button>
         </div>
       </header>
+
+      {/* Mobile search bar (slides under header) */}
+      {mobileSearch && (
+        <div className="sm:hidden absolute top-[64px] left-3 right-3 z-30 pointer-events-auto">
+          <div className="bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 py-2.5 shadow-2xl flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-slate-400 shrink-0"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/><path d="m20 20-3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            <input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Callsign, type, op…"
+              className="bg-transparent text-sm placeholder:text-slate-500 outline-none flex-1 text-slate-100" />
+            <button onClick={()=>{setQuery(''); setMobileSearch(false)}} className="text-slate-500 text-sm">✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile menu sheet */}
+      {mobileMenu && (
+        <div className="sm:hidden absolute inset-x-3 top-[64px] z-30 pointer-events-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl p-3 grid grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto">
+          {([
+            ['Trails', showTrails, ()=>setShowTrails(v=>!v)],
+            ['Weather', showWeather, ()=>setShowWeather(v=>!v)],
+            ['Night', showNight, ()=>setShowNight(v=>!v)],
+            ['Heat', showHeat, ()=>setShowHeat(v=>!v)],
+            ['3D', show3D, ()=>setShow3D(v=>!v)],
+            ['Chase', chase, ()=>{ if(!selected) return; setChase(v=>{ const nv=!v; chaseRef.current=nv; if(nv){setShow3D(true)} return nv })}],
+            ['List', showList, ()=>setShowList(v=>!v)],
+            [`Watch${watchlist.length?` ${watchlist.length}`:''}`, showWatch, ()=>setShowWatch(v=>!v)],
+            ['Filter', showFilters, ()=>setShowFilters(v=>!v)],
+            ['Stats', showStats, ()=>setShowStats(v=>!v)],
+            ...(compareList.length>0 ? [[`⇄ ${compareList.length}`, showCompare, ()=>setShowCompare(v=>!v)] as [string,boolean,()=>void]] : []),
+          ] as [string, boolean, ()=>void][]).map(([label,on,fn]) => (
+            <button key={label} onClick={()=>{ fn(); }}
+              className={`px-2 py-2.5 rounded-xl text-xs font-semibold border transition active:scale-95 ${on?'bg-sky-500 text-slate-950 border-sky-400':'bg-slate-900/80 text-slate-300 border-slate-800'}`}>{label}</button>
+          ))}
+        </div>
+      )}
 
       {/* Stats strip */}
       <div className="absolute top-[60px] md:top-[68px] left-3 md:left-4 z-20 pointer-events-none">
@@ -1748,7 +1798,7 @@ export default function FlightMap() {
 
       {/* Footer keybind hints — only when nothing selected (avoids ticker collision) */}
       {!selected && (
-        <footer className="absolute bottom-12 left-3 md:left-4 z-10 pointer-events-none">
+        <footer className="hidden md:block absolute bottom-12 left-3 md:left-4 z-10 pointer-events-none">
           <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl px-2.5 py-1 text-[10px] uppercase tracking-widest text-slate-400 shadow-2xl">
             8s refresh · /=search · esc · t·w·n·h·l·f · drag-rotate · select a plane then CHASE
           </div>

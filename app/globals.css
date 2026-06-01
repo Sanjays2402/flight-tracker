@@ -15,3 +15,12 @@ html, body, #__next { height: 100%; margin: 0; background: #07090d; color: #e2e8
 
 @keyframes pulse-dot { 0%, 100% { opacity: 1 } 50% { opacity: 0.3 } }
 .live-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+
+/* Mobile: push maplibre zoom/compass controls above the ticker */
+@media (max-width: 640px) {
+  .maplibregl-ctrl-bottom-right { bottom: 56px !important; }
+  .maplibregl-ctrl-bottom-left { bottom: 56px !important; }
+  .maplibregl-ctrl-attrib { font-size: 9px !important; }
+}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
