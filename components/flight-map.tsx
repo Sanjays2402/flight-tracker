@@ -2614,11 +2614,67 @@ const NOTABLE_RE = /^(AF1|AIRFORCE1|FORCE0?1|SAM\d+|SPAR\d+|RCH\d+|JANET\d*|VENU
 function isNotable(cs: string): boolean { return NOTABLE_RE.test((cs || '').replace(/\s+/g, '')) }
 
 function PlaneLogo() {
+  const [theme, setTheme] = React.useState<string>('sky')
+  const [open, setOpen] = React.useState(false)
+  React.useEffect(() => {
+    try { const v = localStorage.getItem('ft-accent'); if (v) setTheme(v) } catch {}
+  }, [])
+  React.useEffect(() => {
+    const map: Record<string, { from: string; to: string; shadow: string; ring: string }> = {
+      sky:     { from: 'from-sky-400',     to: 'to-sky-600',     shadow: 'shadow-sky-500/30',     ring: 'bg-sky-500' },
+      emerald: { from: 'from-emerald-400', to: 'to-emerald-600', shadow: 'shadow-emerald-500/30', ring: 'bg-emerald-500' },
+      violet:  { from: 'from-violet-400',  to: 'to-violet-600',  shadow: 'shadow-violet-500/30',  ring: 'bg-violet-500' },
+      rose:    { from: 'from-rose-400',    to: 'to-rose-600',    shadow: 'shadow-rose-500/30',    ring: 'bg-rose-500' },
+      amber:   { from: 'from-amber-400',   to: 'to-amber-600',   shadow: 'shadow-amber-500/30',   ring: 'bg-amber-500' },
+      fuchsia: { from: 'from-fuchsia-400', to: 'to-fuchsia-600', shadow: 'shadow-fuchsia-500/30', ring: 'bg-fuchsia-500' },
+      teal:    { from: 'from-teal-400',    to: 'to-teal-600',    shadow: 'shadow-teal-500/30',    ring: 'bg-teal-500' },
+      orange:  { from: 'from-orange-400',  to: 'to-orange-600',  shadow: 'shadow-orange-500/30',  ring: 'bg-orange-500' },
+    }
+    const t = map[theme] || map.sky
+    document.documentElement.style.setProperty('--ft-accent', `var(--tw-${theme}-500, #0ea5e9)`)
+    document.documentElement.dataset.ftAccent = theme
+    ;(window as any).__ftAccent = t
+  }, [theme])
+
+  const choose = (k: string) => { setTheme(k); try { localStorage.setItem('ft-accent', k) } catch {}; setOpen(false) }
+  const cls = ({
+    sky:     'from-sky-400 to-sky-600 shadow-sky-500/30',
+    emerald: 'from-emerald-400 to-emerald-600 shadow-emerald-500/30',
+    violet:  'from-violet-400 to-violet-600 shadow-violet-500/30',
+    rose:    'from-rose-400 to-rose-600 shadow-rose-500/30',
+    amber:   'from-amber-400 to-amber-600 shadow-amber-500/30',
+    fuchsia: 'from-fuchsia-400 to-fuchsia-600 shadow-fuchsia-500/30',
+    teal:    'from-teal-400 to-teal-600 shadow-teal-500/30',
+    orange:  'from-orange-400 to-orange-600 shadow-orange-500/30',
+  } as Record<string,string>)[theme] || 'from-sky-400 to-sky-600 shadow-sky-500/30'
+
+  const swatches = [
+    ['sky','#0ea5e9'], ['emerald','#10b981'], ['violet','#8b5cf6'], ['rose','#f43f5e'],
+    ['amber','#f59e0b'], ['fuchsia','#d946ef'], ['teal','#14b8a6'], ['orange','#f97316'],
+  ] as const
   return (
-    <div className="size-9 rounded-xl bg-gradient-to-br from-sky-400 to-sky-600 flex items-center justify-center shadow-lg shadow-sky-500/30">
-      <svg viewBox="0 0 24 24" width="22" height="22" className="-rotate-12">
-        <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 1 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" fill="#0f172a"/>
-      </svg>
+    <div className="relative">
+      <button onClick={()=>setOpen(v=>!v)} title="Change accent color"
+        className={`size-9 rounded-xl bg-gradient-to-br ${cls} flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95`}>
+        <svg viewBox="0 0 24 24" width="22" height="22" className="-rotate-12">
+          <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 1 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" fill="#0f172a"/>
+        </svg>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={()=>setOpen(false)} />
+          <div className="absolute top-full left-0 mt-2 z-50 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl p-2 shadow-2xl">
+            <div className="text-[9px] uppercase tracking-widest text-slate-500 px-1 pb-1.5">Accent</div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {swatches.map(([k,hex])=>(
+                <button key={k} onClick={()=>choose(k)} title={k}
+                  className={`size-6 rounded-md border-2 transition-transform hover:scale-110 ${theme===k?'border-white':'border-slate-700'}`}
+                  style={{background:`linear-gradient(135deg, ${hex}cc, ${hex})`}} />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
