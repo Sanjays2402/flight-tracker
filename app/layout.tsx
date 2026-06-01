@@ -1,5 +1,5 @@
 import './globals.css'
-import 'leaflet/dist/leaflet.css'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {

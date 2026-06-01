@@ -1,17 +1,18 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import L from 'leaflet'
+import maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import { AIRPORTS, AirportPin } from './airports'
 
 /* ============================================================
-   Flight Tracker — competing with FR24
+   Flight Tracker — MapLibre GL v5 edition (3D-capable).
    Data: adsb.lol (positions, routes, airports), planespotters.net (photos),
          RainViewer (weather radar), built-in day/night terminator.
    ============================================================ */
 
 interface AcRaw {
   hex: string
-  type?: string  // data source: adsb_icao, adsb_other, mlat, tisb_other, mode_s, etc.
+  type?: string
   flight?: string
   r?: string
   t?: string
@@ -24,18 +25,18 @@ interface AcRaw {
   tas?: number
   mach?: number
   track?: number
-  baro_rate?: number   // ft/min
+  baro_rate?: number
   geom_rate?: number
   nav_altitude_mcp?: number
-  wd?: number          // wind dir
-  ws?: number          // wind speed (kt)
-  oat?: number         // outside air temp °C
+  wd?: number
+  ws?: number
+  oat?: number
   squawk?: string
   category?: string
   lat: number
   lon: number
   emergency?: string
-  dbFlags?: number     // bit 0 = military
+  dbFlags?: number
 }
 interface Flight {
   icao: string
@@ -50,8 +51,8 @@ interface Flight {
   velocityKts: number
   ias: number
   mach: number
-  vertRate: number      // ft/min
-  navAlt: number        // autopilot target ft (0 = unknown)
+  vertRate: number
+  navAlt: number
   windDir: number
   windKts: number
   oat: number
@@ -66,37 +67,68 @@ interface Airport {
   icao: string; iata: string; name: string; location: string; lat: number; lon: number; countryiso2: string
 }
 interface Route {
-  airports?: Airport[]   // [origin, ...via, destination]
+  airports?: Airport[]
   airline?: string
 }
 
 const REFRESH_MS = 8_000
-const TRAIL_MAX = 60  // last N positions per flight
+const TRAIL_MAX = 60
 
-const UA = 'FlightTracker/2.0 (+https://github.com/Sanjays2402/flight-tracker)'
-
-/* category codes from ADS-B (A0-A7, B0-B7) */
+/* category codes from ADS-B */
 const CAT_LABEL: Record<string, string> = {
   A1: 'Light', A2: 'Small', A3: 'Large', A4: 'High-vortex', A5: 'Heavy',
   A6: 'High-perf', A7: 'Rotorcraft', B1: 'Glider', B2: 'Balloon', B4: 'UAV',
   B6: 'UAV', B7: 'Spacecraft',
 }
 
+/* ---------- Plane icon palette (drawn into canvas, addImage'd) ---------- */
+const ICON_COLORS = ['#64748b','#f43f5e','#f97316','#facc15','#22d3ee','#38bdf8','#a78bfa','#fbbf24']
+const PLANE_PATH = 'M21 16v-2l-8-5V3.5a1.5 1.5 0 1 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z'
+function iconKey(color: string, heli: boolean, selected: boolean) {
+  return `pl-${heli ? 'h' : 'p'}-${selected ? 's' : 'n'}-${color.replace('#', '')}`
+}
+function drawIcon(color: string, heli: boolean, selected: boolean): ImageData {
+  const pixelRatio = 2
+  const sizeCss = selected ? 32 : 26
+  const size = sizeCss * pixelRatio
+  const c = document.createElement('canvas')
+  c.width = c.height = size
+  const ctx = c.getContext('2d')!
+  ctx.clearRect(0, 0, size, size)
+  if (heli) {
+    ctx.translate(size / 2, size / 2)
+    ctx.fillStyle = color
+    ctx.strokeStyle = '#0f172a'
+    ctx.lineWidth = 1.4 * pixelRatio
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.16, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+    ctx.strokeStyle = color
+    ctx.lineWidth = 1.8 * pixelRatio
+    ctx.beginPath(); ctx.moveTo(-size * 0.42, 0); ctx.lineTo(size * 0.42, 0); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(0, -size * 0.42); ctx.lineTo(0, size * 0.42); ctx.stroke()
+  } else {
+    const k = size / 24
+    ctx.translate(size / 2, size / 2)
+    ctx.scale(k, k)
+    ctx.translate(-12, -12)
+    const p = new Path2D(PLANE_PATH)
+    ctx.fillStyle = color
+    ctx.strokeStyle = '#0f172a'
+    ctx.lineWidth = 0.8
+    ctx.lineJoin = 'round'
+    ctx.fill(p); ctx.stroke(p)
+  }
+  return ctx.getImageData(0, 0, size, size)
+}
+
 export default function FlightMap() {
   const mapEl = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<L.Map | null>(null)
-  const planeLayerRef = useRef<L.LayerGroup | null>(null)
-  const airportLayerRef = useRef<L.LayerGroup | null>(null)
-  const trailLayerRef = useRef<L.LayerGroup | null>(null)
-  const routeLayerRef = useRef<L.LayerGroup | null>(null)
-  const weatherLayerRef = useRef<L.TileLayer | null>(null)
-  const heatLayerRef = useRef<L.Layer | null>(null)
-  const heatCanvasRef = useRef<HTMLCanvasElement | null>(null)
-  const terminatorLayerRef = useRef<L.Polygon | null>(null)
-  const markersRef = useRef<Map<string, L.Marker>>(new Map())
-  const trailsRef = useRef<Map<string, Array<[number, number, number]>>>(new Map())  // icao -> [lat, lng, ts]
-  const routeCacheRef = useRef<Map<string, Route | null>>(new Map())  // callsign -> route
-  const photoCacheRef = useRef<Map<string, string | null>>(new Map())  // icao -> photo url
+  const mapRef = useRef<maplibregl.Map | null>(null)
+  const mapReadyRef = useRef(false)
+  const [mapReady, setMapReady] = useState(false)
+
+  const trailsRef = useRef<Map<string, Array<[number, number, number]>>>(new Map())
+  const routeCacheRef = useRef<Map<string, Route | null>>(new Map())
+  const photoCacheRef = useRef<Map<string, string | null>>(new Map())
 
   const [flights, setFlights] = useState<Flight[]>([])
   const [selected, setSelected] = useState<Flight | null>(null)
@@ -111,7 +143,7 @@ export default function FlightMap() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [query, setQuery] = useState('')
   const PREFS_KEY = 'ft-prefs-v1'
-const WATCH_KEY = 'ft-watch-v1'
+  const WATCH_KEY = 'ft-watch-v1'
   const loadPrefs = (): Record<string, boolean> => {
     if (typeof window === 'undefined') return {}
     try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') } catch { return {} }
@@ -122,6 +154,7 @@ const WATCH_KEY = 'ft-watch-v1'
   const [showNight, setShowNight] = useState(prefs.showNight ?? true)
   const [showList, setShowList] = useState(prefs.showList ?? false)
   const [showHeat, setShowHeat] = useState(prefs.showHeat ?? false)
+  const [show3D, setShow3D] = useState<boolean>((prefs as any).show3D ?? false)
   const [watchlist, setWatchlist] = useState<string[]>(() => {
     if (typeof window === 'undefined') return []
     try { return JSON.parse(localStorage.getItem(WATCH_KEY) || '[]') } catch { return [] }
@@ -141,55 +174,258 @@ const WATCH_KEY = 'ft-watch-v1'
   const [hideGround, setHideGround] = useState(false)
   const [listSort, setListSort] = useState<'callsign'|'alt'|'spd'>('alt')
 
+  const selectedIcaoRef = useRef<string | null>(null)
+  const initialFocusRef = useRef<string | null>(null)
+  const flightsRef = useRef<Flight[]>([])
+  useEffect(() => { flightsRef.current = flights }, [flights])
+
+  /* ---- Airport markers cache (MapLibre Markers for tooltip+click ergonomics) ---- */
+  const airportMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map())
+
+  /* ---- Helper: pan/fly using MapLibre semantics ---- */
+  const flyToLatLng = useCallback((lat: number, lng: number, zoom?: number) => {
+    const m = mapRef.current; if (!m) return
+    if (zoom != null) m.flyTo({ center: [lng, lat], zoom })
+    else m.flyTo({ center: [lng, lat] })
+  }, [])
+
   /* ---- Init map ---- */
   useEffect(() => {
     if (!mapEl.current || mapRef.current) return
 
-    // Restore from URL
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ''))
     const lat = parseFloat(params.get('lat') || '40.7')
     const lng = parseFloat(params.get('lng') || '-74')
     const zoom = parseInt(params.get('z') || '6', 10)
     const focusIcao = params.get('icao')
+    if (focusIcao) initialFocusRef.current = focusIcao.toLowerCase()
 
-    const map = L.map(mapEl.current, {
-      center: [lat, lng], zoom, minZoom: 2, maxZoom: 14,
-      worldCopyJump: true, zoomControl: false, attributionControl: true,
-      preferCanvas: true,
+    const map = new maplibregl.Map({
+      container: mapEl.current,
+      center: [lng, lat],
+      zoom,
+      minZoom: 2,
+      maxZoom: 16,
+      pitch: prefs.show3D ? 60 : 0,
+      maxPitch: 75,
+      attributionControl: false,
+      style: {
+        version: 8,
+        sources: {
+          'carto-dark': {
+            type: 'raster',
+            tiles: [
+              'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+              'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+              'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+              'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            ],
+            tileSize: 256,
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> · <a href="https://carto.com/attributions">CARTO</a> · <a href="https://adsb.lol">adsb.lol</a> · <a href="https://www.planespotters.net">planespotters</a> · <a href="https://rainviewer.com">RainViewer</a> · <a href="https://registry.opendata.aws/terrain-tiles/">AWS Terrain</a>',
+          },
+          'terrain-dem': {
+            type: 'raster-dem',
+            tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+            tileSize: 256,
+            encoding: 'terrarium',
+            maxzoom: 14,
+          },
+        },
+        layers: [
+          { id: 'basemap', type: 'raster', source: 'carto-dark' },
+          { id: 'hillshade', type: 'hillshade', source: 'terrain-dem',
+            paint: { 'hillshade-shadow-color': '#000010', 'hillshade-highlight-color': '#3b4f7a', 'hillshade-exaggeration': 0.5 },
+            layout: { visibility: 'none' } },
+        ],
+      },
     })
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> · <a href="https://carto.com/attributions">CARTO</a> · <a href="https://adsb.lol">adsb.lol</a> · <a href="https://www.planespotters.net">planespotters</a> · <a href="https://rainviewer.com">RainViewer</a>',
-      subdomains: 'abcd', maxZoom: 19,
-    }).addTo(map)
-    L.control.zoom({ position: 'bottomright' }).addTo(map)
 
-    trailLayerRef.current = L.layerGroup().addTo(map)
-    routeLayerRef.current = L.layerGroup().addTo(map)
-    planeLayerRef.current = L.layerGroup().addTo(map)
-    airportLayerRef.current = L.layerGroup().addTo(map)
+    map.addControl(new maplibregl.AttributionControl({ compact: true }))
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true, showCompass: true }), 'bottom-right')
+    map.dragRotate.enable()
+    map.touchZoomRotate.enableRotation()
+
     mapRef.current = map
 
-    // Persist to URL on move + sync bounds/zoom for airport rendering
+    map.on('load', () => {
+      // Pre-generate plane icons
+      for (const color of ICON_COLORS) {
+        for (const heli of [false, true]) {
+          for (const sel of [false, true]) {
+            const id = iconKey(color, heli, sel)
+            if (!map.hasImage(id)) {
+              map.addImage(id, drawIcon(color, heli, sel), { pixelRatio: 2 })
+            }
+          }
+        }
+      }
+
+      // Sources
+      map.addSource('terminator', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      map.addSource('weather', { type: 'raster', tiles: [], tileSize: 256 } as any)
+      map.addSource('trails', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      map.addSource('routes', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      map.addSource('route-points', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      map.addSource('planes', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      map.addSource('alt-columns', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+
+      // Sky / atmosphere (only renders when pitched)
+      try {
+        map.setSky({
+          'sky-color': '#0b1424',
+          'horizon-color': '#1e3a5f',
+          'fog-color': '#0b1424',
+          'sky-horizon-blend': 0.6,
+          'horizon-fog-blend': 0.6,
+          'fog-ground-blend': 0.5,
+          'atmosphere-blend': ['interpolate', ['linear'], ['zoom'], 0, 1, 12, 0],
+        } as any)
+      } catch {}
+
+      // Day/night fill (above basemap, below everything else)
+      map.addLayer({
+        id: 'terminator-layer',
+        type: 'fill',
+        source: 'terminator',
+        paint: { 'fill-color': '#000010', 'fill-opacity': 0.35 },
+      })
+
+      // Weather raster (initially hidden)
+      map.addLayer({
+        id: 'weather-layer',
+        type: 'raster',
+        source: 'weather',
+        paint: { 'raster-opacity': 0.55 },
+        layout: { visibility: 'none' },
+      })
+
+      // Heatmap (driven by planes source, ground filtered out)
+      map.addLayer({
+        id: 'heat-layer',
+        type: 'heatmap',
+        source: 'planes',
+        filter: ['!=', ['get', 'ground'], true],
+        layout: { visibility: 'none' },
+        paint: {
+          'heatmap-weight': 1,
+          'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 9, 3],
+          'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 12, 9, 30],
+          'heatmap-opacity': 0.7,
+          'heatmap-color': [
+            'interpolate', ['linear'], ['heatmap-density'],
+            0, 'rgba(0,0,0,0)',
+            0.2, 'rgba(255,80,40,0.4)',
+            0.5, 'rgba(255,180,40,0.6)',
+            0.75, 'rgba(120,220,80,0.75)',
+            1, 'rgba(80,180,255,0.9)',
+          ],
+        },
+      })
+
+      // Trails
+      map.addLayer({
+        id: 'trails-layer',
+        type: 'line',
+        source: 'trails',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': ['case', ['==', ['get', 'sel'], true], 3, 1.2],
+          'line-opacity': ['case', ['==', ['get', 'sel'], true], 0.95, 0.55],
+        },
+      })
+
+      // Routes
+      map.addLayer({
+        id: 'routes-layer',
+        type: 'line',
+        source: 'routes',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': ['get', 'width'],
+          'line-opacity': ['get', 'opacity'],
+          'line-dasharray': ['case',
+            ['==', ['get', 'dashed'], true], ['literal', [2, 2]],
+            ['literal', [1]],
+          ],
+        },
+      })
+      map.addLayer({
+        id: 'route-points-layer',
+        type: 'circle',
+        source: 'route-points',
+        paint: {
+          'circle-radius': 5,
+          'circle-color': ['get', 'color'],
+          'circle-stroke-color': ['get', 'color'],
+          'circle-stroke-width': 2,
+          'circle-opacity': 0.45,
+        },
+      })
+
+      // Planes (symbol)
+      map.addLayer({
+        id: 'planes-layer',
+        type: 'symbol',
+        source: 'planes',
+        layout: {
+          'icon-image': ['get', 'icon'],
+          'icon-rotate': ['get', 'track'],
+          'icon-rotation-alignment': 'map',
+          'icon-pitch-alignment': 'map',
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+          'icon-size': 1,
+        },
+      })
+
+      // Altitude columns (3D fill-extrusion ground→aircraft, shown only when 3D pitched)
+      map.addLayer({
+        id: 'alt-columns-layer',
+        type: 'fill-extrusion',
+        source: 'alt-columns',
+        layout: { visibility: 'none' },
+        paint: {
+          'fill-extrusion-color': ['get', 'color'],
+          'fill-extrusion-base': 0,
+          'fill-extrusion-height': ['get', 'h'],
+          'fill-extrusion-opacity': 0.35,
+        },
+      })
+
+      // Click handler
+      map.on('click', 'planes-layer', (e) => {
+        const f0 = e.features?.[0]; if (!f0) return
+        const icao = (f0.properties as any).icao as string
+        const flt = flightsRef.current.find((x) => x.icao === icao)
+        if (flt) { setSelected(flt); setSelectedAirport(null) }
+      })
+      map.on('mouseenter', 'planes-layer', () => { map.getCanvas().style.cursor = 'pointer' })
+      map.on('mouseleave', 'planes-layer', () => { map.getCanvas().style.cursor = '' })
+
+      mapReadyRef.current = true
+      setMapReady(true)
+    })
+
+    // URL + bounds sync
     const saveUrl = () => {
       const c = map.getCenter()
       const b = map.getBounds()
       const q = new URLSearchParams()
       q.set('lat', c.lat.toFixed(3))
       q.set('lng', c.lng.toFixed(3))
-      q.set('z', String(map.getZoom()))
+      q.set('z', String(Math.round(map.getZoom())))
       if (selectedIcaoRef.current) q.set('icao', selectedIcaoRef.current)
       window.history.replaceState(null, '', `#${q.toString()}`)
       setMapZoom(map.getZoom())
       setMapBounds({ n: b.getNorth(), s: b.getSouth(), e: b.getEast(), w: b.getWest() })
     }
-    map.on('moveend zoomend', saveUrl)
-    saveUrl()  // initial
+    map.on('moveend', saveUrl)
+    map.on('zoomend', saveUrl)
+    map.once('load', saveUrl)
 
-    // Stash focus icao for first-fetch select
-    if (focusIcao) initialFocusRef.current = focusIcao.toLowerCase()
-
-    const fixSize = () => map.invalidateSize()
-    requestAnimationFrame(fixSize)
+    const fixSize = () => map.resize()
     const t1 = setTimeout(fixSize, 250)
     const t2 = setTimeout(fixSize, 800)
     window.addEventListener('resize', fixSize)
@@ -197,20 +433,37 @@ const WATCH_KEY = 'ft-watch-v1'
       clearTimeout(t1); clearTimeout(t2)
       window.removeEventListener('resize', fixSize)
       map.remove(); mapRef.current = null
+      mapReadyRef.current = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const selectedIcaoRef = useRef<string | null>(null)
-  const initialFocusRef = useRef<string | null>(null)
-  useEffect(() => { selectedIcaoRef.current = selected?.icao ?? null
+  useEffect(() => {
+    selectedIcaoRef.current = selected?.icao ?? null
     const q = new URLSearchParams(window.location.hash.replace(/^#/, ''))
     if (selected) q.set('icao', selected.icao); else q.delete('icao')
     window.history.replaceState(null, '', `#${q.toString()}`)
   }, [selected])
 
+  /* ---- 3D pitch + terrain + extrusions toggle ---- */
+  useEffect(() => {
+    const m = mapRef.current; if (!m || !mapReady) return
+    if (show3D) {
+      try { m.setTerrain({ source: 'terrain-dem', exaggeration: 1.4 } as any) } catch {}
+      if (m.getLayer('hillshade')) m.setLayoutProperty('hillshade', 'visibility', 'visible')
+      if (m.getLayer('alt-columns-layer')) m.setLayoutProperty('alt-columns-layer', 'visibility', 'visible')
+      m.easeTo({ pitch: 60, bearing: m.getBearing(), duration: 800 })
+    } else {
+      try { m.setTerrain(null as any) } catch {}
+      if (m.getLayer('hillshade')) m.setLayoutProperty('hillshade', 'visibility', 'none')
+      if (m.getLayer('alt-columns-layer')) m.setLayoutProperty('alt-columns-layer', 'visibility', 'none')
+      m.easeTo({ pitch: 0, duration: 600 })
+    }
+  }, [show3D, mapReady])
+
   /* ---- Weather radar (RainViewer) ---- */
   useEffect(() => {
-    const map = mapRef.current; if (!map) return
+    const m = mapRef.current; if (!m || !mapReady) return
     if (showWeather) {
       ;(async () => {
         try {
@@ -219,32 +472,45 @@ const WATCH_KEY = 'ft-watch-v1'
           const past = j.radar.past
           const latest = past[past.length - 1]
           const url = `${j.host}${latest.path}/256/{z}/{x}/{y}/2/1_1.png`
-          if (weatherLayerRef.current) map.removeLayer(weatherLayerRef.current)
-          weatherLayerRef.current = L.tileLayer(url, { opacity: 0.55, zIndex: 200 }).addTo(map)
+          const src = m.getSource('weather') as any
+          // Recreate the source to swap tile URL
+          if (m.getLayer('weather-layer')) m.removeLayer('weather-layer')
+          if (m.getSource('weather')) m.removeSource('weather')
+          m.addSource('weather', { type: 'raster', tiles: [url], tileSize: 256 } as any)
+          const before = m.getLayer('terminator-layer') ? 'terminator-layer' : undefined
+          m.addLayer({
+            id: 'weather-layer', type: 'raster', source: 'weather',
+            paint: { 'raster-opacity': 0.55 },
+          }, before)
+          void src
         } catch (e) { console.error('weather fail', e) }
       })()
-    } else if (weatherLayerRef.current) {
-      map.removeLayer(weatherLayerRef.current)
-      weatherLayerRef.current = null
+    } else {
+      if (m.getLayer('weather-layer')) m.setLayoutProperty('weather-layer', 'visibility', 'none')
     }
-  }, [showWeather])
+  }, [showWeather, mapReady])
 
   /* ---- Day/Night terminator ---- */
   useEffect(() => {
-    const map = mapRef.current; if (!map) return
-    const draw = () => {
-      if (terminatorLayerRef.current) map.removeLayer(terminatorLayerRef.current)
-      if (!showNight) return
-      const pts = terminatorPolygon(new Date())
-      terminatorLayerRef.current = L.polygon(pts as L.LatLngExpression[], {
-        stroke: false, fillColor: '#000010', fillOpacity: 0.35, interactive: false,
-      }).addTo(map)
-      terminatorLayerRef.current.bringToBack()
+    const m = mapRef.current; if (!m || !mapReady) return
+    const apply = () => {
+      const src = m.getSource('terminator') as maplibregl.GeoJSONSource | undefined
+      if (!src) return
+      if (!showNight) { src.setData({ type: 'FeatureCollection', features: [] } as any); return }
+      const pts = terminatorPolygon(new Date()).map(([lat, lng]) => [lng, lat])
+      const geo: any = {
+        type: 'FeatureCollection',
+        features: [{
+          type: 'Feature', properties: {},
+          geometry: { type: 'Polygon', coordinates: [pts] },
+        }],
+      }
+      src.setData(geo)
     }
-    draw()
-    const id = setInterval(draw, 5 * 60_000)
+    apply()
+    const id = setInterval(apply, 5 * 60_000)
     return () => clearInterval(id)
-  }, [showNight])
+  }, [showNight, mapReady])
 
   /* ---- Fetch loop ---- */
   const fetchOnce = useCallback(async () => {
@@ -272,7 +538,7 @@ const WATCH_KEY = 'ft-watch-v1'
           const sq = a.squawk || ''
           const emergency = !!a.emergency && a.emergency !== 'none' || sq === '7500' || sq === '7600' || sq === '7700'
           const military = !!(a.desc && /\b(USAF|NAVY|ARMY|MARINE|FORCE|MIL|RAF|JASDF)\b/i.test(a.desc)) ||
-                           !!(a.r && /^\d+-\d+/.test(a.r))  // not perfect; will improve via /v2/mil overlay
+                           !!(a.r && /^\d+-\d+/.test(a.r))
           return {
             icao: a.hex,
             callsign: (a.flight || '').trim() || a.r || a.hex.toUpperCase(),
@@ -295,7 +561,6 @@ const WATCH_KEY = 'ft-watch-v1'
             emergency, military: military || !!(a.dbFlags && (a.dbFlags & 1)),
           }
         })
-      // Update trails
       const now = Date.now()
       for (const f of parsed) {
         const t = trailsRef.current.get(f.icao) || []
@@ -306,7 +571,6 @@ const WATCH_KEY = 'ft-watch-v1'
           trailsRef.current.set(f.icao, t)
         }
       }
-      // GC stale trails (not seen in 5 min)
       const seen = new Set(parsed.map(f => f.icao))
       for (const [k, t] of trailsRef.current) {
         const lastTs = t[t.length - 1]?.[2] || 0
@@ -316,7 +580,6 @@ const WATCH_KEY = 'ft-watch-v1'
       setStatus('live')
       setLastUpdate(new Date())
 
-      // First-fetch select-by-icao (URL deep link)
       if (initialFocusRef.current) {
         const f = parsed.find(x => x.icao.toLowerCase() === initialFocusRef.current)
         if (f) setSelected(f)
@@ -362,125 +625,80 @@ const WATCH_KEY = 'ft-watch-v1'
     })
   }, [flights, query, hideGround, onlyMil, onlyEmerg, altMin, altMax])
 
-  /* ---- Render markers + trails ---- */
+  /* ---- Render planes (symbol layer) ---- */
   useEffect(() => {
-    const layer = planeLayerRef.current; if (!layer) return
-    const live = new Set<string>()
-    for (const f of filtered) {
-      live.add(f.icao)
+    const m = mapRef.current; if (!m || !mapReady) return
+    const src = m.getSource('planes') as maplibregl.GeoJSONSource | undefined
+    if (!src) return
+    const features = filtered.map((f) => {
       const isSel = selected?.icao === f.icao
-      const html = planeHtml(f, isSel)
-      const icon = L.divIcon({ html, className: '', iconSize: [28, 28], iconAnchor: [14, 14] })
-      let marker = markersRef.current.get(f.icao)
-      if (!marker) {
-        marker = L.marker([f.lat, f.lng], { icon, riseOnHover: true, keyboard: false })
-          .on('click', () => setSelected(f))
-        marker.addTo(layer)
-        markersRef.current.set(f.icao, marker)
-      } else {
-        marker.setLatLng([f.lat, f.lng])
-        marker.setIcon(icon)
+      const heli = f.category === 'A7'
+      const color = f.emergency ? '#f43f5e' : f.ground ? '#64748b' : isSel ? '#fbbf24' : altColor(f.altitudeFt)
+      return {
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: [f.lng, f.lat] },
+        properties: {
+          icao: f.icao,
+          track: f.track || 0,
+          icon: iconKey(color, heli, isSel),
+          ground: f.ground,
+        },
       }
-    }
-    for (const [icao, m] of markersRef.current) {
-      if (!live.has(icao)) { layer.removeLayer(m); markersRef.current.delete(icao) }
-    }
-  }, [filtered, selected])
+    })
+    src.setData({ type: 'FeatureCollection', features } as any)
 
-  // Trails layer
+    // Altitude columns — tiny square footprint, height = altitude meters
+    const colSrc = m.getSource('alt-columns') as maplibregl.GeoJSONSource | undefined
+    if (colSrc) {
+      const cols = filtered.filter(f => !f.ground && f.altitudeFt > 0).map(f => {
+        const d = 0.003 // ~330m square footprint
+        const isSel = selected?.icao === f.icao
+        const color = f.emergency ? '#f43f5e' : isSel ? '#fbbf24' : altColor(f.altitudeFt)
+        const ring = [
+          [f.lng - d, f.lat - d], [f.lng + d, f.lat - d],
+          [f.lng + d, f.lat + d], [f.lng - d, f.lat + d],
+          [f.lng - d, f.lat - d],
+        ]
+        return {
+          type: 'Feature' as const,
+          geometry: { type: 'Polygon' as const, coordinates: [ring] },
+          properties: { icao: f.icao, color, h: f.altitudeFt * 0.3048 },
+        }
+      })
+      colSrc.setData({ type: 'FeatureCollection', features: cols } as any)
+    }
+  }, [filtered, selected, mapReady])
+
+  /* ---- Render trails ---- */
   useEffect(() => {
-    const layer = trailLayerRef.current; if (!layer) return
-    layer.clearLayers()
-    if (!showTrails) return
-    // Only draw trails for filtered (visible) flights to keep it light
+    const m = mapRef.current; if (!m || !mapReady) return
+    const src = m.getSource('trails') as maplibregl.GeoJSONSource | undefined
+    if (!src) return
+    if (!showTrails) { src.setData({ type: 'FeatureCollection', features: [] } as any); return }
+    const features: any[] = []
     for (const f of filtered) {
       const t = trailsRef.current.get(f.icao)
       if (!t || t.length < 2) continue
       const color = altColor(f.altitudeFt)
       const isSel = selected?.icao === f.icao
-      L.polyline(t.map(p => [p[0], p[1]] as [number, number]), {
-        color, weight: isSel ? 3 : 1.2, opacity: isSel ? 0.95 : 0.55,
-        smoothFactor: 1.5, interactive: false,
-      }).addTo(layer)
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: t.map(p => [p[1], p[0]]) },
+        properties: { color, sel: isSel },
+      })
     }
-  }, [filtered, selected, showTrails, flights])
+    src.setData({ type: 'FeatureCollection', features } as any)
+  }, [filtered, selected, showTrails, flights, mapReady])
 
-  /* ---- Density heatmap (canvas overlay) ---- */
+  /* ---- Heatmap toggle ---- */
   useEffect(() => {
-    const map = mapRef.current; if (!map) return
-    if (!showHeat) {
-      if (heatLayerRef.current) { map.removeLayer(heatLayerRef.current); heatLayerRef.current = null }
-      heatCanvasRef.current = null
-      return
+    const m = mapRef.current; if (!m || !mapReady) return
+    if (m.getLayer('heat-layer')) {
+      m.setLayoutProperty('heat-layer', 'visibility', showHeat ? 'visible' : 'none')
     }
-    const HeatLayer = (L.Layer as any).extend({
-      onAdd(map: L.Map) {
-        const canvas = document.createElement('canvas')
-        canvas.style.position = 'absolute'
-        canvas.style.pointerEvents = 'none'
-        canvas.style.opacity = '0.7'
-        canvas.style.mixBlendMode = 'screen'
-        canvas.style.zIndex = '180'
-        this._canvas = canvas
-        heatCanvasRef.current = canvas
-        const pane = map.getPane('overlayPane')
-        if (pane) pane.appendChild(canvas)
-        map.on('moveend zoomend resize', this._redraw, this)
-        map.on('move', this._reposition, this)
-        this._redraw()
-        return this
-      },
-      onRemove(map: L.Map) {
-        map.off('moveend zoomend resize', this._redraw, this)
-        map.off('move', this._reposition, this)
-        this._canvas?.remove()
-      },
-      _reposition() {
-        const map = this._map
-        const topLeft = map.containerPointToLayerPoint([0, 0])
-        L.DomUtil.setPosition(this._canvas, topLeft)
-      },
-      _redraw() {
-        const map = this._map; if (!map || !this._canvas) return
-        const size = map.getSize()
-        this._canvas.width = size.x; this._canvas.height = size.y
-        this._reposition()
-        const ctx = this._canvas.getContext('2d')
-        if (!ctx) return
-        ctx.clearRect(0, 0, size.x, size.y)
-        // For each flight in view, draw a radial gradient
-        const radius = Math.max(15, 35 - map.getZoom() * 2)
-        for (const f of flightsRef.current) {
-          if (f.ground) continue
-          const pt = map.latLngToContainerPoint([f.lat, f.lng])
-          if (pt.x < -radius || pt.x > size.x + radius || pt.y < -radius || pt.y > size.y + radius) continue
-          const g = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, radius)
-          // Color by altitude
-          const a = f.altitudeFt
-          const col = a < 10000 ? '255,80,40' : a < 25000 ? '255,180,40' : a < 35000 ? '120,220,80' : '80,180,255'
-          g.addColorStop(0, `rgba(${col},0.55)`)
-          g.addColorStop(1, `rgba(${col},0)`)
-          ctx.fillStyle = g
-          ctx.beginPath()
-          ctx.arc(pt.x, pt.y, radius, 0, Math.PI * 2)
-          ctx.fill()
-        }
-      },
-    })
-    const layer = new HeatLayer()
-    map.addLayer(layer)
-    heatLayerRef.current = layer
-    return () => { if (heatLayerRef.current) { map.removeLayer(heatLayerRef.current); heatLayerRef.current = null } }
-  }, [showHeat])
+  }, [showHeat, mapReady])
 
-  // Redraw heatmap when flights update
-  const flightsRef = useRef<Flight[]>([])
-  useEffect(() => {
-    flightsRef.current = flights
-    if (showHeat && heatLayerRef.current) (heatLayerRef.current as any)._redraw?.()
-  }, [flights, showHeat])
-
-  /* ---- Render airport pins (zoom ≥ 5, in viewport) ---- */
+  /* ---- Visible airports ---- */
   const visibleAirports = useMemo(() => {
     if (!mapBounds || mapZoom < 5) return []
     const { n, s, e, w } = mapBounds
@@ -492,33 +710,41 @@ const WATCH_KEY = 'ft-watch-v1'
     )
   }, [mapBounds, mapZoom])
 
+  /* ---- Airport markers ---- */
   useEffect(() => {
-    const layer = airportLayerRef.current; if (!layer) return
-    layer.clearLayers()
-    if (mapZoom < 5) return
-    const size = mapZoom < 7 ? 6 : mapZoom < 9 ? 9 : 12
+    const m = mapRef.current; if (!m || !mapReady) return
+    const live = new Set<string>()
+    const size = mapZoom < 7 ? 14 : mapZoom < 9 ? 18 : 22
     const fontSize = mapZoom < 7 ? 7 : mapZoom < 9 ? 9 : 11
-    for (const ap of visibleAirports) {
-      const icon = L.divIcon({
-        className: '',
-        iconSize: [size, size],
-        iconAnchor: [size/2, size/2],
-        html: `<div style="
-          width:${size}px;height:${size}px;
-          border-radius:3px;background:rgba(15,23,42,0.85);
-          border:1.5px solid #38bdf8;
-          display:flex;align-items:center;justify-content:center;
-          font-family:monospace;font-weight:700;font-size:${fontSize}px;
-          color:#7dd3fc;line-height:1;cursor:pointer;
-          box-shadow:0 0 6px rgba(56,189,248,0.4);
-        ">✈</div>`,
-      })
-      const m = L.marker([ap.lat, ap.lon], { icon, interactive: true, keyboard: false, riseOnHover: true, zIndexOffset: -100 })
-        .bindTooltip(`<b>${ap.a}</b> · ${ap.n}<br/><span style="opacity:.6">${ap.m}</span>`, { direction: 'top', offset: [0, -size/2] })
-        .on('click', () => { setSelectedAirport(ap); setSelected(null) })
-      layer.addLayer(m)
+    if (mapZoom < 5) {
+      for (const [, mk] of airportMarkersRef.current) mk.remove()
+      airportMarkersRef.current.clear()
+      return
     }
-  }, [visibleAirports, mapZoom])
+    for (const ap of visibleAirports) {
+      live.add(ap.i)
+      let mk = airportMarkersRef.current.get(ap.i)
+      if (!mk) {
+        const el = document.createElement('div')
+        el.style.cssText = `width:${size}px;height:${size}px;border-radius:3px;background:rgba(15,23,42,0.85);border:1.5px solid #38bdf8;display:flex;align-items:center;justify-content:center;font-family:monospace;font-weight:700;font-size:${fontSize}px;color:#7dd3fc;line-height:1;cursor:pointer;box-shadow:0 0 6px rgba(56,189,248,0.4);user-select:none;`
+        el.textContent = '✈'
+        el.title = `${ap.a} · ${ap.n}\n${ap.m}`
+        el.addEventListener('click', (ev) => {
+          ev.stopPropagation()
+          setSelectedAirport(ap); setSelected(null)
+        })
+        mk = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([ap.lon, ap.lat]).addTo(m)
+        airportMarkersRef.current.set(ap.i, mk)
+      } else {
+        // resize existing element if zoom changed
+        const el = mk.getElement()
+        el.style.width = `${size}px`; el.style.height = `${size}px`; el.style.fontSize = `${fontSize}px`
+      }
+    }
+    for (const [k, mk] of airportMarkersRef.current) {
+      if (!live.has(k)) { mk.remove(); airportMarkersRef.current.delete(k) }
+    }
+  }, [visibleAirports, mapZoom, mapReady])
 
   /* ---- Emergency squawk alerting ---- */
   useEffect(() => {
@@ -533,7 +759,6 @@ const WATCH_KEY = 'ft-watch-v1'
     }
     if (fresh.length) {
       setToasts(prev => [...fresh, ...prev].slice(0, 5))
-      // Beep
       try {
         const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
         if (Ctx) {
@@ -546,7 +771,6 @@ const WATCH_KEY = 'ft-watch-v1'
           o.start(); o.stop(ctx.currentTime + 0.5)
         }
       } catch {}
-      // Auto-dismiss after 12s
       setTimeout(() => {
         setToasts(prev => prev.filter(t => !fresh.find(f => f.id === t.id)))
       }, 12000)
@@ -591,41 +815,40 @@ const WATCH_KEY = 'ft-watch-v1'
       } catch {}
       setTimeout(() => setToasts(prev => prev.filter(t => !fresh.find(f => f.id === t.id))), 15000)
     }
-    // Clean up watch entries for aircraft no longer in view
     const visibleIcaos = new Set(flights.map(f => 'watch:' + f.icao))
     for (const k of Array.from(knownWatchRef.current)) {
       if (k.startsWith('watch:') && !visibleIcaos.has(k)) knownWatchRef.current.delete(k)
     }
   }, [flights, watchlist])
 
-  /* ---- Refresh compare list from live flights ---- */
+  /* ---- Refresh compare list ---- */
   useEffect(() => {
     if (!compareList.length) return
     setCompareList(prev => prev.map(p => flights.find(f => f.icao === p.icao) || p))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flights])
 
   /* ---- Follow mode ---- */
   useEffect(() => {
     if (!follow || !selected) return
     const f = flights.find(x => x.icao === selected.icao)
-    if (f) mapRef.current?.panTo([f.lat, f.lng], { animate: true, duration: 0.4 })
+    if (f) mapRef.current?.easeTo({ center: [f.lng, f.lat], duration: 400 })
   }, [follow, selected, flights])
 
-  /* ---- Persist UI preferences ---- */
+  /* ---- Persist UI prefs ---- */
   useEffect(() => {
     try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify({ showWeather, showTrails, showNight, showList, showHeat }))
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ showWeather, showTrails, showNight, showList, showHeat, show3D }))
     } catch {}
-  }, [showWeather, showTrails, showNight, showList, showHeat])
+  }, [showWeather, showTrails, showNight, showList, showHeat, show3D])
 
   /* ---- Route + photo on selection ---- */
   useEffect(() => {
     setRoute(null); setPhoto(null)
-    if (routeLayerRef.current) routeLayerRef.current.clearLayers()
+    clearRouteLayer()
     if (!selected) return
     const flight = selected
-    drawRoute(null, flight)  // immediate heading projection while route loads
-    // Route via routeset
+    drawRoute(null, flight)
     const cs = flight.callsign.replace(/\s+/g, '')
     if (cs && cs.length >= 3 && cs !== flight.registration && cs !== flight.icao.toUpperCase()) {
       const cached = routeCacheRef.current.get(cs)
@@ -656,7 +879,6 @@ const WATCH_KEY = 'ft-watch-v1'
         })()
       }
     }
-    // Photo via planespotters (fallback to adsbdb's url_photo)
     const ph = photoCacheRef.current.get(flight.icao)
     if (ph !== undefined) setPhoto(ph)
     else {
@@ -666,7 +888,6 @@ const WATCH_KEY = 'ft-watch-v1'
           const j = await r.json() as { photos?: Array<{ thumbnail_large?: { src: string } }> }
           let src = j.photos?.[0]?.thumbnail_large?.src || null
           if (!src) {
-            // Try adsbdb fallback
             try {
               const r2 = await fetch(`https://api.adsbdb.com/v0/aircraft/${flight.icao}`)
               const j2 = await r2.json() as { response?: { aircraft?: { url_photo_thumbnail?: string | null } } }
@@ -680,46 +901,73 @@ const WATCH_KEY = 'ft-watch-v1'
         }
       })()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected])
 
+  const clearRouteLayer = () => {
+    const m = mapRef.current; if (!m) return
+    const rs = m.getSource('routes') as maplibregl.GeoJSONSource | undefined
+    const ps = m.getSource('route-points') as maplibregl.GeoJSONSource | undefined
+    rs?.setData({ type: 'FeatureCollection', features: [] } as any)
+    ps?.setData({ type: 'FeatureCollection', features: [] } as any)
+  }
+
   const drawRoute = (r: Route | null, flight: Flight) => {
-    const layer = routeLayerRef.current; if (!layer) return
-    layer.clearLayers()
-    // If no route data, project a 10-minute heading line from current position/velocity
+    const m = mapRef.current; if (!m) return
+    const rs = m.getSource('routes') as maplibregl.GeoJSONSource | undefined
+    const ps = m.getSource('route-points') as maplibregl.GeoJSONSource | undefined
+    if (!rs || !ps) return
+    const lines: any[] = []
+    const points: any[] = []
     if (!r?.airports?.length) {
       if (!flight.ground && flight.velocityKts > 30) {
-        const distNm = (flight.velocityKts / 60) * 10  // 10 min ahead
+        const distNm = (flight.velocityKts / 60) * 10
         const R = 3440.065
         const brg = flight.track * Math.PI/180
         const lat1 = flight.lat * Math.PI/180, lon1 = flight.lng * Math.PI/180
         const dR = distNm / R
         const lat2 = Math.asin(Math.sin(lat1)*Math.cos(dR) + Math.cos(lat1)*Math.sin(dR)*Math.cos(brg))
         const lon2 = lon1 + Math.atan2(Math.sin(brg)*Math.sin(dR)*Math.cos(lat1), Math.cos(dR) - Math.sin(lat1)*Math.sin(lat2))
-        L.polyline([[flight.lat, flight.lng], [lat2*180/Math.PI, lon2*180/Math.PI]], {
-          color: '#fbbf24', weight: 1.5, dashArray: '4 6', opacity: 0.7, interactive: false,
-        }).addTo(layer)
+        lines.push({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: [[flight.lng, flight.lat], [lon2*180/Math.PI, lat2*180/Math.PI]] },
+          properties: { color: '#fbbf24', width: 1.5, opacity: 0.7, dashed: true },
+        })
       }
+      rs.setData({ type: 'FeatureCollection', features: lines } as any)
+      ps.setData({ type: 'FeatureCollection', features: points } as any)
       return
     }
     const aps = r.airports
-    const planePos: [number, number] = [flight.lat, flight.lng]
-    // Pre-route (origin -> plane), post-route (plane -> dest)
+    const planePos: [number, number] = [flight.lng, flight.lat]
     if (aps.length >= 1) {
       const orig = aps[0]
-      L.polyline([[orig.lat, orig.lon], planePos], {
-        color: '#64748b', weight: 1.5, dashArray: '6 6', opacity: 0.6, interactive: false,
-      }).addTo(layer)
-      L.circleMarker([orig.lat, orig.lon], { radius: 5, color: '#10b981', weight: 2, fillOpacity: 0.4 })
-        .bindTooltip(`<b>${orig.iata || orig.icao}</b> · ${orig.name}`, { permanent: false, direction: 'top' }).addTo(layer)
+      lines.push({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: [[orig.lon, orig.lat], planePos] },
+        properties: { color: '#64748b', width: 1.5, opacity: 0.6, dashed: true },
+      })
+      points.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [orig.lon, orig.lat] },
+        properties: { color: '#10b981' },
+      })
     }
     if (aps.length >= 2) {
       const dest = aps[aps.length - 1]
-      L.polyline([planePos, [dest.lat, dest.lon]], {
-        color: '#38bdf8', weight: 2, opacity: 0.85, interactive: false,
-      }).addTo(layer)
-      L.circleMarker([dest.lat, dest.lon], { radius: 5, color: '#38bdf8', weight: 2, fillOpacity: 0.5 })
-        .bindTooltip(`<b>${dest.iata || dest.icao}</b> · ${dest.name}`, { permanent: false, direction: 'top' }).addTo(layer)
+      lines.push({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: [planePos, [dest.lon, dest.lat]] },
+        properties: { color: '#38bdf8', width: 2, opacity: 0.85, dashed: false },
+      })
+      points.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [dest.lon, dest.lat] },
+        properties: { color: '#38bdf8' },
+      })
     }
+    rs.setData({ type: 'FeatureCollection', features: lines } as any)
+    ps.setData({ type: 'FeatureCollection', features: points } as any)
   }
 
   /* ---- Stats ---- */
@@ -762,7 +1010,7 @@ const WATCH_KEY = 'ft-watch-v1'
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-[#07090d]">
-      <div ref={mapEl} className="absolute inset-0 z-0" />
+      <div ref={mapEl} className="absolute inset-0 z-0" style={{ width: '100%', height: '100%' }} />
 
       {/* Emergency banner */}
       {stats.emerg > 0 && (
@@ -795,6 +1043,7 @@ const WATCH_KEY = 'ft-watch-v1'
             <Toggle on={showWeather} onClick={()=>setShowWeather(v=>!v)} label="Weather" hint="W" />
             <Toggle on={showNight} onClick={()=>setShowNight(v=>!v)} label="Night" hint="N" />
             <Toggle on={showHeat} onClick={()=>setShowHeat(v=>!v)} label="Heat" hint="H" />
+            <Toggle on={show3D} onClick={()=>setShow3D(v=>!v)} label="3D" />
             <Toggle on={showList} onClick={()=>setShowList(v=>!v)} label="List" hint="L" />
             <Toggle on={showWatch} onClick={()=>setShowWatch(v=>!v)} label={`Watch${watchlist.length?` ${watchlist.length}`:''}`} />
             {compareList.length > 0 && (
@@ -862,7 +1111,7 @@ const WATCH_KEY = 'ft-watch-v1'
           <div className="flex-1 overflow-y-auto">
             {sortedList.map(f => (
               <button key={f.icao}
-                      onClick={()=>{ setSelected(f); mapRef.current?.panTo([f.lat, f.lng]) }}
+                      onClick={()=>{ setSelected(f); flyToLatLng(f.lat, f.lng) }}
                       className={`w-full text-left px-4 py-2 border-b border-slate-800/60 hover:bg-slate-800/50 transition flex items-center gap-3 ${selected?.icao===f.icao?'bg-sky-500/10':''}`}>
                 <div className={`size-2 rounded-full shrink-0 ${f.emergency?'bg-rose-500':f.ground?'bg-slate-500':'bg-emerald-400'}`} />
                 <div className="flex-1 min-w-0">
@@ -903,7 +1152,6 @@ const WATCH_KEY = 'ft-watch-v1'
                 <div className="text-2xl font-bold tracking-tight mt-0.5 font-mono">{selected.callsign}</div>
                 <div className="text-xs text-slate-400 mt-1">{selected.registration} · {selected.type}</div>
                 {selected.operator !== '—' && <div className="text-xs text-slate-500 mt-0.5">{selected.operator}</div>}
-                {/* Data source badge */}
                 {(() => {
                   const ds = selected.dataSource
                   const map: Record<string,{l:string,c:string,t:string}> = {
@@ -937,7 +1185,7 @@ const WATCH_KEY = 'ft-watch-v1'
                 const R=3440.065, toRad=(x:number)=>x*Math.PI/180
                 const dLat=toRad(c-a), dLon=toRad(d-b)
                 const s=Math.sin(dLat/2)**2 + Math.cos(toRad(a))*Math.cos(toRad(c))*Math.sin(dLon/2)**2
-                return 2*R*Math.asin(Math.sqrt(s))  // nm
+                return 2*R*Math.asin(Math.sqrt(s))
               }
               const total = hav(orig.lat,orig.lon,dest.lat,dest.lon)
               const remain = hav(selected.lat,selected.lng,dest.lat,dest.lon)
@@ -998,11 +1246,11 @@ const WATCH_KEY = 'ft-watch-v1'
                 Globe ↗
               </a>
             </div>
+
             {!photo && (
               <div className="mt-3 text-[10px] text-slate-600 text-center">Photo via planespotters.net — none on file for this aircraft</div>
             )}
 
-            {/* Export / share row */}
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 onClick={() => {
@@ -1019,7 +1267,7 @@ const WATCH_KEY = 'ft-watch-v1'
               <button
                 onClick={() => {
                   const trail = trailsRef.current.get(selected.icao) || []
-                  const coords = trail.map(([la,ln,ts]) => `${ln},${la},${0}`).join(' ')
+                  const coords = trail.map(([la,ln]) => `${ln},${la},${0}`).join(' ')
                   const kml = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
 <Document>
@@ -1080,7 +1328,6 @@ const WATCH_KEY = 'ft-watch-v1'
           const s=Math.sin(dLat/2)**2 + Math.cos(toRad(a))*Math.cos(toRad(c))*Math.sin(dLon/2)**2
           return 2*R*Math.asin(Math.sqrt(s))
         }
-        // Bearing from airport TO flight
         const bear = (lat1:number,lon1:number,lat2:number,lon2:number) => {
           const toRad=(x:number)=>x*Math.PI/180
           const dLon = toRad(lon2-lon1)
@@ -1090,12 +1337,9 @@ const WATCH_KEY = 'ft-watch-v1'
         }
         const angDiff = (a:number,b:number) => { const d=Math.abs(a-b)%360; return d>180?360-d:d }
 
-        // Derive arrivals (inbound, descending, close) + departures (outbound, climbing, close)
-        // Plus known route matches from cache
         const arrivals: {f: Flight; distNm: number; etaMin: number; tag: string}[] = []
         const departures: {f: Flight; distNm: number; tag: string}[] = []
         for (const f of flights) {
-          // Cached route match: definitive
           const cs = f.callsign.replace(/\s+/g, '')
           const cached = routeCacheRef.current.get(cs)
           if (cached?.airports?.length) {
@@ -1112,11 +1356,9 @@ const WATCH_KEY = 'ft-watch-v1'
               continue
             }
           }
-          // Heuristic: within 80 nm
           const d = hav(f.lat,f.lng,ap.lat,ap.lon)
           if (d > 80 || f.ground) continue
           const bFromAp = bear(ap.lat, ap.lon, f.lat, f.lng)
-          // Heading roughly opposite of bearing-from-airport => inbound
           const inbound = angDiff(f.track, (bFromAp+180)%360) < 50
           const outbound = angDiff(f.track, bFromAp) < 50
           if (inbound && f.vertRate < 200 && f.altitudeFt < 15000) {
@@ -1150,7 +1392,7 @@ const WATCH_KEY = 'ft-watch-v1'
               <div className="flex-1 overflow-y-auto border-r border-slate-800">
                 {arrivals.length === 0 && <div className="p-3 text-[11px] text-slate-500 text-center">None inbound</div>}
                 {arrivals.slice(0, 30).map(({f, distNm, etaMin, tag}) => (
-                  <button key={f.icao} onClick={()=>{ setSelected(f); mapRef.current?.panTo([f.lat,f.lng]) }}
+                  <button key={f.icao} onClick={()=>{ setSelected(f); flyToLatLng(f.lat,f.lng) }}
                           className="w-full text-left px-2.5 py-1.5 hover:bg-slate-900 border-b border-slate-900 transition">
                     <div className="flex items-baseline justify-between gap-1">
                       <span className="font-mono font-bold text-emerald-300 text-[11px]">{f.callsign}</span>
@@ -1166,7 +1408,7 @@ const WATCH_KEY = 'ft-watch-v1'
               <div className="flex-1 overflow-y-auto">
                 {departures.length === 0 && <div className="p-3 text-[11px] text-slate-500 text-center">None outbound</div>}
                 {departures.slice(0, 30).map(({f, distNm, tag}) => (
-                  <button key={f.icao} onClick={()=>{ setSelected(f); mapRef.current?.panTo([f.lat,f.lng]) }}
+                  <button key={f.icao} onClick={()=>{ setSelected(f); flyToLatLng(f.lat,f.lng) }}
                           className="w-full text-left px-2.5 py-1.5 hover:bg-slate-900 border-b border-slate-900 transition">
                     <div className="flex items-baseline justify-between gap-1">
                       <span className="font-mono font-bold text-amber-300 text-[11px]">{f.callsign}</span>
@@ -1215,7 +1457,7 @@ const WATCH_KEY = 'ft-watch-v1'
           <div className="flex-1 overflow-y-auto">
             {watchlist.length === 0 && (
               <div className="p-4 text-center text-[11px] text-slate-500">
-                Empty. Add a callsign — you'll get audio + visual alert next time it broadcasts.
+                Empty. Add a callsign — you&apos;ll get audio + visual alert next time it broadcasts.
               </div>
             )}
             {watchlist.map(w => {
@@ -1227,7 +1469,7 @@ const WATCH_KEY = 'ft-watch-v1'
               return (
                 <div key={w} className="px-3 py-2 border-b border-slate-900 flex items-center justify-between gap-2 hover:bg-slate-900/50">
                   <button onClick={()=>{
-                    if (live) { setSelected(live); mapRef.current?.flyTo([live.lat,live.lng], Math.max(mapRef.current.getZoom(),7)) }
+                    if (live) { setSelected(live); flyToLatLng(live.lat, live.lng, Math.max(mapRef.current?.getZoom() ?? 0, 7)) }
                   }} className="flex-1 text-left">
                     <div className="font-mono text-sm text-sky-300 font-bold">{w}</div>
                     <div className="text-[10px] text-slate-500 mt-0.5">
@@ -1260,7 +1502,7 @@ const WATCH_KEY = 'ft-watch-v1'
                   <th className="text-left px-3 py-2 font-medium">Metric</th>
                   {compareList.map(f => (
                     <th key={f.icao} className="text-left px-3 py-2 font-medium">
-                      <button onClick={()=>{setSelected(f); mapRef.current?.flyTo([f.lat,f.lng],Math.max(mapRef.current.getZoom(),7))}}
+                      <button onClick={()=>{setSelected(f); flyToLatLng(f.lat,f.lng,Math.max(mapRef.current?.getZoom() ?? 0, 7))}}
                               className="hover:text-violet-300">
                         <span className="font-mono text-violet-300 font-bold normal-case tracking-normal text-xs">{f.callsign}</span>
                       </button>
@@ -1303,7 +1545,7 @@ const WATCH_KEY = 'ft-watch-v1'
       {/* Footer */}
       <footer className="absolute bottom-3 left-3 md:left-4 z-10 pointer-events-none">
         <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl px-2.5 py-1 text-[10px] uppercase tracking-widest text-slate-400 shadow-2xl">
-          8s refresh · /=search · esc · t·w·n·h·l·f
+          8s refresh · /=search · esc · t·w·n·h·l·f · drag-rotate for 3D
         </div>
       </footer>
 
@@ -1323,7 +1565,7 @@ const WATCH_KEY = 'ft-watch-v1'
               <button key={t.id}
                 onClick={() => {
                   const f = flights.find(x => x.icao === t.icao)
-                  if (f) { setSelected(f); mapRef.current?.flyTo([f.lat, f.lng], Math.max(mapRef.current.getZoom(), 8)) }
+                  if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, Math.max(mapRef.current?.getZoom() ?? 0, 8)) }
                   setToasts(prev => prev.filter(x => x.id !== t.id))
                 }}
                 className={`text-left backdrop-blur-xl rounded-xl px-3 py-2 shadow-2xl ${cls}`}
@@ -1383,36 +1625,13 @@ function compass(deg: number) {
   return dirs[Math.round(((deg % 360) / 22.5)) % 16]
 }
 function altColor(ft: number): string {
-  // FR24-style altitude ramp
   if (ft <= 0) return '#64748b'
-  if (ft < 5000)   return '#f43f5e'  // rose
-  if (ft < 15000)  return '#f97316'  // orange
-  if (ft < 25000)  return '#facc15'  // yellow
-  if (ft < 35000)  return '#22d3ee'  // cyan
-  if (ft < 42000)  return '#38bdf8'  // sky
-  return '#a78bfa'                   // violet
-}
-function planeHtml(f: Flight, selected: boolean) {
-  const color = f.emergency ? '#f43f5e' : f.ground ? '#64748b' : selected ? '#fbbf24' : altColor(f.altitudeFt)
-  const size = selected ? 30 : 24
-  const glow = f.emergency ? '0 0 14px rgba(244,63,94,0.9)'
-              : selected   ? '0 0 14px rgba(251,191,36,0.9)'
-              : `0 0 8px ${color}aa`
-  // helicopter (rotorcraft) gets a different shape
-  if (f.category === 'A7') {
-    return `<div style="width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(${glow});">
-      <svg viewBox="0 0 24 24" width="${size-4}" height="${size-4}">
-        <circle cx="12" cy="12" r="3.5" fill="${color}" stroke="#0f172a" stroke-width="0.8"/>
-        <line x1="2" y1="12" x2="22" y2="12" stroke="${color}" stroke-width="1.3"/>
-        <line x1="12" y1="2" x2="12" y2="22" stroke="${color}" stroke-width="1.3"/>
-      </svg></div>`
-  }
-  return `
-    <div style="width:${size}px;height:${size}px;transform:rotate(${f.track}deg);display:flex;align-items:center;justify-content:center;filter:drop-shadow(${glow});">
-      <svg viewBox="0 0 24 24" width="${size-4}" height="${size-4}">
-        <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 1 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"
-              fill="${color}" stroke="#0f172a" stroke-width="0.7" stroke-linejoin="round"/>
-      </svg></div>`
+  if (ft < 5000)   return '#f43f5e'
+  if (ft < 15000)  return '#f97316'
+  if (ft < 25000)  return '#facc15'
+  if (ft < 35000)  return '#22d3ee'
+  if (ft < 42000)  return '#38bdf8'
+  return '#a78bfa'
 }
 function PlaneLogo() {
   return (
@@ -1424,11 +1643,10 @@ function PlaneLogo() {
   )
 }
 
-/* Day/night terminator polygon (simple Spencer formula). */
+/* Day/night terminator polygon (simple Spencer formula). Returns [lat,lng]. */
 function terminatorPolygon(date: Date): Array<[number, number]> {
   const julian = date.getTime() / 86400000 + 2440587.5
   const T = (julian - 2451545.0) / 36525
-  // Solar declination
   const epsilon = (23.439 - 0.0000004 * (julian - 2451545.0)) * Math.PI / 180
   const L0 = (280.46646 + T * (36000.76983 + T * 0.0003032)) % 360
   const M = (357.52911 + T * (35999.05029 - 0.0001537 * T)) * Math.PI / 180
@@ -1437,17 +1655,14 @@ function terminatorPolygon(date: Date): Array<[number, number]> {
             + 0.000289 * Math.sin(3 * M)
   const lambda = (L0 + C) * Math.PI / 180
   const dec = Math.asin(Math.sin(epsilon) * Math.sin(lambda))
-  // Greenwich hour angle of sun
   const utHours = date.getUTCHours() + date.getUTCMinutes()/60 + date.getUTCSeconds()/3600
   const gha = (utHours * 15 - 180) * Math.PI / 180
-  // For each longitude, compute terminator latitude
   const pts: Array<[number, number]> = []
   for (let lng = -180; lng <= 180; lng += 2) {
     const H = (lng * Math.PI / 180) + gha
     const lat = Math.atan(-Math.cos(H) / Math.tan(dec)) * 180 / Math.PI
     pts.push([lat, lng])
   }
-  // Close polygon over the night side. If sun is in N hemisphere (summer), night is southern wrap; else northern.
   const decDeg = dec * 180 / Math.PI
   if (decDeg > 0) {
     pts.push([-90, 180]); pts.push([-90, -180])
