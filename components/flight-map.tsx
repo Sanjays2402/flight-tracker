@@ -550,63 +550,20 @@ export default function FlightMap() {
     try {
       const m = mapRef.current
       let lat = 40.7, lon = -74, distNm = 250
-      let useGlobal = false
-      let bbox: {lamin:number; lamax:number; lomin:number; lomax:number} | null = null
       if (m) {
         const c = m.getCenter()
         lat = c.lat; lon = c.lng
         const b = m.getBounds()
         const halfH = (b.getNorth() - b.getSouth()) / 2 * 60
         const halfW = (b.getEast() - b.getWest()) / 2 * 60 * Math.cos(lat * Math.PI / 180)
-        distNm = Math.min(250, Math.max(50, Math.ceil(Math.max(halfH, halfW))))
-        const z = m.getZoom()
-        // At low zoom, switch to OpenSky bbox for true global coverage
-        if (z < 6) {
-          useGlobal = true
-          bbox = {
-            lamin: Math.max(-90, b.getSouth()),
-            lamax: Math.min(90, b.getNorth()),
-            lomin: Math.max(-180, b.getWest()),
-            lomax: Math.min(180, b.getEast()),
-          }
-        }
+        // adsb.lol allows up to dist=25000nm. Scale with viewport so world view returns everything.
+        distNm = Math.min(25000, Math.max(50, Math.ceil(Math.max(halfH, halfW) * 1.15)))
       }
-
-      let raw: AcRaw[] = []
-      if (useGlobal && bbox) {
-        const u = `https://opensky-network.org/api/states/all?lamin=${bbox.lamin.toFixed(3)}&lomin=${bbox.lomin.toFixed(3)}&lamax=${bbox.lamax.toFixed(3)}&lomax=${bbox.lomax.toFixed(3)}`
-        const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(u)}`, { cache: 'no-store' })
-        if (!res.ok) throw new Error(`OpenSky HTTP ${res.status}`)
-        const j = await res.json() as { states?: Array<unknown[]> }
-        raw = (j.states ?? []).map(s => {
-          const [icao24, cs, country, , , lng, latv, baroAlt, onGround, vel, trk, vRate, , geoAlt, sq] = s as [string, string|null, string, number|null, number|null, number|null, number|null, number|null, boolean, number|null, number|null, number|null, unknown, number|null, string|null]
-          const m2ft = 3.28084
-          const ms2kt = 1.94384
-          return {
-            hex: icao24,
-            flight: (cs || '').trim(),
-            t: '—',
-            r: '—',
-            desc: country || '',
-            ownOp: '—',
-            lat: latv ?? 0, lon: lng ?? 0,
-            alt_baro: onGround ? 'ground' : (baroAlt != null ? Math.round(baroAlt * m2ft) : 0),
-            alt_geom: geoAlt != null ? Math.round(geoAlt * m2ft) : undefined,
-            gs: vel != null ? Math.round(vel * ms2kt) : 0,
-            geom_rate: vRate != null ? Math.round(vRate * m2ft * 60) : 0,
-            track: trk ?? 0,
-            squawk: sq || '',
-            category: '',
-            type: 'opensky',
-          } as AcRaw
-        }).filter(a => a.lat !== 0 || a.lon !== 0)
-      } else {
-        const target = `https://api.adsb.lol/v2/lat/${lat.toFixed(4)}/lon/${lon.toFixed(4)}/dist/${distNm}`
-        const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(target)}`, { cache: 'no-store' })
-        if (!res.ok) throw new Error(`adsb.lol HTTP ${res.status}`)
-        const json = await res.json() as { ac?: AcRaw[] }
-        raw = json.ac ?? []
-      }
+      const target = `https://api.adsb.lol/v2/lat/${lat.toFixed(4)}/lon/${lon.toFixed(4)}/dist/${distNm}`
+      const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(target)}`, { cache: 'no-store' })
+      if (!res.ok) throw new Error(`adsb.lol HTTP ${res.status}`)
+      const json = await res.json() as { ac?: AcRaw[] }
+      const raw: AcRaw[] = json.ac ?? []
       const parsed: Flight[] = raw
         .filter(a => typeof a.lat === 'number' && typeof a.lon === 'number')
         .map(a => {
@@ -1946,7 +1903,6 @@ export default function FlightMap() {
                 <div className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-2">Data sources</div>
                 <ul className="space-y-1.5 text-[13px]">
                   <li>• <a className="text-sky-400 hover:underline" href="https://adsb.lol" target="_blank" rel="noopener">adsb.lol</a> — aircraft positions, routes, airport DB (community feed, no API key)</li>
-                  <li>• <a className="text-sky-400 hover:underline" href="https://opensky-network.org" target="_blank" rel="noopener">OpenSky Network</a> — global aircraft state vectors (used at world view)</li>
                   <li>• <a className="text-sky-400 hover:underline" href="https://aviationweather.gov" target="_blank" rel="noopener">aviationweather.gov</a> — METAR airport weather (NOAA/AWC, no key)</li>
                   <li>• <a className="text-sky-400 hover:underline" href="https://www.planespotters.net" target="_blank" rel="noopener">planespotters.net</a> — aircraft photos</li>
                   <li>• <a className="text-sky-400 hover:underline" href="https://www.rainviewer.com" target="_blank" rel="noopener">RainViewer</a> — weather radar overlay</li>
