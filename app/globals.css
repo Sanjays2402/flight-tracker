@@ -24,3 +24,44 @@ html, body, #__next { height: 100%; margin: 0; background: #07090d; color: #e2e8
 }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* [BATCH-C] visual effects */
+@keyframes ft-pulse-halo {
+  0%, 100% { opacity: 0.55; transform: scale(1) }
+  50% { opacity: 1; transform: scale(1.25) }
+}
+@keyframes ft-flash-red {
+  0%, 100% { filter: hue-rotate(0deg) saturate(1) brightness(1) }
+  50% { filter: hue-rotate(-15deg) saturate(2.5) brightness(1.4) }
+}
+@keyframes ft-rainbow-trail {
+  0%   { stroke: #f43f5e }
+  16%  { stroke: #fb923c }
+  33%  { stroke: #facc15 }
+  50%  { stroke: #22c55e }
+  66%  { stroke: #38bdf8 }
+  83%  { stroke: #a78bfa }
+  100% { stroke: #f43f5e }
+}
+.ft-rainbow .maplibregl-canvas { filter: hue-rotate(0deg); animation: ft-rainbow-hue 6s linear infinite }
+@keyframes ft-rainbow-hue { to { filter: hue-rotate(360deg) } }
+
+/* galaxy-view overlay shown when extreme zoom-out */
+.ft-galaxy {
+  background:
+    radial-gradient(2px 2px at 12% 18%, #fff, transparent 60%),
+    radial-gradient(2px 2px at 32% 72%, #cbd5e1, transparent 60%),
+    radial-gradient(1px 1px at 56% 26%, #93c5fd, transparent 60%),
+    radial-gradient(1.5px 1.5px at 78% 60%, #fde68a, transparent 60%),
+    radial-gradient(1px 1px at 88% 12%, #fff, transparent 60%),
+    radial-gradient(1.5px 1.5px at 22% 88%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 65% 86%, #ddd, transparent 60%),
+    radial-gradient(ellipse at 50% 55%, rgba(15,42,84,0.55), rgba(7,9,13,0.95));
+  pointer-events: none;
+  animation: ft-twinkle 12s ease-in-out infinite alternate;
+}
+@keyframes ft-twinkle { from { opacity: 0.4 } to { opacity: 0.9 } }
+
+/* mil tint marker */
+.ft-mil-tint { filter: sepia(0.5) hue-rotate(50deg) saturate(0.8) brightness(0.85) }
+

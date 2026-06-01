@@ -3,6 +3,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { AIRPORTS, AirportPin } from './airports'
+// [BATCH-C] imports
+import { BatchCOverlay, useBatchCPrefs, StatsExtended, FlightDetailCharts } from './batch-c-overlay'
+// [BATCH-B] overlays bundle
+import BatchBOverlays from './overlays/batch-b-overlays'
+// [BATCH-A] new imports
+import { SettingsCluster, ToastHost, OfflineBanner, SkipToMap, EmergencyLive, useRefreshControl } from './settings-bundle'
+import { pushToast } from '../lib/toast'
+import { playEmergencyChime, playRadioChirp } from '../lib/audio'
+import { lsGet, lsSet } from '../lib/storage'
+import { t as i18nT } from '../lib/i18n'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -215,6 +225,129 @@ export default function FlightMap() {
   const [emergLog, setEmergLog] = useState<{icao:string; cs:string; sq:string; lat:number; lng:number; t:number}[]>([])
   const [showEmergLog, setShowEmergLog] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  // [BATCH-C] preference hook
+  const batchCPrefs = useBatchCPrefs()
+
+  // [BATCH-A] persist last selected icao + restore on mount, full URL state, watchlist chime, page-vis pause hint
+  const lastIcaoLoadedRef = useRef(false)
+  useEffect(() => {
+    if (selected) { try { localStorage.setItem('ft-last-icao', selected.icao) } catch {} }
+  }, [selected])
+  useEffect(() => {
+    if (lastIcaoLoadedRef.current) return
+    if (flights.length === 0) return
+    lastIcaoLoadedRef.current = true
+    try {
+      const last = localStorage.getItem('ft-last-icao')
+      const fromHash = new URLSearchParams(window.location.hash.replace(/^#/, '')).get('icao')
+      const icao = (fromHash || last || '').toLowerCase()
+      if (!icao || selectedIcaoRef.current) return
+      const f = flights.find(x => x.icao === icao)
+      if (f) setSelected(f)
+    } catch {}
+  }, [flights])
+
+  // chime on watchlist hit (debounced per icao, 60s)
+  const watchHitsRef = useRef<Map<string, number>>(new Map())
+  useEffect(() => {
+    if (!flights.length || !watchlist.length) return
+    const now = Date.now()
+    const wl = new Set(watchlist.map(w => w.toLowerCase()))
+    for (const f of flights) {
+      const cs = (f.callsign || '').toLowerCase()
+      const ic = f.icao.toLowerCase()
+      if (wl.has(cs) || wl.has(ic)) {
+        const last = watchHitsRef.current.get(ic) || 0
+        if (now - last > 60000) {
+          watchHitsRef.current.set(ic, now)
+          playRadioChirp()
+        }
+      }
+    }
+  }, [flights, watchlist])
+
+  // emergency audio: integrate new audio module (gated by ft-mute/ft-volume)
+  const emergChimedRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    for (const e of emergLog) {
+      if (!emergChimedRef.current.has(e.icao)) {
+        emergChimedRef.current.add(e.icao)
+        playEmergencyChime()
+      }
+    }
+  }, [emergLog])
+
+  // expand URL hash to include zoom/lat/lng/style/follow/units (read by Share, kept fresh)
+  useEffect(() => {
+    const m = mapRef.current; if (!m || !mapReady) return
+    const sync = () => {
+      try {
+        const c = m.getCenter(), z = m.getZoom()
+        const q = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+        q.set('lat', c.lat.toFixed(3)); q.set('lng', c.lng.toFixed(3)); q.set('z', String(Math.round(z)))
+        q.set('style', mapStyle); q.set('follow', follow ? '1' : '0')
+        q.set('au', units.alt); q.set('su', units.spd)
+        if (selected) q.set('icao', selected.icao); else q.delete('icao')
+        window.history.replaceState(null, '', `#${q.toString()}`)
+      } catch {}
+    }
+    let raf = 0
+    const onMove = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(sync) }
+    m.on('moveend', onMove); sync()
+    return () => { m.off('moveend', onMove); cancelAnimationFrame(raf) }
+  }, [mapReady, mapStyle, follow, units, selected])
+
+  // persist filters + follow + style audit
+  useEffect(() => {
+    try {
+      localStorage.setItem('ft-filters-v1', JSON.stringify({
+        altMin, altMax, spdMin, onlyMil, onlyEmerg, hideGround, airlinePrefix, listSort,
+      }))
+    } catch {}
+  }, [altMin, altMax, spdMin, onlyMil, onlyEmerg, hideGround, airlinePrefix, listSort])
+  useEffect(() => {
+    if (!lastIcaoLoadedRef.current) return
+    try {
+      const raw = localStorage.getItem('ft-filters-v1')
+      if (!raw) return
+      const f = JSON.parse(raw)
+      if (typeof f.altMin === 'number') setAltMin(f.altMin)
+      if (typeof f.altMax === 'number') setAltMax(f.altMax)
+      if (typeof f.spdMin === 'number') setSpdMin(f.spdMin)
+      if (typeof f.onlyMil === 'boolean') setOnlyMil(f.onlyMil)
+      if (typeof f.onlyEmerg === 'boolean') setOnlyEmerg(f.onlyEmerg)
+      if (typeof f.hideGround === 'boolean') setHideGround(f.hideGround)
+      if (typeof f.airlinePrefix === 'string') setAirlinePrefix(f.airlinePrefix)
+      if (typeof f.listSort === 'string') setListSort(f.listSort)
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastIcaoLoadedRef.current])
+  useEffect(() => { try { localStorage.setItem('ft-follow', follow ? '1' : '0') } catch {} }, [follow])
+  useEffect(() => {
+    try { if (localStorage.getItem('ft-follow') === '1') setFollow(true) } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // reduced motion + high contrast CSS injection (idempotent)
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    if (document.getElementById('ft-batch-a-style')) return
+    const s = document.createElement('style')
+    s.id = 'ft-batch-a-style'
+    s.textContent = `
+      :root { --ft-font-size: 14px; }
+      html[data-fontsize="S"] .ft-scale { font-size: 12px; }
+      html[data-fontsize="L"] .ft-scale { font-size: 16px; }
+      html[data-contrast="high"] body { filter: contrast(1.15) saturate(1.1); }
+      html[data-theme="light"] body { background: #f3f4f6; color: #0f172a; }
+      .ft-focus:focus-visible { outline: 2px solid rgb(14 165 233) !important; outline-offset: 2px; }
+      @media (prefers-reduced-motion: reduce) {
+        .animate-pulse, .animate-spin, .transition-transform, .transition-colors { animation: none !important; transition: none !important; }
+      }
+    `
+    document.head.appendChild(s)
+  }, [])
+
 
   const selectedIcaoRef = useRef<string | null>(null)
   const initialFocusRef = useRef<string | null>(null)
@@ -1220,7 +1353,12 @@ export default function FlightMap() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-[#07090d]">
-      <div ref={mapEl} className="absolute inset-0 z-0" style={{ width: '100%', height: '100%' }} />
+      {/* [BATCH-A] */}
+      <SkipToMap />
+      <OfflineBanner />
+      <ToastHost />
+      <EmergencyLive text={emergLog[0] ? `Emergency squawk ${emergLog[0].sq} from ${emergLog[0].cs || emergLog[0].icao}` : ''} />
+      <div id="map-main" ref={mapEl} className="absolute inset-0 z-0" style={{ width: '100%', height: '100%' }} />
 
       {/* Emergency banner */}
       {stats.emerg > 0 && (
@@ -2314,12 +2452,58 @@ export default function FlightMap() {
         </button>
         <button onClick={()=>setShowHelp(true)} title="Help (?)"
           className="w-9 h-9 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-700 text-sm font-bold shadow-xl">?</button>
+        {/* [BATCH-A] screenshot + settings */}
+        <button onClick={()=>{
+          try {
+            const canvas = mapRef.current?.getCanvas()
+            if (!canvas) { pushToast('Map not ready', 'warn'); return }
+            const url = canvas.toDataURL('image/png')
+            const a = document.createElement('a')
+            a.href = url; a.download = `flight-map-${Date.now()}.png`; a.click()
+            pushToast('Screenshot saved', 'success')
+          } catch (e) { pushToast('Screenshot failed', 'error') }
+        }} title={i18nT('screenshot')} aria-label={i18nT('screenshot')}
+          className="ft-focus w-9 h-9 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-700 text-sm font-bold shadow-xl focus:outline-none focus:ring-2 focus:ring-sky-500">📷</button>
+        <button onClick={()=>{
+          try {
+            const log = (emergLog || []).map(e => ({ icao: e.icao, callsign: e.cs, squawk: e.sq, lat: e.lat, lng: e.lng, t: new Date(e.t).toISOString() }))
+            const sel = selected ? { icao: selected.icao, callsign: selected.callsign, lat: selected.lat, lng: selected.lng, t: new Date().toISOString() } : null
+            const blob = new Blob([JSON.stringify({ emergencies: log, selected: sel }, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a'); a.href = url; a.download = `flight-log-${Date.now()}.json`; a.click()
+            setTimeout(() => URL.revokeObjectURL(url), 2000)
+            pushToast('Log exported', 'success')
+          } catch { pushToast('Export failed', 'error') }
+        }} title={i18nT('exportLog')} aria-label={i18nT('exportLog')}
+          className="ft-focus w-9 h-9 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-700 text-sm font-bold shadow-xl focus:outline-none focus:ring-2 focus:ring-sky-500">⤓</button>
+        <SettingsCluster />
       </div>
+      {/* [BATCH-B] overlays + tools + context menu + measure + pins + bookmarks */}
+      <BatchBOverlays
+        map={mapRef.current}
+        mapReady={mapReady}
+        flights={flights as any}
+        selectedIcao={selected?.icao || null}
+        watchHexes={new Set(watchlist.map(w => w.toLowerCase()))}
+        airports={AIRPORTS as any}
+        onSelectFlight={(hex) => {
+          const f = flightsRef.current.find(x => x.icao === hex)
+          if (f) setSelected(f)
+        }}
+        onDeselect={() => setSelected(null)}
+        onFlyTo={(lat, lng, zoom) => flyToLatLng(lat, lng, zoom)}
+      />
+      {/* [BATCH-C] overlay: hover tooltip, splash, about, fx, konami, galaxy */}
+      <BatchCOverlay
+        mapRef={mapRef}
+        flightsRef={flightsRef}
+        selected={selected}
+        mapZoom={mapZoom}
+        prefs={batchCPrefs}
+      />
     </div>
   )
 }
-
-/* ---------- helpers ---------- */
 
 function Stat({ label, value, color }: { label: string; value: string; color: string }) {
   return (
