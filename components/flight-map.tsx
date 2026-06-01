@@ -183,6 +183,7 @@ export default function FlightMap() {
   const [showStats, setShowStats] = useState(false)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
+  const [fabOpen, setFabOpen] = useState(false)
   const [welcome, setWelcome] = useState(false)
   const [about, setAbout] = useState(false)
   useEffect(() => {
@@ -1370,16 +1371,16 @@ export default function FlightMap() {
       )}
 
       {/* Top bar */}
-      <header className="absolute top-0 inset-x-0 z-20 flex items-start justify-between gap-3 p-3 md:p-4 pointer-events-none">
-        <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 md:px-4 py-2.5 shadow-2xl flex items-center gap-3">
+      <header className="absolute top-0 inset-x-0 z-20 flex items-start justify-between gap-2 sm:gap-3 p-2 sm:p-3 md:p-4 pointer-events-none">
+        <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-2.5 sm:px-3 md:px-4 py-2 sm:py-2.5 shadow-2xl flex items-center gap-2 sm:gap-3 min-w-0">
           <PlaneLogo />
-          <div>
-            <div className="text-sm md:text-base font-bold tracking-tight leading-none">Flight Tracker</div>
-            <div className="flex items-center gap-1.5 mt-1 text-[10px] uppercase tracking-widest">
+          <div className="min-w-0">
+            <div className="hidden xs:block text-sm md:text-base font-bold tracking-tight leading-none">Flight Tracker</div>
+            <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1 text-[10px] uppercase tracking-widest">
               <span className={`size-1.5 rounded-full ${status==='live'?'bg-emerald-400 live-dot':status==='error'?'bg-rose-500':'bg-amber-400 live-dot'}`} />
-              <span className="text-slate-400">
-                {status === 'live' ? `Live · ${flights.length} ac` : status === 'error' ? 'Connection error' : 'Loading'}
-                {lastUpdate && status==='live' && ` · ${lastUpdate.toLocaleTimeString()}`}
+              <span className="text-slate-400 truncate max-w-[40vw] sm:max-w-none">
+                {status === 'live' ? `Live · ${flights.length} ac` : status === 'error' ? 'Conn. error' : 'Loading'}
+                {lastUpdate && status==='live' && <span className="hidden sm:inline"> · {lastUpdate.toLocaleTimeString()}</span>}
               </span>
             </div>
           </div>
@@ -1411,7 +1412,7 @@ export default function FlightMap() {
             {query && <button onClick={()=>setQuery('')} className="text-slate-500 hover:text-slate-200 text-xs">✕</button>}
           </div>
           {searchOpen && query.trim().length >= 1 && (
-            <div className="absolute top-full mt-1 right-0 w-64 max-h-72 overflow-y-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl z-30">
+            <div className="absolute top-full mt-1 right-0 w-[min(80vw,16rem)] max-h-72 overflow-y-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-xl shadow-2xl z-30">
               {filtered.slice(0, 12).map(f => (
                 <button key={f.icao} onMouseDown={()=>{ setSelected(f); flyToLatLng(f.lat, f.lng, Math.max(mapRef.current?.getZoom() ?? 0, 8)); setSearchOpen(false) }}
                   className="w-full text-left px-3 py-2 hover:bg-slate-800/60 border-b border-slate-900 last:border-0 flex items-center gap-2">
@@ -1429,12 +1430,12 @@ export default function FlightMap() {
           </div>
           {/* Mobile: search icon */}
           <button onClick={()=>setMobileSearch(v=>!v)} aria-label="Search"
-            className="sm:hidden bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl size-10 flex items-center justify-center text-slate-300 active:bg-slate-800 shadow-2xl">
+            className="sm:hidden bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl size-11 flex items-center justify-center text-slate-300 active:bg-slate-800 shadow-2xl">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/><path d="m20 20-3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
           </button>
           {/* Mobile: hamburger */}
           <button onClick={()=>setMobileMenu(v=>!v)} aria-label="Menu"
-            className="sm:hidden bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl size-10 flex items-center justify-center text-slate-300 active:bg-slate-800 shadow-2xl">
+            className="sm:hidden bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl size-11 flex items-center justify-center text-slate-300 active:bg-slate-800 shadow-2xl">
             {mobileMenu ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
             ) : (
@@ -1458,7 +1459,7 @@ export default function FlightMap() {
 
       {/* Mobile menu sheet */}
       {mobileMenu && (
-        <div className="sm:hidden absolute inset-x-3 top-[64px] z-30 pointer-events-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl p-3 grid grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto">
+        <div className="sm:hidden absolute inset-x-3 top-[64px] z-30 pointer-events-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl p-3 grid grid-cols-3 xs:grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto">
           {([
             ['Trails', showTrails, ()=>setShowTrails(v=>!v)],
             ['Weather', showWeather, ()=>setShowWeather(v=>!v)],
@@ -1473,14 +1474,14 @@ export default function FlightMap() {
             ...(compareList.length>0 ? [[`⇄ ${compareList.length}`, showCompare, ()=>setShowCompare(v=>!v)] as [string,boolean,()=>void]] : []),
           ] as [string, boolean, ()=>void][]).map(([label,on,fn]) => (
             <button key={label} onClick={()=>{ fn(); }}
-              className={`px-2 py-2.5 rounded-xl text-xs font-semibold border transition active:scale-95 ${on?'bg-sky-500 text-slate-950 border-sky-400':'bg-slate-900/80 text-slate-300 border-slate-800'}`}>{label}</button>
+              className={`min-h-11 px-2 py-3 rounded-xl text-xs font-semibold border transition active:scale-95 ${on?'bg-sky-500 text-slate-950 border-sky-400':'bg-slate-900/80 text-slate-300 border-slate-800'}`}>{label}</button>
           ))}
         </div>
       )}
 
       {/* Stats strip */}
-      <div className="absolute top-[60px] md:top-[68px] left-3 md:left-4 z-20 pointer-events-none">
-        <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 md:px-4 py-2.5 md:py-3 shadow-2xl grid grid-cols-2 sm:grid-cols-4 gap-x-5 md:gap-x-6 gap-y-2.5 w-[min(96vw,600px)]">
+      <div className="absolute top-[56px] md:top-[68px] left-2 sm:left-3 md:left-4 right-2 sm:right-auto z-20 pointer-events-none">
+        <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 md:px-4 py-2 md:py-3 shadow-2xl grid grid-cols-2 sm:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-2 sm:gap-y-2.5 w-full sm:w-[min(96vw,600px)]">
           <Stat label="Shown" value={stats.total.toLocaleString()} color="text-sky-400" />
           <Stat label="Airborne" value={stats.airborne.toLocaleString()} color="text-emerald-400" />
           <Stat label="Avg alt" value={`${(stats.avgAlt/1000).toFixed(1)}k ft`} color="text-violet-400" />
@@ -1490,7 +1491,9 @@ export default function FlightMap() {
 
       {/* Filter panel */}
       {showFilters && (
-        <div className="absolute top-[140px] md:top-[150px] left-3 md:left-4 z-20 w-[min(94vw,360px)] bg-slate-950/90 backdrop-blur-xl border border-slate-800 rounded-2xl p-4 shadow-2xl">
+        <div className="absolute z-20 shadow-2xl bg-slate-950/95 backdrop-blur-xl border border-slate-800
+          sm:top-[140px] md:top-[150px] sm:left-3 md:left-4 sm:w-[min(94vw,360px)] sm:rounded-2xl sm:bottom-auto sm:inset-x-auto
+          inset-x-0 bottom-0 rounded-t-2xl max-h-[75vh] overflow-y-auto p-4 ft-sheet ft-safe-pb">
           <div className="flex items-center justify-between mb-3">
             <div className="text-xs uppercase tracking-widest text-slate-400 font-semibold">Filters</div>
             <button onClick={()=>setShowFilters(false)} className="size-6 rounded-md hover:bg-slate-800 flex items-center justify-center text-slate-400">✕</button>
@@ -1577,7 +1580,9 @@ export default function FlightMap() {
 
       {/* Live list panel */}
       {showList && (
-        <aside className="absolute right-3 md:right-4 top-[68px] md:top-[80px] bottom-3 md:bottom-4 z-20 w-[min(94vw,340px)] bg-slate-950/90 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl flex flex-col">
+        <aside className="absolute z-20 bg-slate-950/90 backdrop-blur-xl border border-slate-800 shadow-2xl flex flex-col
+          sm:right-3 md:right-4 sm:top-[68px] md:top-[80px] sm:bottom-3 md:bottom-4 sm:w-[min(94vw,340px)] sm:rounded-2xl sm:inset-x-auto
+          inset-x-0 bottom-0 max-h-[70vh] rounded-t-2xl ft-sheet ft-safe-pb">
           <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
             <div className="text-xs uppercase tracking-widest text-slate-400 font-semibold">Live ({sortedList.length})</div>
             <div className="flex gap-1">
@@ -1613,7 +1618,9 @@ export default function FlightMap() {
 
       {/* Selected flight panel */}
       {selected && (
-        <aside className={`absolute z-20 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl overflow-hidden ${showList ? 'left-3 md:left-4' : 'right-3 md:right-4'} bottom-3 md:bottom-4 w-[min(94vw,380px)] max-h-[70vh] overflow-y-auto`}>
+        <aside className={`absolute z-20 bg-slate-950/95 backdrop-blur-xl border border-slate-800 shadow-2xl
+          sm:rounded-2xl ${showList ? 'sm:left-3 md:sm:left-4' : 'sm:right-3 md:right-4'} sm:bottom-3 md:bottom-4 sm:w-[min(94vw,380px)] sm:max-h-[70vh] sm:overflow-y-auto sm:inset-x-auto
+          inset-x-0 bottom-0 max-h-[70vh] overflow-y-auto rounded-t-2xl ft-sheet ft-safe-pb`}>
           <button onClick={()=>setSelected(null)} className="absolute top-3 right-3 size-7 rounded-lg bg-slate-900/70 hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-100 transition z-10">✕</button>
           {photo && (
             <div className="relative h-40 bg-slate-900">
@@ -1947,7 +1954,9 @@ export default function FlightMap() {
 
       {/* Watchlist panel */}
       {showWatch && (
-        <aside className="absolute top-16 right-3 z-20 w-[95vw] max-w-[300px] max-h-[60vh] flex flex-col bg-slate-950/95 backdrop-blur-xl border border-sky-700/60 rounded-2xl shadow-2xl shadow-sky-900/40">
+        <aside className="absolute z-20 bg-slate-950/95 backdrop-blur-xl border border-sky-700/60 shadow-2xl shadow-sky-900/40 flex flex-col
+          sm:top-16 sm:right-3 sm:w-[95vw] sm:max-w-[300px] sm:max-h-[60vh] sm:rounded-2xl sm:inset-x-auto sm:bottom-auto
+          inset-x-0 bottom-0 max-h-[70vh] rounded-t-2xl ft-sheet ft-safe-pb">
           <div className="p-3 border-b border-slate-800 flex items-baseline justify-between">
             <div>
               <div className="text-[10px] uppercase tracking-widest text-sky-400">Watchlist</div>
@@ -2003,7 +2012,9 @@ export default function FlightMap() {
 
       {/* Compare panel */}
       {showCompare && compareList.length > 0 && (
-        <aside className="absolute left-1/2 -translate-x-1/2 bottom-12 z-30 w-[95vw] max-w-[820px] bg-slate-950/95 backdrop-blur-xl border border-violet-700/50 rounded-2xl shadow-2xl shadow-violet-900/30">
+        <aside className="absolute z-30 bg-slate-950/95 backdrop-blur-xl border border-violet-700/50 shadow-2xl shadow-violet-900/30
+          sm:left-1/2 sm:-translate-x-1/2 sm:bottom-12 sm:w-[95vw] sm:max-w-[820px] sm:rounded-2xl
+          inset-x-0 bottom-0 rounded-t-2xl ft-sheet ft-safe-pb max-h-[70vh] overflow-y-auto">
           <div className="px-4 py-2 border-b border-slate-800 flex items-baseline justify-between">
             <div className="text-[10px] uppercase tracking-widest text-violet-400">Compare · {compareList.length} aircraft</div>
             <div className="flex items-center gap-3">
@@ -2143,7 +2154,9 @@ export default function FlightMap() {
         )
 
         return (
-          <aside className="absolute z-20 left-3 md:left-4 top-24 md:top-32 w-[min(94vw,360px)] max-h-[calc(100vh-200px)] overflow-y-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl">
+          <aside className="absolute z-20 bg-slate-950/95 backdrop-blur-xl border border-slate-800 shadow-2xl
+            sm:left-3 md:left-4 sm:top-24 md:top-32 sm:w-[min(94vw,360px)] sm:max-h-[calc(100vh-200px)] sm:rounded-2xl sm:inset-x-auto sm:bottom-auto
+            inset-x-0 bottom-0 max-h-[75vh] rounded-t-2xl ft-sheet ft-safe-pb overflow-y-auto">
             <header className="sticky top-0 bg-slate-950/95 backdrop-blur-xl border-b border-slate-800 px-3 py-2 flex items-center justify-between">
               <h3 className="text-xs uppercase tracking-widest text-slate-300 font-semibold">Live Statistics</h3>
               <button onClick={()=>setShowStats(false)} className="text-slate-500 hover:text-slate-300 text-sm">✕</button>
@@ -2442,16 +2455,22 @@ export default function FlightMap() {
         </div>
       )}
 
-      {/* Floating utility buttons (bottom-right) */}
-      <div className="absolute bottom-4 right-4 z-30 flex flex-col gap-1.5">
+      {/* Floating utility buttons (bottom-right) — collapsible FAB on mobile */}
+      <div className="ft-fab absolute bottom-4 right-3 sm:right-4 z-30 flex flex-col gap-1.5 items-end ft-safe-mb">
+        {/* FAB toggle (mobile only) */}
+        <button onClick={()=>setFabOpen(v=>!v)} aria-label="More tools"
+          className="sm:hidden w-12 h-12 rounded-full bg-sky-600/95 backdrop-blur border border-sky-400 text-white text-xl font-bold shadow-2xl active:scale-95 transition order-last">
+          {fabOpen ? '×' : '⋯'}
+        </button>
+        <div className={`flex flex-col gap-1.5 items-end ${fabOpen ? 'flex' : 'hidden'} sm:flex`}>
         <button onClick={()=>setShowStyles(true)} title="Map style (m)"
-          className="w-9 h-9 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-700 text-sm font-bold shadow-xl">◐</button>
+          className="w-11 h-11 sm:w-9 sm:h-9 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-700 text-sm font-bold shadow-xl">◐</button>
         <button onClick={()=>setShowEmergLog(v=>!v)} title="Recent emergencies"
-          className={`relative w-9 h-9 rounded-lg bg-slate-900/90 backdrop-blur border text-sm font-bold shadow-xl ${emergLog.length?'border-rose-700 text-rose-400':'border-slate-800 text-slate-500'}`}>
+          className={`relative w-11 h-11 sm:w-9 sm:h-9 rounded-lg bg-slate-900/90 backdrop-blur border text-sm font-bold shadow-xl ${emergLog.length?'border-rose-700 text-rose-400':'border-slate-800 text-slate-500'}`}>
           ⚠{emergLog.length>0 && <span className="absolute -top-1 -right-1 bg-rose-500 text-slate-950 text-[9px] font-mono rounded-full w-4 h-4 flex items-center justify-center">{emergLog.length}</span>}
         </button>
         <button onClick={()=>setShowHelp(true)} title="Help (?)"
-          className="w-9 h-9 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-700 text-sm font-bold shadow-xl">?</button>
+          className="w-11 h-11 sm:w-9 sm:h-9 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-700 text-sm font-bold shadow-xl">?</button>
         {/* [BATCH-A] screenshot + settings */}
         <button onClick={()=>{
           try {
@@ -2463,7 +2482,7 @@ export default function FlightMap() {
             pushToast('Screenshot saved', 'success')
           } catch (e) { pushToast('Screenshot failed', 'error') }
         }} title={i18nT('screenshot')} aria-label={i18nT('screenshot')}
-          className="ft-focus w-9 h-9 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-700 text-sm font-bold shadow-xl focus:outline-none focus:ring-2 focus:ring-sky-500">📷</button>
+          className="ft-focus w-11 h-11 sm:w-9 sm:h-9 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-700 text-sm font-bold shadow-xl focus:outline-none focus:ring-2 focus:ring-sky-500">📷</button>
         <button onClick={()=>{
           try {
             const log = (emergLog || []).map(e => ({ icao: e.icao, callsign: e.cs, squawk: e.sq, lat: e.lat, lng: e.lng, t: new Date(e.t).toISOString() }))
@@ -2475,8 +2494,9 @@ export default function FlightMap() {
             pushToast('Log exported', 'success')
           } catch { pushToast('Export failed', 'error') }
         }} title={i18nT('exportLog')} aria-label={i18nT('exportLog')}
-          className="ft-focus w-9 h-9 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-700 text-sm font-bold shadow-xl focus:outline-none focus:ring-2 focus:ring-sky-500">⤓</button>
+          className="ft-focus w-11 h-11 sm:w-9 sm:h-9 rounded-lg bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-700 text-sm font-bold shadow-xl focus:outline-none focus:ring-2 focus:ring-sky-500">⤓</button>
         <SettingsCluster />
+        </div>
       </div>
       {/* [BATCH-B] overlays + tools + context menu + measure + pins + bookmarks */}
       <BatchBOverlays

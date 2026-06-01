@@ -666,7 +666,7 @@ export default function BatchBOverlays(props: BatchBProps) {
       )}
 
       {/* main controls panel */}
-      <div className="absolute right-3 bottom-44 z-30 flex flex-col gap-1.5 pointer-events-auto">
+      <div className="hidden sm:flex absolute right-3 bottom-44 z-30 flex-col gap-1.5 pointer-events-auto">
         <button
           onClick={() => setShowPanel(v => !v)}
           title="Map tools"
@@ -830,7 +830,7 @@ function MiniMap({ parent }: { parent: maplibregl.Map }) {
     }
   }, [parent])
   return (
-    <div className="absolute bottom-4 left-4 z-20 w-40 h-28 rounded-lg overflow-hidden border border-slate-700 shadow-2xl cursor-pointer">
+    <div className="ft-minimap-pip absolute bottom-4 left-4 z-20 w-40 h-28 rounded-lg overflow-hidden border border-slate-700 shadow-2xl cursor-pointer">
       <div ref={ref} className="w-full h-full" />
     </div>
   )

@@ -18,10 +18,30 @@ html, body, #__next { height: 100%; margin: 0; background: #07090d; color: #e2e8
 
 /* Mobile: push maplibre zoom/compass controls above the ticker */
 @media (max-width: 640px) {
-  .maplibregl-ctrl-bottom-right { bottom: 56px !important; }
-  .maplibregl-ctrl-bottom-left { bottom: 56px !important; }
+  .maplibregl-ctrl-bottom-right { bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important; }
+  .maplibregl-ctrl-bottom-left { bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important; }
   .maplibregl-ctrl-attrib { font-size: 9px !important; }
+  /* Hide mini-map PIP on phones */
+  .ft-minimap-pip { display: none !important; }
+  /* Tap targets — ensure all buttons meet 44px when on phone */
+  .ft-fab, .ft-fab button { min-width: 44px !important; min-height: 44px !important; }
 }
+
+/* iOS safe-area helpers */
+.ft-safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.ft-safe-pb { padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)); }
+.ft-safe-mb { margin-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* Bottom sheet (mobile) */
+@keyframes ft-sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.ft-sheet { animation: ft-sheet-up 220ms cubic-bezier(.2,.7,.2,1); }
+
+/* Horizontal scroll for narrow tab rows */
+.ft-hscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.ft-hscroll::-webkit-scrollbar { display: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
