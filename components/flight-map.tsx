@@ -2614,26 +2614,13 @@ const NOTABLE_RE = /^(AF1|AIRFORCE1|FORCE0?1|SAM\d+|SPAR\d+|RCH\d+|JANET\d*|VENU
 function isNotable(cs: string): boolean { return NOTABLE_RE.test((cs || '').replace(/\s+/g, '')) }
 
 function PlaneLogo() {
-  const [theme, setTheme] = React.useState<string>('sky')
-  const [open, setOpen] = React.useState(false)
-  React.useEffect(() => {
+  const [theme, setTheme] = useState<string>('sky')
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
     try { const v = localStorage.getItem('ft-accent'); if (v) setTheme(v) } catch {}
   }, [])
-  React.useEffect(() => {
-    const map: Record<string, { from: string; to: string; shadow: string; ring: string }> = {
-      sky:     { from: 'from-sky-400',     to: 'to-sky-600',     shadow: 'shadow-sky-500/30',     ring: 'bg-sky-500' },
-      emerald: { from: 'from-emerald-400', to: 'to-emerald-600', shadow: 'shadow-emerald-500/30', ring: 'bg-emerald-500' },
-      violet:  { from: 'from-violet-400',  to: 'to-violet-600',  shadow: 'shadow-violet-500/30',  ring: 'bg-violet-500' },
-      rose:    { from: 'from-rose-400',    to: 'to-rose-600',    shadow: 'shadow-rose-500/30',    ring: 'bg-rose-500' },
-      amber:   { from: 'from-amber-400',   to: 'to-amber-600',   shadow: 'shadow-amber-500/30',   ring: 'bg-amber-500' },
-      fuchsia: { from: 'from-fuchsia-400', to: 'to-fuchsia-600', shadow: 'shadow-fuchsia-500/30', ring: 'bg-fuchsia-500' },
-      teal:    { from: 'from-teal-400',    to: 'to-teal-600',    shadow: 'shadow-teal-500/30',    ring: 'bg-teal-500' },
-      orange:  { from: 'from-orange-400',  to: 'to-orange-600',  shadow: 'shadow-orange-500/30',  ring: 'bg-orange-500' },
-    }
-    const t = map[theme] || map.sky
-    document.documentElement.style.setProperty('--ft-accent', `var(--tw-${theme}-500, #0ea5e9)`)
-    document.documentElement.dataset.ftAccent = theme
-    ;(window as any).__ftAccent = t
+  useEffect(() => {
+    try { document.documentElement.dataset.ftAccent = theme } catch {}
   }, [theme])
 
   const choose = (k: string) => { setTheme(k); try { localStorage.setItem('ft-accent', k) } catch {}; setOpen(false) }
