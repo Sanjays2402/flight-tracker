@@ -32,6 +32,7 @@ import AirportBoard from './airport-board'
 import SpeedAltScatter from './speed-alt-scatter'
 import SquawkMonitor from './squawk-monitor'
 import OperatorRace from './operator-race'
+import DensityHeatPanel, { installHeat, updateHeat, setHeatVisibility, setHeatRadius, setHeatIntensity, type HeatMode } from './density-heat'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -184,6 +185,12 @@ export default function FlightMap() {
   const [showScatter, setShowScatter] = useState<boolean>(() => lsGet('ft-scatter', false))
   const [showSquawk, setShowSquawk] = useState<boolean>(() => lsGet('ft-squawk', false))
   const [showRace, setShowRace] = useState<boolean>(() => lsGet('ft-race', false))
+  const [showDensity, setShowDensity] = useState<boolean>(() => lsGet('ft-dens', false))
+  const [heatMode, setHeatMode] = useState<HeatMode>(() => (lsGet('ft-heat-mode', 'count') as HeatMode))
+  const [heatGround, setHeatGround] = useState<boolean>(() => lsGet('ft-heat-grd', false))
+  const [heatRadius, setHeatRadiusState] = useState<number>(() => lsGet('ft-heat-r', 1))
+  const [heatIntensity, setHeatIntensityState] = useState<number>(() => lsGet('ft-heat-i', 1))
+  const [heatCell, setHeatCell] = useState<number>(() => lsGet('ft-heat-cell', 1))
   const [showPip, setShowPip] = useState<boolean>(() => { try { return localStorage.getItem('ft-pip') === '1' } catch { return false } })
   const [pipRadius, setPipRadius] = useState<number>(() => { try { const n = Number(localStorage.getItem('ft-pip-r') || '80'); return Number.isFinite(n) && n > 5 ? n : 80 } catch { return 80 } })
   const [holdMinTurn, setHoldMinTurn] = useState<number>(() => lsGet('ft-hold-turn', 360))
@@ -1160,7 +1167,44 @@ export default function FlightMap() {
     return () => { clearInterval(t); try { removeTerminator(m) } catch {} }
   }, [showSun, mapReady])
 
-  /* ---- Render planes (symbol layer) + 60fps dead-reckon interpolation ---- */
+  /* ---- Density Heatmap install + live sync ---- */
+  useEffect(() => {
+    const m = mapRef.current; if (!m || !mapReady) return
+    try { installHeat(m) } catch {}
+    try { setHeatVisibility(m, showDensity) } catch {}
+    try { setHeatRadius(m, heatRadius) } catch {}
+    try { setHeatIntensity(m, heatIntensity) } catch {}
+  }, [mapReady])
+
+  useEffect(() => {
+    const m = mapRef.current; if (!m || !mapReady) return
+    try { setHeatVisibility(m, showDensity) } catch {}
+  }, [showDensity, mapReady])
+
+  useEffect(() => {
+    const m = mapRef.current; if (!m || !mapReady) return
+    try { setHeatRadius(m, heatRadius) } catch {}
+  }, [heatRadius, mapReady])
+
+  useEffect(() => {
+    const m = mapRef.current; if (!m || !mapReady) return
+    try { setHeatIntensity(m, heatIntensity) } catch {}
+  }, [heatIntensity, mapReady])
+
+  useEffect(() => {
+    const m = mapRef.current; if (!m || !mapReady) return
+    if (!showDensity) return
+    try {
+      updateHeat(m, flights.map(f => ({
+        icao: f.icao, callsign: f.callsign,
+        lat: f.lat, lng: f.lng,
+        altitudeFt: f.altitudeFt, velocityKts: f.velocityKts,
+        ground: f.ground, emergency: f.emergency, military: f.military,
+      })), heatMode, heatGround)
+    } catch {}
+  }, [flights, heatMode, heatGround, showDensity, mapReady])
+
+
   // Snapshot of last-known authoritative positions per icao
   const lastPosRef = useRef<Map<string, { lng:number; lat:number; t:number; track:number; gs:number; ground:boolean; altFt:number; emergency:boolean; isSel:boolean; heli:boolean; color:string }>>(new Map())
 
@@ -1762,6 +1806,7 @@ export default function FlightMap() {
             <Toggle on={showScatter} onClick={()=>{ const nv = !showScatter; setShowScatter(nv); lsSet('ft-scatter', nv) }} label="S×A" />
             <Toggle on={showSquawk} onClick={()=>{ const nv = !showSquawk; setShowSquawk(nv); lsSet('ft-squawk', nv) }} label="SQK" />
             <Toggle on={showRace} onClick={()=>{ const nv = !showRace; setShowRace(nv); lsSet('ft-race', nv) }} label="RACE" />
+            <Toggle on={showDensity} onClick={()=>{ const nv = !showDensity; setShowDensity(nv); lsSet('ft-dens', nv) }} label="DENS" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2912,6 +2957,31 @@ export default function FlightMap() {
             }
           }}
           onClose={() => { setShowRace(false); lsSet('ft-race', false) }}
+        />
+      )}
+
+      {showDensity && (
+        <DensityHeatPanel
+          flights={flights.map(f => ({
+            icao: f.icao, callsign: f.callsign,
+            lat: f.lat, lng: f.lng,
+            altitudeFt: f.altitudeFt, velocityKts: f.velocityKts,
+            ground: f.ground, emergency: f.emergency, military: f.military,
+          }))}
+          mode={heatMode}
+          setMode={(m) => { setHeatMode(m); lsSet('ft-heat-mode', m) }}
+          includeGround={heatGround}
+          setIncludeGround={(b) => { setHeatGround(b); lsSet('ft-heat-grd', b) }}
+          radiusScale={heatRadius}
+          setRadiusScale={(n) => { setHeatRadiusState(n); lsSet('ft-heat-r', n) }}
+          intensityScale={heatIntensity}
+          setIntensityScale={(n) => { setHeatIntensityState(n); lsSet('ft-heat-i', n) }}
+          cellDeg={heatCell}
+          setCellDeg={(n) => { setHeatCell(n); lsSet('ft-heat-cell', n) }}
+          onFly={(lat, lng) => {
+            try { mapRef.current?.flyTo({ center: [lng, lat], zoom: Math.max(mapRef.current.getZoom(), 6), duration: 700 }) } catch {}
+          }}
+          onClose={() => { setShowDensity(false); lsSet('ft-dens', false) }}
         />
       )}
 
