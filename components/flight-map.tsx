@@ -27,6 +27,7 @@ import CockpitHUD from './cockpit-hud'
 import RulerTool from './ruler-tool'
 import PipMinimap from './pip-minimap'
 import BullseyeTool from './bullseye-tool'
+import WindsAloft from './winds-aloft'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -174,6 +175,7 @@ export default function FlightMap() {
   const [showCockpit, setShowCockpit] = useState<boolean>(() => lsGet('ft-pfd', false))
   const [showRuler, setShowRuler] = useState<boolean>(false)
   const [showBullseye, setShowBullseye] = useState<boolean>(false)
+  const [showWinds, setShowWinds] = useState<boolean>(() => lsGet('ft-winds', false))
   const [showPip, setShowPip] = useState<boolean>(() => { try { return localStorage.getItem('ft-pip') === '1' } catch { return false } })
   const [pipRadius, setPipRadius] = useState<number>(() => { try { const n = Number(localStorage.getItem('ft-pip-r') || '80'); return Number.isFinite(n) && n > 5 ? n : 80 } catch { return 80 } })
   const [holdMinTurn, setHoldMinTurn] = useState<number>(() => lsGet('ft-hold-turn', 360))
@@ -1747,6 +1749,7 @@ export default function FlightMap() {
             <Toggle on={showCockpit} onClick={()=>{ const nv = !showCockpit; setShowCockpit(nv); lsSet('ft-pfd', nv) }} label="PFD" />
             <Toggle on={showRuler} onClick={()=>setShowRuler(v=>!v)} label="Ruler" />
             <Toggle on={showBullseye} onClick={()=>setShowBullseye(v=>!v)} label="Bull" />
+            <Toggle on={showWinds} onClick={()=>{ const nv = !showWinds; setShowWinds(nv); lsSet('ft-winds', nv) }} label="Wind" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2805,6 +2808,20 @@ export default function FlightMap() {
             const f = flights.find(x => x.icao === icao)
             if (f && mapRef.current) {
               try { mapRef.current.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {}
+              setSelected(f)
+            }
+          }}
+        />
+      )}
+
+      {showWinds && (
+        <WindsAloft
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, altitudeFt: f.altitudeFt, ground: f.ground, windDir: f.windDir, windKts: f.windKts, oat: f.oat, lat: f.lat, lng: f.lng }))}
+          onClose={() => { setShowWinds(false); lsSet('ft-winds', false) }}
+          onFly={(icao) => {
+            const f = flights.find(x => x.icao === icao)
+            if (f && mapRef.current) {
+              try { mapRef.current.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 7), duration: 700 }) } catch {}
               setSelected(f)
             }
           }}
