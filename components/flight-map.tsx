@@ -77,6 +77,7 @@ import CurfewMonitor from './curfew-monitor'
 import MountainWave from './mountain-wave'
 import BirdStrikeMonitor from './birdstrike-monitor'
 import VolcanicAshMonitor from './volcanic-ash-monitor'
+import FirLoadMonitor from './fir-load-monitor'
 import RaimMonitor from './raim-monitor'
 import DepartureSequencer from './departure-sequencer'
 import CrosswindCompass from './crosswind-compass'
@@ -267,6 +268,7 @@ export default function FlightMap() {
   const [showMtnWave, setShowMtnWave] = useState<boolean>(() => lsGet('ft-mwave', false))
   const [showBird, setShowBird] = useState<boolean>(() => lsGet('ft-bird', false))
   const [showAsh, setShowAsh] = useState<boolean>(() => lsGet('ft-ash', false))
+  const [showFir, setShowFir] = useState<boolean>(() => lsGet('ft-fir', false))
   const [showRaim, setShowRaim] = useState<boolean>(() => lsGet('ft-raim', false))
   const [showOcean, setShowOcean] = useState<boolean>(() => lsGet('ft-ocean', false))
   const [showMetar, setShowMetar] = useState<boolean>(() => lsGet('ft-metar', false))
@@ -2168,6 +2170,7 @@ export default function FlightMap() {
           { id: 'toggle-mwave', group: 'View', label: showMtnWave ? 'Close Mountain Wave' : 'Mountain Wave (lee wave / rotor turbulence)', run: () => { const nv = !showMtnWave; setShowMtnWave(nv); lsSet('ft-mwave', nv) }, keywords: ['mountain', 'wave', 'lee', 'rotor', 'turbulence', 'ridge', 'sierra', 'alps', 'andes', 'crest'] },
           { id: 'toggle-bird', group: 'View', label: showBird ? 'Close Bird Strike' : 'Bird Strike (flyway / wildlife hazard)', run: () => { const nv = !showBird; setShowBird(nv); lsSet('ft-bird', nv) }, keywords: ['bird', 'strike', 'wildlife', 'flyway', 'migration', 'hazard', 'goose', 'duck', 'hudson'] },
           { id: 'toggle-ash', group: 'View', label: showAsh ? 'Close Volcanic Ash' : 'Volcanic Ash (VAAC plume drift)', run: () => { const nv = !showAsh; setShowAsh(nv); lsSet('ft-ash', nv) }, keywords: ['ash', 'volcano', 'volcanic', 'vaac', 'plume', 'eyjafjallajokull', 'eruption', 'so2', 'sigmet'] },
+          { id: 'toggle-fir', group: 'View', label: showFir ? 'Close FIR Load Monitor' : 'FIR / Sector Load Monitor (ATFM capacity)', run: () => { const nv = !showFir; setShowFir(nv); lsSet('ft-fir', nv) }, keywords: ['fir', 'sector', 'load', 'capacity', 'atfm', 'acc', 'controller', 'workload', 'atc', 'eurocontrol', 'artcc', 'overload', 'nmoc'] },
           { id: 'toggle-raim', group: 'View', label: showRaim ? 'Close GPS / RAIM' : 'GPS / RAIM (scintillation + jamming)', run: () => { const nv = !showRaim; setShowRaim(nv); lsSet('ft-raim', nv) }, keywords: ['gps', 'raim', 'gnss', 'jamming', 'spoofing', 'ionosphere', 'scintillation', 's4', 'kp', 'auroral', 'lpv', 'rnp'] },
           { id: 'toggle-ocean', group: 'View', label: showOcean ? 'Close Oceanic Tracks' : 'Oceanic Tracks (NAT-OTS / PACOTS)', run: () => { const nv = !showOcean; setShowOcean(nv); lsSet('ft-ocean', nv) }, keywords: ['oceanic', 'nat', 'ots', 'pacots', 'track', 'xtk', 'slop', 'mnt', 'in-trail', 'random'] },
           { id: 'toggle-metar', group: 'View', label: showMetar ? 'Close METAR Monitor' : 'METAR Monitor (surface obs)', run: () => { const nv = !showMetar; setShowMetar(nv); lsSet('ft-metar', nv) }, keywords: ['metar', 'taf', 'weather', 'wind', 'visibility', 'ceiling', 'vfr', 'mvfr', 'ifr', 'lifr', 'altimeter', 'qnh'] },
@@ -3737,6 +3740,16 @@ export default function FlightMap() {
         />
       )}
 
+      {showFir && (
+        <FirLoadMonitor
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, ground: f.ground }))}
+          onClose={() => { setShowFir(false); lsSet('ft-fir', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 6) } }}
+          onFlyLatLng={(lat, lng, zoom) => flyToLatLng(lat, lng, zoom)}
+        />
+      )}
+
       {showRaim && (
         <RaimMonitor
           map={mapRef.current}
@@ -4261,6 +4274,7 @@ export default function FlightMap() {
                 ['Curfew', showCurfew, ()=>{ const nv=!showCurfew; setShowCurfew(nv); lsSet('ft-curfew', nv) }],
                 ['Approach seq', showAprSeq, ()=>{ const nv=!showAprSeq; setShowAprSeq(nv); lsSet('ft-aprseq', nv) }],
                 ['Oceanic tracks', showOcean, ()=>{ const nv=!showOcean; setShowOcean(nv); lsSet('ft-ocean', nv) }],
+                ['FIR load', showFir, ()=>{ const nv=!showFir; setShowFir(nv); lsSet('ft-fir', nv) }],
                 ['SAR planner', showSar, ()=>{ const nv=!showSar; setShowSar(nv); lsSet('ft-sar', nv) }],
                 ['Stable approach', showStable, ()=>{ const nv=!showStable; setShowStable(nv); lsSet('ft-stable', nv) }],
                 ['FIR crossings', showFir, ()=>{ const nv=!showFir; setShowFir(nv); lsSet('ft-fir', nv) }],
