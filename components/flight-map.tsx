@@ -19,6 +19,7 @@ import EmissionsPanel from './emissions-panel'
 import ConflictPanel, { detectConflicts, type ConflictPair } from './conflict-panel'
 import OverheadPanel from './overhead-panel'
 import HoldingPanel, { detectHolding, type HoldingHit } from './holding-panel'
+import CockpitHUD from './cockpit-hud'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -160,6 +161,7 @@ export default function FlightMap() {
   const [showConflict, setShowConflict] = useState<boolean>(() => lsGet('ft-cflx', false))
   const [showOverhead, setShowOverhead] = useState<boolean>(() => lsGet('ft-overhead', false))
   const [showHolding, setShowHolding] = useState<boolean>(() => lsGet('ft-hold', false))
+  const [showCockpit, setShowCockpit] = useState<boolean>(() => lsGet('ft-pfd', false))
   const [holdMinTurn, setHoldMinTurn] = useState<number>(() => lsGet('ft-hold-turn', 360))
   const [holdMaxRadius, setHoldMaxRadius] = useState<number>(() => lsGet('ft-hold-rad', 10))
   const [holdMinSpan, setHoldMinSpan] = useState<number>(() => lsGet('ft-hold-span', 120))
@@ -1671,6 +1673,7 @@ export default function FlightMap() {
             <Toggle on={showConflict} onClick={()=>{ const nv = !showConflict; setShowConflict(nv); lsSet('ft-cflx', nv) }} label="CFLX" />
             <Toggle on={showOverhead} onClick={()=>{ const nv = !showOverhead; setShowOverhead(nv); lsSet('ft-overhead', nv) }} label="OVHD" />
             <Toggle on={showHolding} onClick={()=>{ const nv = !showHolding; setShowHolding(nv); lsSet('ft-hold', nv) }} label="HOLD" />
+            <Toggle on={showCockpit} onClick={()=>{ const nv = !showCockpit; setShowCockpit(nv); lsSet('ft-pfd', nv) }} label="PFD" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2653,6 +2656,13 @@ export default function FlightMap() {
             } catch {}
           }}
           onClose={() => { setShowConflict(false); lsSet('ft-cflx', false) }}
+        />
+      )}
+
+      {showCockpit && selected && (
+        <CockpitHUD
+          flight={selected as any}
+          onClose={() => { setShowCockpit(false); lsSet('ft-pfd', false) }}
         />
       )}
 
