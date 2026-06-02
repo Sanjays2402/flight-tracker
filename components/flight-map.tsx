@@ -315,6 +315,8 @@ export default function FlightMap() {
   const knownWatchRef = useRef<Set<string>>(new Set())
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
+  const [showLayers, setShowLayers] = useState(false)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity].filter(Boolean).length
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2164,62 +2166,10 @@ export default function FlightMap() {
             <Toggle on={showTrails} onClick={()=>setShowTrails(v=>!v)} label="Trails" hint="T" />
             <Toggle on={showWeather} onClick={()=>setShowWeather(v=>!v)} label="Weather" hint="W" />
             <Toggle on={showNight} onClick={()=>setShowNight(v=>!v)} label="Night" hint="N" />
-            <Toggle on={showHeat} onClick={()=>setShowHeat(v=>!v)} label="Heat" hint="H" />
             <Toggle on={show3D} onClick={()=>setShow3D(v=>!v)} label="3D" />
-            <Toggle on={chase} onClick={()=>{ if(!selected){return} setChase(v=>{ const nv=!v; chaseRef.current=nv; if(nv){setShow3D(true)} return nv }) }} label="Chase" />
             <Toggle on={showList} onClick={()=>setShowList(v=>!v)} label="List" hint="L" />
-            <Toggle on={showWatch} onClick={()=>setShowWatch(v=>!v)} label={`Watch${watchlist.length?` ${watchlist.length}`:''}`} />
-            {compareList.length > 0 && (
-              <Toggle on={showCompare} onClick={()=>setShowCompare(v=>!v)} label={`⇄ ${compareList.length}`} />
-            )}
             <Toggle on={showFilters} onClick={()=>setShowFilters(v=>!v)} label="Filter" />
-            <Toggle on={showStats} onClick={()=>setShowStats(v=>!v)} label="Stats" />
-            <Toggle on={showRadar} onClick={()=>{ const nv = !showRadar; setShowRadar(nv); lsSet('ft-radar', nv) }} label="Radar" />
-            <Toggle on={showEmissions} onClick={()=>{ const nv = !showEmissions; setShowEmissions(nv); lsSet('ft-em', nv) }} label="CO₂" />
-            <Toggle on={showConflict} onClick={()=>{ const nv = !showConflict; setShowConflict(nv); lsSet('ft-cflx', nv) }} label="CFLX" />
-            <Toggle on={showOverhead} onClick={()=>{ const nv = !showOverhead; setShowOverhead(nv); lsSet('ft-overhead', nv) }} label="OVHD" />
-            <Toggle on={showSun} onClick={()=>{ const nv = !showSun; setShowSun(nv); lsSet('ft-sun', nv) }} label="SUN" />
-            <Toggle on={showHolding} onClick={()=>{ const nv = !showHolding; setShowHolding(nv); lsSet('ft-hold', nv) }} label="HOLD" />
-            <Toggle on={showFormation} onClick={()=>{ const nv = !showFormation; setShowFormation(nv); lsSet('ft-form', nv) }} label="FORM" />
-            <Toggle on={showCpa} onClick={()=>{ const nv = !showCpa; setShowCpa(nv); lsSet('ft-cpa', nv) }} label="CPA" />
-            <Toggle on={showDiversion} onClick={()=>{ const nv = !showDiversion; setShowDiversion(nv); lsSet('ft-div', nv) }} label="DIV" />
-            <Toggle on={showVProfile} onClick={()=>{ const nv = !showVProfile; setShowVProfile(nv); lsSet('ft-vp', nv) }} label="VP" />
-            <Toggle on={showTcas} onClick={()=>{ const nv = !showTcas; setShowTcas(nv); lsSet('ft-tcas', nv) }} label="TCAS" />
-            <Toggle on={showWake} onClick={()=>{ const nv = !showWake; setShowWake(nv); lsSet('ft-wake', nv) }} label="WAKE" />
-            <Toggle on={showContrail} onClick={()=>{ const nv = !showContrail; setShowContrail(nv); lsSet('ft-contrail', nv) }} label="CTRL" />
-            <Toggle on={showAtlas} onClick={()=>{ const nv = !showAtlas; setShowAtlas(nv); lsSet('ft-atlas', nv) }} label="ATLAS" />
-            <Toggle on={showVip} onClick={()=>{ const nv = !showVip; setShowVip(nv); lsSet('ft-vip', nv) }} label="VIP" />
-            <Toggle on={showFlow} onClick={()=>{ const nv = !showFlow; setShowFlow(nv); lsSet('ft-flow', nv) }} label="FLOW" />
-            <Toggle on={showRecords} onClick={()=>{ const nv = !showRecords; setShowRecords(nv); lsSet('ft-records', nv) }} label="REC" />
-            <Toggle on={showShadow} onClick={()=>{ const nv = !showShadow; setShowShadow(nv); lsSet('ft-shadow', nv) }} label="SHAD" />
-            <Toggle on={showDoppler} onClick={()=>{ const nv = !showDoppler; setShowDoppler(nv); lsSet('ft-doppler', nv) }} label="DOP" />
-            <Toggle on={showAprSeq} onClick={()=>{ const nv = !showAprSeq; setShowAprSeq(nv); lsSet('ft-aprseq', nv) }} label="APR" />
-            <Toggle on={showPass} onClick={()=>{ const nv = !showPass; setShowPass(nv); lsSet('ft-pass', nv) }} label="PASS" />
-            <Toggle on={showNoise} onClick={()=>{ const nv = !showNoise; setShowNoise(nv); lsSet('ft-noise', nv) }} label="NOISE" />
-            <Toggle on={showTod} onClick={()=>{ const nv = !showTod; setShowTod(nv); lsSet('ft-tod', nv) }} label="TOD" />
-            <Toggle on={showTripwire} onClick={()=>{ const nv = !showTripwire; setShowTripwire(nv); lsSet('ft-tripwire', nv) }} label="WIRE" />
-            <Toggle on={showGeofence} onClick={()=>{ const nv = !showGeofence; setShowGeofence(nv); lsSet('ft-geofence', nv) }} label="FENCE" />
-            <Toggle on={showVoronoi} onClick={()=>{ const nv = !showVoronoi; setShowVoronoi(nv); lsSet('ft-voronoi', nv) }} label="VOR" />
-            <Toggle on={showSunGlare} onClick={()=>{ const nv = !showSunGlare; setShowSunGlare(nv); lsSet('ft-sunglare', nv) }} label="SUN" />
-            <Toggle on={showAnomaly} onClick={()=>{ const nv = !showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }} label="ANOM" />
-            <Toggle on={showCompareStudio} onClick={()=>{ const nv = !showCompareStudio; setShowCompareStudio(nv); lsSet('ft-compare-studio', nv); if (nv && selected && !compareStudioIcaos.includes(selected.icao)) { const next = [...compareStudioIcaos, selected.icao].slice(0, 4); setCompareStudioIcaos(next); lsSet('ft-compare-studio-icaos', next) } }} label="CMP" />
-            <Toggle on={showSymphony} onClick={()=>{ const nv = !showSymphony; setShowSymphony(nv); lsSet('ft-symphony', nv) }} label="SYNTH" />
-            <Toggle on={showTimeMachine} onClick={()=>{ const nv = !showTimeMachine; setShowTimeMachine(nv); lsSet('ft-timemachine', nv) }} label="TIME" />
-            <Toggle on={showReach} onClick={()=>{ const nv = !showReach; setShowReach(nv); lsSet('ft-reach', nv) }} label="REACH" />
-            <Toggle on={showTrip} onClick={()=>{ const nv = !showTrip; setShowTrip(nv); lsSet('ft-trip', nv) }} label="TRIP" />
-            <Toggle on={showEventLog} onClick={()=>{ const nv = !showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }} label="LOG" />
-            <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
-            <Toggle on={showPhase} onClick={()=>{ const nv = !showPhase; setShowPhase(nv); lsSet('ft-phase', nv) }} label="PHASE" />
-            <Toggle on={showCockpit} onClick={()=>{ const nv = !showCockpit; setShowCockpit(nv); lsSet('ft-pfd', nv) }} label="PFD" />
-            <Toggle on={showRuler} onClick={()=>setShowRuler(v=>!v)} label="Ruler" />
-            <Toggle on={showBullseye} onClick={()=>setShowBullseye(v=>!v)} label="Bull" />
-            <Toggle on={showWinds} onClick={()=>{ const nv = !showWinds; setShowWinds(nv); lsSet('ft-winds', nv) }} label="Wind" />
-            <Toggle on={showBoard} onClick={()=>{ const nv = !showBoard; setShowBoard(nv); lsSet('ft-board', nv) }} label="APT" />
-            <Toggle on={showScatter} onClick={()=>{ const nv = !showScatter; setShowScatter(nv); lsSet('ft-scatter', nv) }} label="S×A" />
-            <Toggle on={showSquawk} onClick={()=>{ const nv = !showSquawk; setShowSquawk(nv); lsSet('ft-squawk', nv) }} label="SQK" />
-            <Toggle on={showRace} onClick={()=>{ const nv = !showRace; setShowRace(nv); lsSet('ft-race', nv) }} label="RACE" />
-            <Toggle on={showDensity} onClick={()=>{ const nv = !showDensity; setShowDensity(nv); lsSet('ft-dens', nv) }} label="DENS" />
-            <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
+            <Toggle on={showLayers} onClick={()=>setShowLayers(v=>!v)} label={`Layers${activeLayerCount?` ${activeLayerCount}`:''}`} />
           </div>
           <div className="relative hidden sm:block">
           <div className="bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 py-2 shadow-2xl items-center gap-2 w-44 sm:w-60 flex">
@@ -2301,10 +2251,10 @@ export default function FlightMap() {
       {/* Stats strip */}
       <div className="absolute top-[56px] md:top-[68px] left-2 sm:left-3 md:left-4 right-2 sm:right-auto z-20 pointer-events-none">
         <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 md:px-4 py-2 md:py-3 shadow-2xl grid grid-cols-2 sm:grid-cols-4 gap-x-4 sm:gap-x-6 gap-y-2 sm:gap-y-2.5 w-full sm:w-[min(96vw,600px)]">
-          <Stat label="Shown" value={stats.total.toLocaleString()} color="text-sky-400" />
-          <Stat label="Airborne" value={stats.airborne.toLocaleString()} color="text-emerald-400" />
-          <Stat label="Avg alt" value={`${(stats.avgAlt/1000).toFixed(1)}k ft`} color="text-violet-400" />
-          <Stat label="Avg speed" value={`${Math.round(stats.avgVel)} kt`} color="text-rose-400" />
+          <Stat label="Shown" value={stats.total.toLocaleString()} color="text-slate-100" />
+          <Stat label="Airborne" value={stats.airborne.toLocaleString()} color="text-slate-100" />
+          <Stat label="Avg alt" value={`${(stats.avgAlt/1000).toFixed(1)}k ft`} color="text-slate-100" />
+          <Stat label="Avg speed" value={`${Math.round(stats.avgVel)} kt`} color="text-slate-100" />
         </div>
       </div>
 
@@ -3803,8 +3753,13 @@ export default function FlightMap() {
       {/* Footer keybind hints — only when nothing selected (avoids ticker collision) */}
       {!selected && (
         <footer className="hidden md:block absolute bottom-12 left-3 md:left-4 z-10 pointer-events-none">
-          <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl px-2.5 py-1 text-[10px] uppercase tracking-widest text-slate-400 shadow-2xl">
-            8s refresh · /=search · esc · t·w·n·h·l·f · drag-rotate · select a plane then CHASE
+          <div className="pointer-events-auto bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-xl px-3 py-2 text-[11px] text-slate-400 shadow-2xl flex items-center gap-3 flex-wrap">
+            <span className="flex items-center gap-1.5"><kbd className="font-mono bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[10px] border border-slate-700">/</kbd><span>Search</span></span>
+            <span className="text-slate-700">·</span>
+            <span className="flex items-center gap-1.5"><kbd className="font-mono bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[10px] border border-slate-700">L</kbd><span>List</span></span>
+            <span className="flex items-center gap-1.5"><kbd className="font-mono bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[10px] border border-slate-700">F</kbd><span>Filter</span></span>
+            <span className="flex items-center gap-1.5"><kbd className="font-mono bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[10px] border border-slate-700">3</kbd><span>3D</span></span>
+            <span className="flex items-center gap-1.5"><kbd className="font-mono bg-slate-800 text-slate-200 px-1.5 py-0.5 rounded text-[10px] border border-slate-700">?</kbd><span>All shortcuts</span></span>
           </div>
         </footer>
       )}
@@ -3820,12 +3775,12 @@ export default function FlightMap() {
         const emerg = filtered.filter(f=>f.emergency)[0]
         const mil = filtered.filter(f=>f.military)[0]
         const items: Array<{icon:string;label:string;value:string;color:string;flight:any}> = []
-        if (emerg) items.push({icon:'🚨', label:'EMERGENCY', value:`${emerg.callsign||emerg.icao} sq${emerg.squawk}`, color:'text-rose-400', flight:emerg})
-        items.push({icon:'⚡', label:'FASTEST', value:`${fastest.callsign||fastest.icao} ${Math.round(fastest.velocityKts)}kt`, color:'text-amber-400', flight:fastest})
-        items.push({icon:'⬆', label:'HIGHEST', value:`${highest.callsign||highest.icao} FL${Math.round(highest.altitudeFt/100)}`, color:'text-violet-400', flight:highest})
-        if (climbing) items.push({icon:'🚀', label:'CLIMB', value:`${climbing.callsign||climbing.icao} +${Math.round(climbing.vertRate)}fpm`, color:'text-emerald-400', flight:climbing})
-        if (descending) items.push({icon:'⬇', label:'DESCEND', value:`${descending.callsign||descending.icao} ${Math.round(descending.vertRate)}fpm`, color:'text-sky-400', flight:descending})
-        if (mil) items.push({icon:'🛡', label:'MIL', value:`${mil.callsign||mil.icao} ${mil.type||''}`, color:'text-orange-400', flight:mil})
+        if (emerg) items.push({icon:'!', label:'EMERGENCY', value:`${emerg.callsign||emerg.icao} sq${emerg.squawk}`, color:'text-rose-300', flight:emerg})
+        items.push({icon:'›', label:'FASTEST', value:`${fastest.callsign||fastest.icao} ${Math.round(fastest.velocityKts)}kt`, color:'text-slate-100', flight:fastest})
+        items.push({icon:'↑', label:'HIGHEST', value:`${highest.callsign||highest.icao} FL${Math.round(highest.altitudeFt/100)}`, color:'text-slate-100', flight:highest})
+        if (climbing) items.push({icon:'↗', label:'CLIMB', value:`${climbing.callsign||climbing.icao} +${Math.round(climbing.vertRate)}fpm`, color:'text-slate-100', flight:climbing})
+        if (descending) items.push({icon:'↘', label:'DESCEND', value:`${descending.callsign||descending.icao} ${Math.round(descending.vertRate)}fpm`, color:'text-slate-100', flight:descending})
+        if (mil) items.push({icon:'★', label:'MIL', value:`${mil.callsign||mil.icao} ${mil.type||''}`, color:'text-slate-100', flight:mil})
         return (
           <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none overflow-hidden">
             <div className="bg-gradient-to-t from-slate-950/95 via-slate-950/80 to-transparent pt-2 pb-2 pl-16 pr-3">
@@ -3875,6 +3830,100 @@ export default function FlightMap() {
               </button>
             )
           })}
+        </div>
+      )}
+
+      {/* Layers panel — categorized hub for all overlay toggles */}
+      {showLayers && (
+        <div className="absolute inset-0 z-50 flex items-start justify-end bg-slate-950/40 backdrop-blur-[2px]" onClick={()=>setShowLayers(false)}>
+          <div className="mt-16 mr-4 w-[min(92vw,420px)] max-h-[78vh] overflow-y-auto bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl" onClick={e=>e.stopPropagation()}>
+            <div className="sticky top-0 bg-slate-950/95 backdrop-blur-xl px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <div className="text-[10px] uppercase tracking-widest text-slate-500">Overlays</div>
+                <div className="text-sm font-semibold text-slate-100">Layers <span className="text-slate-500 font-normal">· {activeLayerCount} active</span></div>
+              </div>
+              <button onClick={()=>setShowLayers(false)} className="text-slate-500 hover:text-slate-200 text-xl leading-none px-1">×</button>
+            </div>
+            {[
+              {group:'View', items:[
+                ['Heat', showHeat, ()=>setShowHeat(v=>!v)],
+                ['Stats', showStats, ()=>setShowStats(v=>!v)],
+                ['Watch', showWatch, ()=>setShowWatch(v=>!v)],
+                ['Chase', chase, ()=>{ if(!selected){return} setChase(v=>{ const nv=!v; chaseRef.current=nv; if(nv){setShow3D(true)} return nv }) }],
+                ['Fullscreen', isFullscreen, toggleFullscreen],
+              ]},
+              {group:'Safety & Traffic', items:[
+                ['Radar', showRadar, ()=>{ const nv=!showRadar; setShowRadar(nv); lsSet('ft-radar', nv) }],
+                ['Conflict', showConflict, ()=>{ const nv=!showConflict; setShowConflict(nv); lsSet('ft-cflx', nv) }],
+                ['TCAS', showTcas, ()=>{ const nv=!showTcas; setShowTcas(nv); lsSet('ft-tcas', nv) }],
+                ['CPA', showCpa, ()=>{ const nv=!showCpa; setShowCpa(nv); lsSet('ft-cpa', nv) }],
+                ['Diversion', showDiversion, ()=>{ const nv=!showDiversion; setShowDiversion(nv); lsSet('ft-div', nv) }],
+                ['Holding', showHolding, ()=>{ const nv=!showHolding; setShowHolding(nv); lsSet('ft-hold', nv) }],
+                ['Formation', showFormation, ()=>{ const nv=!showFormation; setShowFormation(nv); lsSet('ft-form', nv) }],
+                ['Anomaly', showAnomaly, ()=>{ const nv=!showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }],
+                ['Squawk', showSquawk, ()=>{ const nv=!showSquawk; setShowSquawk(nv); lsSet('ft-squawk', nv) }],
+              ]},
+              {group:'Environment', items:[
+                ['Wake', showWake, ()=>{ const nv=!showWake; setShowWake(nv); lsSet('ft-wake', nv) }],
+                ['Contrail', showContrail, ()=>{ const nv=!showContrail; setShowContrail(nv); lsSet('ft-contrail', nv) }],
+                ['CO₂', showEmissions, ()=>{ const nv=!showEmissions; setShowEmissions(nv); lsSet('ft-em', nv) }],
+                ['Winds', showWinds, ()=>{ const nv=!showWinds; setShowWinds(nv); lsSet('ft-winds', nv) }],
+                ['Sun', showSun, ()=>{ const nv=!showSun; setShowSun(nv); lsSet('ft-sun', nv) }],
+                ['Sun glare', showSunGlare, ()=>{ const nv=!showSunGlare; setShowSunGlare(nv); lsSet('ft-sunglare', nv) }],
+                ['Shadow', showShadow, ()=>{ const nv=!showShadow; setShowShadow(nv); lsSet('ft-shadow', nv) }],
+                ['Doppler', showDoppler, ()=>{ const nv=!showDoppler; setShowDoppler(nv); lsSet('ft-doppler', nv) }],
+                ['Noise', showNoise, ()=>{ const nv=!showNoise; setShowNoise(nv); lsSet('ft-noise', nv) }],
+              ]},
+              {group:'Analysis', items:[
+                ['Vertical profile', showVProfile, ()=>{ const nv=!showVProfile; setShowVProfile(nv); lsSet('ft-vp', nv) }],
+                ['Flight level', showLadder, ()=>{ const nv=!showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }],
+                ['Phase', showPhase, ()=>{ const nv=!showPhase; setShowPhase(nv); lsSet('ft-phase', nv) }],
+                ['Cockpit (PFD)', showCockpit, ()=>{ const nv=!showCockpit; setShowCockpit(nv); lsSet('ft-pfd', nv) }],
+                ['Scatter S×A', showScatter, ()=>{ const nv=!showScatter; setShowScatter(nv); lsSet('ft-scatter', nv) }],
+                ['Density', showDensity, ()=>{ const nv=!showDensity; setShowDensity(nv); lsSet('ft-dens', nv) }],
+                ['Voronoi', showVoronoi, ()=>{ const nv=!showVoronoi; setShowVoronoi(nv); lsSet('ft-voronoi', nv) }],
+                ['Records', showRecords, ()=>{ const nv=!showRecords; setShowRecords(nv); lsSet('ft-records', nv) }],
+              ]},
+              {group:'Routes & Flow', items:[
+                ['Overhead', showOverhead, ()=>{ const nv=!showOverhead; setShowOverhead(nv); lsSet('ft-overhead', nv) }],
+                ['Approach seq', showAprSeq, ()=>{ const nv=!showAprSeq; setShowAprSeq(nv); lsSet('ft-aprseq', nv) }],
+                ['Pass-by', showPass, ()=>{ const nv=!showPass; setShowPass(nv); lsSet('ft-pass', nv) }],
+                ['Flow', showFlow, ()=>{ const nv=!showFlow; setShowFlow(nv); lsSet('ft-flow', nv) }],
+                ['Reach', showReach, ()=>{ const nv=!showReach; setShowReach(nv); lsSet('ft-reach', nv) }],
+                ['Trip', showTrip, ()=>{ const nv=!showTrip; setShowTrip(nv); lsSet('ft-trip', nv) }],
+                ['Race', showRace, ()=>{ const nv=!showRace; setShowRace(nv); lsSet('ft-race', nv) }],
+                ['Time machine', showTimeMachine, ()=>{ const nv=!showTimeMachine; setShowTimeMachine(nv); lsSet('ft-timemachine', nv) }],
+              ]},
+              {group:'Tools', items:[
+                ['Ruler', showRuler, ()=>setShowRuler(v=>!v)],
+                ['Bullseye', showBullseye, ()=>setShowBullseye(v=>!v)],
+                ['Tripwire', showTripwire, ()=>{ const nv=!showTripwire; setShowTripwire(nv); lsSet('ft-tripwire', nv) }],
+                ['Geofence', showGeofence, ()=>{ const nv=!showGeofence; setShowGeofence(nv); lsSet('ft-geofence', nv) }],
+                ['Event log', showEventLog, ()=>{ const nv=!showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }],
+                ['Compare studio', showCompareStudio, ()=>{ const nv=!showCompareStudio; setShowCompareStudio(nv); lsSet('ft-compare-studio', nv) }],
+                ['Symphony', showSymphony, ()=>{ const nv=!showSymphony; setShowSymphony(nv); lsSet('ft-symphony', nv) }],
+              ]},
+              {group:'Reference', items:[
+                ['Airports board', showBoard, ()=>{ const nv=!showBoard; setShowBoard(nv); lsSet('ft-board', nv) }],
+                ['Atlas', showAtlas, ()=>{ const nv=!showAtlas; setShowAtlas(nv); lsSet('ft-atlas', nv) }],
+                ['VIP', showVip, ()=>{ const nv=!showVip; setShowVip(nv); lsSet('ft-vip', nv) }],
+                ['Time of day', showTod, ()=>{ const nv=!showTod; setShowTod(nv); lsSet('ft-tod', nv) }],
+              ]},
+            ].map(section => (
+              <div key={section.group} className="px-4 py-3 border-b border-slate-900 last:border-0">
+                <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-2">{section.group}</div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(section.items as Array<[string, boolean, ()=>void]>).map(([label, on, onClick]) => (
+                    <button key={label} onClick={onClick}
+                      className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-xs text-left transition border ${on ? 'bg-sky-500/15 border-sky-500/50 text-sky-100' : 'bg-slate-900/50 border-slate-800 text-slate-300 hover:bg-slate-800/70 hover:border-slate-700'}`}>
+                      <span className="truncate">{label}</span>
+                      <span className={`size-1.5 rounded-full shrink-0 ${on ? 'bg-sky-400' : 'bg-slate-700'}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -4035,7 +4084,7 @@ function Field({ k, v, wide, accent }: { k: string; v: string; wide?: boolean; a
 function Toggle({ on, onClick, label, hint }: { on: boolean; onClick: () => void; label: string; hint?: string }) {
   return (
     <button onClick={onClick} title={hint ? `Press ${hint}` : undefined}
-      className={`px-2.5 py-1.5 rounded-xl text-[11px] uppercase tracking-widest font-semibold transition ${on?'bg-sky-500 text-slate-950':'text-slate-300 hover:bg-slate-800'}`}>
+      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium tracking-wide transition border ${on?'bg-sky-500/15 text-sky-100 border-sky-500/40':'text-slate-300 hover:bg-slate-800 border-transparent'}`}>
       {label}
     </button>
   )
