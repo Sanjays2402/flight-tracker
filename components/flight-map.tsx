@@ -15,6 +15,7 @@ import { lsGet, lsSet } from '../lib/storage'
 import { t as i18nT } from '../lib/i18n'
 import CommandPalette, { CPAction } from './command-palette'
 import TrafficRadar from './traffic-radar'
+import EmissionsPanel from './emissions-panel'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -152,6 +153,7 @@ export default function FlightMap() {
   const [flights, setFlights] = useState<Flight[]>([])
   const [selected, setSelected] = useState<Flight | null>(null)
   const [showRadar, setShowRadar] = useState<boolean>(() => lsGet('ft-radar', false))
+  const [showEmissions, setShowEmissions] = useState<boolean>(() => lsGet('ft-em', false))
   const [selectedAirport, setSelectedAirport] = useState<AirportPin | null>(null)
   const [airportMetar, setAirportMetar] = useState<{rawOb:string; temp:number; dewp:number; wdir:number; wspd:number; visib:string; altim:number; fltCat:string; clouds?:{cover:string;base:number}[]} | null>(null)
   const [mapZoom, setMapZoom] = useState(4)
@@ -1505,6 +1507,7 @@ export default function FlightMap() {
             <Toggle on={showFilters} onClick={()=>setShowFilters(v=>!v)} label="Filter" />
             <Toggle on={showStats} onClick={()=>setShowStats(v=>!v)} label="Stats" />
             <Toggle on={showRadar} onClick={()=>{ const nv = !showRadar; setShowRadar(nv); lsSet('ft-radar', nv) }} label="Radar" />
+            <Toggle on={showEmissions} onClick={()=>{ const nv = !showEmissions; setShowEmissions(nv); lsSet('ft-em', nv) }} label="CO₂" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2419,6 +2422,17 @@ export default function FlightMap() {
             if (full) { setSelected(full); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [full.lng, full.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
           }}
           onClose={() => { setShowRadar(false); lsSet('ft-radar', false) }}
+        />
+      )}
+
+      {showEmissions && (
+        <EmissionsPanel
+          flights={filtered as any}
+          onSelect={(icao) => {
+            const f = flights.find(ff => ff.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
+          }}
+          onClose={() => { setShowEmissions(false); lsSet('ft-em', false) }}
         />
       )}
 
