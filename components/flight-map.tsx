@@ -19,6 +19,7 @@ import EmissionsPanel from './emissions-panel'
 import ConflictPanel, { detectConflicts, type ConflictPair } from './conflict-panel'
 import OverheadPanel from './overhead-panel'
 import HoldingPanel, { detectHolding, type HoldingHit } from './holding-panel'
+import AltitudeLadder from './altitude-ladder'
 import CockpitHUD from './cockpit-hud'
 import RulerTool from './ruler-tool'
 
@@ -162,6 +163,7 @@ export default function FlightMap() {
   const [showConflict, setShowConflict] = useState<boolean>(() => lsGet('ft-cflx', false))
   const [showOverhead, setShowOverhead] = useState<boolean>(() => lsGet('ft-overhead', false))
   const [showHolding, setShowHolding] = useState<boolean>(() => lsGet('ft-hold', false))
+  const [showLadder, setShowLadder] = useState<boolean>(() => lsGet('ft-ladder', false))
   const [showCockpit, setShowCockpit] = useState<boolean>(() => lsGet('ft-pfd', false))
   const [showRuler, setShowRuler] = useState<boolean>(false)
   const [holdMinTurn, setHoldMinTurn] = useState<number>(() => lsGet('ft-hold-turn', 360))
@@ -1676,6 +1678,7 @@ export default function FlightMap() {
             <Toggle on={showConflict} onClick={()=>{ const nv = !showConflict; setShowConflict(nv); lsSet('ft-cflx', nv) }} label="CFLX" />
             <Toggle on={showOverhead} onClick={()=>{ const nv = !showOverhead; setShowOverhead(nv); lsSet('ft-overhead', nv) }} label="OVHD" />
             <Toggle on={showHolding} onClick={()=>{ const nv = !showHolding; setShowHolding(nv); lsSet('ft-hold', nv) }} label="HOLD" />
+            <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
             <Toggle on={showCockpit} onClick={()=>{ const nv = !showCockpit; setShowCockpit(nv); lsSet('ft-pfd', nv) }} label="PFD" />
             <Toggle on={showRuler} onClick={()=>setShowRuler(v=>!v)} label="Ruler" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
@@ -2633,6 +2636,18 @@ export default function FlightMap() {
             if (hit) { try { mapRef.current?.flyTo({ center: [hit.centerLng, hit.centerLat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 }) } catch {} }
           }}
           onClose={() => { setShowHolding(false); lsSet('ft-hold', false) }}
+        />
+      )}
+
+      {showLadder && (
+        <AltitudeLadder
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, altitudeFt: f.altitudeFt, ground: f.ground, vertRate: f.vertRate, velocityKts: f.velocityKts, category: f.category, emergency: f.emergency }))}
+          selectedIcao={selected?.icao}
+          onSelect={(icao) => {
+            const f = flights.find(ff => ff.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 }) } catch {} }
+          }}
+          onClose={() => { setShowLadder(false); lsSet('ft-ladder', false) }}
         />
       )}
 
