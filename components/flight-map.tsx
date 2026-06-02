@@ -50,6 +50,7 @@ import Tripwire from './tripwire'
 import GeofenceStudio from './geofence-studio'
 import VoronoiTerritory from './voronoi-territory'
 import SunGlarePanel from './sun-glare'
+import AnomalyRadar from './anomaly-radar'
 import ComparePanel from './compare-panel'
 import SkySymphony from './sky-symphony'
 import TimeMachine from './time-machine'
@@ -216,6 +217,7 @@ export default function FlightMap() {
   const [showGeofence, setShowGeofence] = useState<boolean>(() => lsGet('ft-geofence', false))
   const [showVoronoi, setShowVoronoi] = useState<boolean>(() => lsGet('ft-voronoi', false))
   const [showSunGlare, setShowSunGlare] = useState<boolean>(() => lsGet('ft-sunglare', false))
+  const [showAnomaly, setShowAnomaly] = useState<boolean>(() => lsGet('ft-anomaly', false))
   const [showCompareStudio, setShowCompareStudio] = useState<boolean>(() => lsGet('ft-compare-studio', false))
   const [compareStudioIcaos, setCompareStudioIcaos] = useState<string[]>(() => lsGet<string[]>('ft-compare-studio-icaos', []))
   const [showSymphony, setShowSymphony] = useState<boolean>(() => lsGet('ft-symphony', false))
@@ -2085,6 +2087,7 @@ export default function FlightMap() {
           { id: 'toggle-geofence', group: 'View', label: showGeofence ? 'Close geofence studio' : 'Geofence studio (polygon zone monitor)', run: () => { const nv = !showGeofence; setShowGeofence(nv); lsSet('ft-geofence', nv) }, keywords: ['geofence', 'zone', 'polygon', 'area', 'fence', 'studio', 'dwell', 'entry', 'exit', 'monitor', 'intrusion'] },
           { id: 'toggle-voronoi', group: 'View', label: showVoronoi ? 'Close Voronoi territory' : 'Voronoi territory (airspace partition)', run: () => { const nv = !showVoronoi; setShowVoronoi(nv); lsSet('ft-voronoi', nv) }, keywords: ['voronoi', 'territory', 'partition', 'cell', 'isolated', 'crowded', 'nearest', 'neighbor', 'tessellation'] },
           { id: 'toggle-sunglare', group: 'View', label: showSunGlare ? 'Close sun glare predictor' : 'Sun glare predictor (cockpit clock + elevation)', run: () => { const nv = !showSunGlare; setShowSunGlare(nv); lsSet('ft-sunglare', nv) }, keywords: ['sun', 'glare', 'cockpit', 'clock', 'azimuth', 'elevation', 'blinding', 'visibility', 'solar'] },
+          { id: 'toggle-anomaly', group: 'View', label: showAnomaly ? 'Close anomaly radar' : 'Anomaly radar (tick-to-tick state deltas)', run: () => { const nv = !showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }, keywords: ['anomaly', 'radar', 'jump', 'swerve', 'spike', 'squawk', 'flip', 'glitch', 'delta', 'detect', 'alert'] },
           { id: 'toggle-compare', group: 'View', label: showCompareStudio ? 'Close compare studio' : 'Compare studio (side-by-side spec + spider)', run: () => { const nv = !showCompareStudio; setShowCompareStudio(nv); lsSet('ft-compare-studio', nv); if (nv && selected && !compareStudioIcaos.includes(selected.icao)) { const next = [...compareStudioIcaos, selected.icao].slice(0, 4); setCompareStudioIcaos(next); lsSet('ft-compare-studio-icaos', next) } }, keywords: ['compare', 'comparison', 'side by side', 'spec', 'radar chart', 'spider', 'vs', 'diff', 'studio'] },
           { id: 'toggle-symphony', group: 'View', label: showSymphony ? 'Close Sky Symphony' : 'Sky Symphony (sonify live traffic)', run: () => { const nv = !showSymphony; setShowSymphony(nv); lsSet('ft-symphony', nv) }, keywords: ['symphony', 'synth', 'audio', 'sound', 'music', 'sonify', 'sonification', 'tone', 'ambient', 'sound design'] },
           { id: 'toggle-timemachine', group: 'View', label: showTimeMachine ? 'Close Time Machine' : 'Time Machine (playback / scrub history)', run: () => { const nv = !showTimeMachine; setShowTimeMachine(nv); lsSet('ft-timemachine', nv) }, keywords: ['time', 'machine', 'playback', 'scrub', 'history', 'replay', 'rewind', 'past', 'ghost'] },
@@ -2186,6 +2189,7 @@ export default function FlightMap() {
             <Toggle on={showGeofence} onClick={()=>{ const nv = !showGeofence; setShowGeofence(nv); lsSet('ft-geofence', nv) }} label="FENCE" />
             <Toggle on={showVoronoi} onClick={()=>{ const nv = !showVoronoi; setShowVoronoi(nv); lsSet('ft-voronoi', nv) }} label="VOR" />
             <Toggle on={showSunGlare} onClick={()=>{ const nv = !showSunGlare; setShowSunGlare(nv); lsSet('ft-sunglare', nv) }} label="SUN" />
+            <Toggle on={showAnomaly} onClick={()=>{ const nv = !showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }} label="ANOM" />
             <Toggle on={showCompareStudio} onClick={()=>{ const nv = !showCompareStudio; setShowCompareStudio(nv); lsSet('ft-compare-studio', nv); if (nv && selected && !compareStudioIcaos.includes(selected.icao)) { const next = [...compareStudioIcaos, selected.icao].slice(0, 4); setCompareStudioIcaos(next); lsSet('ft-compare-studio-icaos', next) } }} label="CMP" />
             <Toggle on={showSymphony} onClick={()=>{ const nv = !showSymphony; setShowSymphony(nv); lsSet('ft-symphony', nv) }} label="SYNTH" />
             <Toggle on={showTimeMachine} onClick={()=>{ const nv = !showTimeMachine; setShowTimeMachine(nv); lsSet('ft-timemachine', nv) }} label="TIME" />
@@ -3501,6 +3505,18 @@ export default function FlightMap() {
           map={mapRef.current}
           flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, ground: f.ground }))}
           onClose={() => { setShowSunGlare(false); lsSet('ft-sunglare', false) }}
+          onFly={(icao) => {
+            const f = flights.find(x => x.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
+          }}
+        />
+      )}
+
+      {showAnomaly && (
+        <AnomalyRadar
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, squawk: f.squawk, ground: f.ground, emergency: f.emergency, military: f.military }))}
+          onClose={() => { setShowAnomaly(false); lsSet('ft-anomaly', false) }}
           onFly={(icao) => {
             const f = flights.find(x => x.icao === icao)
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
