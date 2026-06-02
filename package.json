@@ -8,12 +8,14 @@
     "start": "next start"
   },
   "dependencies": {
+    "d3-delaunay": "^6.0.4",
     "maplibre-gl": "^5.24.0",
     "next": "^15.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@types/d3-delaunay": "^6.0.4",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
