@@ -92,7 +92,14 @@ const CAT_LABEL: Record<string, string> = {
 }
 
 /* ---------- Plane icon palette (drawn into canvas, addImage'd) ---------- */
-const ICON_COLORS = ['#64748b','#f43f5e','#f97316','#facc15','#22d3ee','#38bdf8','#a78bfa','#fbbf24']
+const ICON_COLORS = [
+  // ground / neutral
+  '#64748b','#94a3b8',
+  // alt ramp (low→high): magenta→red→orange→amber→yellow→lime→emerald→teal→cyan→sky→indigo→violet→fuchsia
+  '#ec4899','#f43f5e','#fb7185','#f97316','#fb923c','#f59e0b','#facc15','#fde047','#bef264','#a3e635','#84cc16','#10b981','#34d399','#14b8a6','#2dd4bf','#22d3ee','#67e8f9','#38bdf8','#0ea5e9','#6366f1','#818cf8','#a78bfa','#c084fc','#d946ef',
+  // category accents
+  '#fbbf24','#e11d48','#7c3aed','#06b6d4','#22c55e',
+]
 const PLANE_PATH = 'M21 16v-2l-8-5V3.5a1.5 1.5 0 1 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z'
 function iconKey(color: string, heli: boolean, selected: boolean) {
   return `pl-${heli ? 'h' : 'p'}-${selected ? 's' : 'n'}-${color.replace('#', '')}`
@@ -2563,28 +2570,52 @@ function compass(deg: number) {
   return dirs[Math.round(((deg % 360) / 22.5)) % 16]
 }
 function altColor(ft: number): string {
-  if (ft <= 0) return '#64748b'
-  if (ft < 5000)   return '#f43f5e'
-  if (ft < 15000)  return '#f97316'
-  if (ft < 25000)  return '#facc15'
-  if (ft < 35000)  return '#22d3ee'
-  if (ft < 42000)  return '#38bdf8'
-  return '#a78bfa'
+  if (ft <= 0)      return '#64748b'
+  if (ft < 1000)    return '#ec4899'
+  if (ft < 3000)    return '#f43f5e'
+  if (ft < 6000)    return '#fb7185'
+  if (ft < 10000)   return '#f97316'
+  if (ft < 15000)   return '#fb923c'
+  if (ft < 20000)   return '#f59e0b'
+  if (ft < 25000)   return '#facc15'
+  if (ft < 28000)   return '#fde047'
+  if (ft < 31000)   return '#bef264'
+  if (ft < 34000)   return '#a3e635'
+  if (ft < 36000)   return '#22d3ee'
+  if (ft < 38000)   return '#67e8f9'
+  if (ft < 40000)   return '#38bdf8'
+  if (ft < 43000)   return '#0ea5e9'
+  if (ft < 46000)   return '#818cf8'
+  if (ft < 50000)   return '#a78bfa'
+  if (ft < 55000)   return '#c084fc'
+  return '#d946ef'
 }
 function speedColor(kt: number): string {
-  if (kt < 50) return '#64748b'
-  if (kt < 150) return '#f43f5e'
-  if (kt < 300) return '#f97316'
-  if (kt < 450) return '#facc15'
-  if (kt < 550) return '#22d3ee'
+  if (kt < 30)   return '#64748b'
+  if (kt < 80)   return '#ec4899'
+  if (kt < 150)  return '#f43f5e'
+  if (kt < 220)  return '#f97316'
+  if (kt < 300)  return '#facc15'
+  if (kt < 380)  return '#bef264'
+  if (kt < 450)  return '#10b981'
+  if (kt < 500)  return '#22d3ee'
+  if (kt < 560)  return '#38bdf8'
+  if (kt < 620)  return '#6366f1'
   return '#a78bfa'
 }
 function catColor(cat: string): string {
-  if (cat === 'A7') return '#10b981'        // heli
-  if (cat === 'B1') return '#a78bfa'        // glider
-  if (['A5','A6'].includes(cat)) return '#38bdf8' // heavy/highperf
-  if (['A1','A2'].includes(cat)) return '#facc15' // light/small
-  if (['A3','A4'].includes(cat)) return '#f97316' // large
+  if (cat === 'A7') return '#10b981'              // helicopter
+  if (cat === 'B1') return '#a78bfa'              // glider
+  if (cat === 'B2') return '#c084fc'              // balloon
+  if (cat === 'B4') return '#d946ef'              // ultralight
+  if (cat === 'B6') return '#06b6d4'              // UAV
+  if (cat === 'B7') return '#818cf8'              // spacecraft
+  if (cat === 'A1') return '#fde047'              // light (<15.5k lb)
+  if (cat === 'A2') return '#facc15'              // small (15.5–75k)
+  if (cat === 'A3') return '#fb923c'              // large (75–300k)
+  if (cat === 'A4') return '#f97316'              // high-vortex large (B757)
+  if (cat === 'A5') return '#e11d48'              // heavy (>300k)
+  if (cat === 'A6') return '#7c3aed'              // high-performance
   return '#94a3b8'
 }
 const REG_FLAG: Array<[RegExp, string, string]> = [
