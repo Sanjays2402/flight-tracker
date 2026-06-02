@@ -22,6 +22,7 @@ import { SunPanel, solarPosition, installTerminator, updateTerminator, removeTer
 import HoldingPanel, { detectHolding, type HoldingHit } from './holding-panel'
 import EventLog, { detectEvents, type LogEvent, type EventKind, type SnapshotEntry } from './event-log'
 import AltitudeLadder from './altitude-ladder'
+import PhasePanel from './phase-panel'
 import CockpitHUD from './cockpit-hud'
 import RulerTool from './ruler-tool'
 import PipMinimap from './pip-minimap'
@@ -169,6 +170,7 @@ export default function FlightMap() {
   const [showSun, setShowSun] = useState<boolean>(() => lsGet('ft-sun', false))
   const [showHolding, setShowHolding] = useState<boolean>(() => lsGet('ft-hold', false))
   const [showLadder, setShowLadder] = useState<boolean>(() => lsGet('ft-ladder', false))
+  const [showPhase, setShowPhase] = useState<boolean>(() => lsGet('ft-phase', false))
   const [showCockpit, setShowCockpit] = useState<boolean>(() => lsGet('ft-pfd', false))
   const [showRuler, setShowRuler] = useState<boolean>(false)
   const [showBullseye, setShowBullseye] = useState<boolean>(false)
@@ -1741,6 +1743,7 @@ export default function FlightMap() {
             <Toggle on={showHolding} onClick={()=>{ const nv = !showHolding; setShowHolding(nv); lsSet('ft-hold', nv) }} label="HOLD" />
             <Toggle on={showEventLog} onClick={()=>{ const nv = !showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }} label="LOG" />
             <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
+            <Toggle on={showPhase} onClick={()=>{ const nv = !showPhase; setShowPhase(nv); lsSet('ft-phase', nv) }} label="PHASE" />
             <Toggle on={showCockpit} onClick={()=>{ const nv = !showCockpit; setShowCockpit(nv); lsSet('ft-pfd', nv) }} label="PFD" />
             <Toggle on={showRuler} onClick={()=>setShowRuler(v=>!v)} label="Ruler" />
             <Toggle on={showBullseye} onClick={()=>setShowBullseye(v=>!v)} label="Bull" />
@@ -2740,6 +2743,18 @@ export default function FlightMap() {
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 }) } catch {} }
           }}
           onClose={() => { setShowLadder(false); lsSet('ft-ladder', false) }}
+        />
+      )}
+
+      {showPhase && (
+        <PhasePanel
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, altitudeFt: f.altitudeFt, ground: f.ground, vertRate: f.vertRate, velocityKts: f.velocityKts, category: f.category, emergency: f.emergency }))}
+          selectedIcao={selected?.icao}
+          onSelect={(icao) => {
+            const f = flights.find(ff => ff.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 }) } catch {} }
+          }}
+          onClose={() => { setShowPhase(false); lsSet('ft-phase', false) }}
         />
       )}
 
