@@ -344,10 +344,32 @@ export default function FlightMap() {
     s.id = 'ft-batch-a-style'
     s.textContent = `
       :root { --ft-font-size: 14px; }
+      /* FONT SIZE — actually scale the whole UI */
+      html[data-fontsize="S"] { font-size: 13px; }
+      html[data-fontsize="M"] { font-size: 15px; }
+      html[data-fontsize="L"] { font-size: 17px; }
       html[data-fontsize="S"] .ft-scale { font-size: 12px; }
       html[data-fontsize="L"] .ft-scale { font-size: 16px; }
-      html[data-contrast="high"] body { filter: contrast(1.15) saturate(1.1); }
-      html[data-theme="light"] body { background: #f3f4f6; color: #0f172a; }
+      /* HIGH CONTRAST — punch up borders + text */
+      html[data-contrast="high"] body { filter: contrast(1.25) saturate(1.2); }
+      html[data-contrast="high"] *, html[data-contrast="high"] *::before, html[data-contrast="high"] *::after {
+        border-color: currentColor !important;
+      }
+      html[data-contrast="high"] .text-slate-400, html[data-contrast="high"] .text-slate-500 { color: #e2e8f0 !important; }
+      /* LIGHT THEME — repaint chrome (header, panels, cards) */
+      html[data-theme="light"] body { background: #f1f5f9; color: #0f172a; }
+      html[data-theme="light"] .bg-\\[\\#07090d\\],
+      html[data-theme="light"] .bg-slate-950,
+      html[data-theme="light"] .bg-slate-900,
+      html[data-theme="light"] .bg-slate-900\\/95,
+      html[data-theme="light"] .bg-slate-900\\/90,
+      html[data-theme="light"] .bg-slate-900\\/80,
+      html[data-theme="light"] .bg-slate-800,
+      html[data-theme="light"] .bg-slate-800\\/90,
+      html[data-theme="light"] .bg-slate-800\\/80 { background-color: rgba(248,250,252,0.95) !important; color: #0f172a !important; }
+      html[data-theme="light"] .text-white, html[data-theme="light"] .text-slate-100, html[data-theme="light"] .text-slate-200, html[data-theme="light"] .text-slate-300 { color: #0f172a !important; }
+      html[data-theme="light"] .text-slate-400 { color: #475569 !important; }
+      html[data-theme="light"] .border-slate-800, html[data-theme="light"] .border-slate-700 { border-color: #cbd5e1 !important; }
       .ft-focus:focus-visible { outline: 2px solid rgb(14 165 233) !important; outline-offset: 2px; }
       @media (prefers-reduced-motion: reduce) {
         .animate-pulse, .animate-spin, .transition-transform, .transition-colors { animation: none !important; transition: none !important; }
