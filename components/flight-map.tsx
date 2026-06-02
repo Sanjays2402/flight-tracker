@@ -28,6 +28,7 @@ import CockpitHUD from './cockpit-hud'
 import RulerTool from './ruler-tool'
 import PipMinimap from './pip-minimap'
 import BullseyeTool from './bullseye-tool'
+import VerticalProfilePanel from './vertical-profile-panel'
 import WindsAloft from './winds-aloft'
 import AirportBoard from './airport-board'
 import SpeedAltScatter from './speed-alt-scatter'
@@ -181,6 +182,7 @@ export default function FlightMap() {
   const [showFormation, setShowFormation] = useState<boolean>(() => lsGet('ft-form', false))
   const [showCpa, setShowCpa] = useState<boolean>(() => lsGet('ft-cpa', false))
   const [showDiversion, setShowDiversion] = useState<boolean>(() => lsGet('ft-div', false))
+  const [showVProfile, setShowVProfile] = useState<boolean>(() => lsGet('ft-vp', false))
   const [cpaHorizon, setCpaHorizon] = useState<number>(() => lsGet('ft-cpa-hor', 300))
   const [cpaMaxMissNm, setCpaMaxMissNm] = useState<number>(() => lsGet('ft-cpa-mnm', 5))
   const [cpaMaxMissFt, setCpaMaxMissFt] = useState<number>(() => lsGet('ft-cpa-mft', 1500))
@@ -2031,6 +2033,7 @@ export default function FlightMap() {
           { id: 'toggle-formation', group: 'View', label: showFormation ? 'Close formation flight detector' : 'Formation flight detector', run: () => { const nv = !showFormation; setShowFormation(nv); lsSet('ft-form', nv) }, keywords: ['formation', 'flight', 'group', 'flock', 'wingman', 'echelon', 'trail', 'tight', 'mil', 'military', 'pack', 'cluster'] },
           { id: 'toggle-cpa', group: 'View', label: showCpa ? 'Close CPA predictor' : 'CPA predictor (predicted near-miss)', run: () => { const nv = !showCpa; setShowCpa(nv); lsSet('ft-cpa', nv) }, keywords: ['cpa', 'closest', 'point', 'approach', 'tcas', 'conflict', 'predict', 'forecast', 'near miss', 'separation', 'collision'] },
           { id: 'toggle-div', group: 'View', label: showDiversion ? 'Close diversion finder' : 'Diversion finder (nearest airports)', run: () => { const nv = !showDiversion; setShowDiversion(nv); lsSet('ft-div', nv) }, keywords: ['divert', 'diversion', 'alternate', 'airport', 'nearest', 'glide', 'emergency', 'land'] },
+          { id: 'toggle-vp', group: 'View', label: showVProfile ? 'Close vertical profile' : 'Vertical profile (side view from center)', run: () => { const nv = !showVProfile; setShowVProfile(nv); lsSet('ft-vp', nv) }, keywords: ['vertical', 'profile', 'side', 'view', 'altitude', 'range', 'cross', 'section', 'arrival', 'descent', 'climb'] },
           { id: 'toggle-pip', group: 'View', label: showPip ? 'Hide picture-in-picture mini-map' : 'Show picture-in-picture mini-map', run: () => { setShowPip(v => { const nv = !v; try { localStorage.setItem('ft-pip', nv ? '1' : '0') } catch {}; return nv }) }, keywords: ['pip', 'minimap', 'mini', 'inset', 'follow'] },
           { id: 'toggle-3d', group: 'Mode', label: show3D ? 'Exit 3D view' : 'Enter 3D view', run: () => setShow3D(v => !v) },
           { id: 'toggle-chase', group: 'Mode', label: chase ? 'Stop chase camera' : 'Start chase camera (select a plane first)', run: () => { if (!selected) return; setChase(v => { const nv = !v; chaseRef.current = nv; if (nv) setShow3D(true); return nv }) } },
@@ -2110,6 +2113,7 @@ export default function FlightMap() {
             <Toggle on={showFormation} onClick={()=>{ const nv = !showFormation; setShowFormation(nv); lsSet('ft-form', nv) }} label="FORM" />
             <Toggle on={showCpa} onClick={()=>{ const nv = !showCpa; setShowCpa(nv); lsSet('ft-cpa', nv) }} label="CPA" />
             <Toggle on={showDiversion} onClick={()=>{ const nv = !showDiversion; setShowDiversion(nv); lsSet('ft-div', nv) }} label="DIV" />
+            <Toggle on={showVProfile} onClick={()=>{ const nv = !showVProfile; setShowVProfile(nv); lsSet('ft-vp', nv) }} label="VP" />
             <Toggle on={showEventLog} onClick={()=>{ const nv = !showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }} label="LOG" />
             <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
             <Toggle on={showPhase} onClick={()=>{ const nv = !showPhase; setShowPhase(nv); lsSet('ft-phase', nv) }} label="PHASE" />
@@ -3265,6 +3269,18 @@ export default function FlightMap() {
               try { mapRef.current.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {}
               setSelected(f)
             }
+          }}
+        />
+      )}
+
+      {showVProfile && (
+        <VerticalProfilePanel
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, ground: f.ground, velocityKts: f.velocityKts, vertRate: f.vertRate, track: f.track, emergency: f.emergency, military: f.military }))}
+          center={selected ? { lat: selected.lat, lng: selected.lng } : { lat: mapCenter.lat, lng: mapCenter.lng }}
+          onClose={() => { setShowVProfile(false); lsSet('ft-vp', false) }}
+          onFly={(icao) => {
+            const f = flights.find(x => x.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
           }}
         />
       )}
