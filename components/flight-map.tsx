@@ -17,6 +17,7 @@ import CommandPalette, { CPAction } from './command-palette'
 import TrafficRadar from './traffic-radar'
 import EmissionsPanel from './emissions-panel'
 import ConflictPanel, { detectConflicts, type ConflictPair } from './conflict-panel'
+import OverheadPanel from './overhead-panel'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -156,6 +157,7 @@ export default function FlightMap() {
   const [showRadar, setShowRadar] = useState<boolean>(() => lsGet('ft-radar', false))
   const [showEmissions, setShowEmissions] = useState<boolean>(() => lsGet('ft-em', false))
   const [showConflict, setShowConflict] = useState<boolean>(() => lsGet('ft-cflx', false))
+  const [showOverhead, setShowOverhead] = useState<boolean>(() => lsGet('ft-overhead', false))
   const [conflictLat, setConflictLat] = useState<number>(() => lsGet('ft-cflx-lat', 5))
   const [conflictVert, setConflictVert] = useState<number>(() => lsGet('ft-cflx-vert', 1000))
   const [conflictGround, setConflictGround] = useState<boolean>(() => lsGet('ft-cflx-grd', false))
@@ -1579,6 +1581,7 @@ export default function FlightMap() {
             <Toggle on={showRadar} onClick={()=>{ const nv = !showRadar; setShowRadar(nv); lsSet('ft-radar', nv) }} label="Radar" />
             <Toggle on={showEmissions} onClick={()=>{ const nv = !showEmissions; setShowEmissions(nv); lsSet('ft-em', nv) }} label="CO₂" />
             <Toggle on={showConflict} onClick={()=>{ const nv = !showConflict; setShowConflict(nv); lsSet('ft-cflx', nv) }} label="CFLX" />
+            <Toggle on={showOverhead} onClick={()=>{ const nv = !showOverhead; setShowOverhead(nv); lsSet('ft-overhead', nv) }} label="OVHD" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2504,6 +2507,17 @@ export default function FlightMap() {
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
           }}
           onClose={() => { setShowEmissions(false); lsSet('ft-em', false) }}
+        />
+      )}
+
+      {showOverhead && (
+        <OverheadPanel
+          flights={flights}
+          onClose={() => { setShowOverhead(false); lsSet('ft-overhead', false) }}
+          onSelect={(icao) => {
+            const f = flights.find(ff => ff.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 }) } catch {} }
+          }}
         />
       )}
 
