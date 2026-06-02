@@ -34,6 +34,7 @@ import SpeedAltScatter from './speed-alt-scatter'
 import SquawkMonitor from './squawk-monitor'
 import OperatorRace from './operator-race'
 import DensityHeatPanel, { installHeat, updateHeat, setHeatVisibility, setHeatRadius, setHeatIntensity, type HeatMode } from './density-heat'
+import CpaPanel, { detectCpa, type CpaHit } from './cpa-panel'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -177,6 +178,12 @@ export default function FlightMap() {
   const [showSun, setShowSun] = useState<boolean>(() => lsGet('ft-sun', false))
   const [showHolding, setShowHolding] = useState<boolean>(() => lsGet('ft-hold', false))
   const [showFormation, setShowFormation] = useState<boolean>(() => lsGet('ft-form', false))
+  const [showCpa, setShowCpa] = useState<boolean>(() => lsGet('ft-cpa', false))
+  const [cpaHorizon, setCpaHorizon] = useState<number>(() => lsGet('ft-cpa-hor', 300))
+  const [cpaMaxMissNm, setCpaMaxMissNm] = useState<number>(() => lsGet('ft-cpa-mnm', 5))
+  const [cpaMaxMissFt, setCpaMaxMissFt] = useState<number>(() => lsGet('ft-cpa-mft', 1500))
+  const [cpaGround, setCpaGround] = useState<boolean>(() => lsGet('ft-cpa-grd', false))
+  const [cpaSameOp, setCpaSameOp] = useState<boolean>(() => lsGet('ft-cpa-sop', false))
   const [formMaxRadius, setFormMaxRadius] = useState<number>(() => lsGet('ft-form-rad', 2))
   const [formMaxAlt, setFormMaxAlt] = useState<number>(() => lsGet('ft-form-alt', 500))
   const [formMaxTrack, setFormMaxTrack] = useState<number>(() => lsGet('ft-form-trk', 15))
@@ -582,6 +589,7 @@ export default function FlightMap() {
       map.addSource('conflicts', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('holding', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('formations', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      map.addSource('cpa', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
 
       // Sky / atmosphere (only renders when pitched)
       try {
@@ -808,7 +816,61 @@ export default function FlightMap() {
         },
       })
 
-      // Planes (symbol) — floats at altitude in 3D mode via symbol-z-elevate
+      // CPA predictor overlays (predicted tracks, CPA midpoint, miss line)
+      map.addLayer({
+        id: 'cpa-track',
+        type: 'line',
+        source: 'cpa',
+        filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'kind'], 'track']],
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 1.4,
+          'line-opacity': 0.75,
+          'line-dasharray': [3, 2],
+        },
+      })
+      map.addLayer({
+        id: 'cpa-miss',
+        type: 'line',
+        source: 'cpa',
+        filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'kind'], 'miss']],
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 2.2,
+          'line-opacity': 0.9,
+        },
+      })
+      map.addLayer({
+        id: 'cpa-mid',
+        type: 'circle',
+        source: 'cpa',
+        filter: ['all', ['==', ['geometry-type'], 'Point'], ['==', ['get', 'kind'], 'mid']],
+        paint: {
+          'circle-radius': ['interpolate', ['linear'], ['get', 'sev'], 0, 9, 3, 4],
+          'circle-color': ['get', 'color'],
+          'circle-stroke-color': '#0b1220',
+          'circle-stroke-width': 2,
+          'circle-opacity': 0.9,
+        },
+      })
+      map.addLayer({
+        id: 'cpa-label',
+        type: 'symbol',
+        source: 'cpa',
+        filter: ['all', ['==', ['geometry-type'], 'Point'], ['==', ['get', 'kind'], 'mid']],
+        layout: {
+          'text-field': ['get', 'label'],
+          'text-size': 10,
+          'text-font': ['Noto Sans Bold'],
+          'text-offset': [0, 1.2],
+          'text-allow-overlap': false,
+        } as any,
+        paint: {
+          'text-color': ['get', 'color'],
+          'text-halo-color': '#0b1220',
+          'text-halo-width': 1.5,
+        },
+      })
       map.addLayer({
         id: 'planes-layer',
         type: 'symbol',
@@ -1332,6 +1394,71 @@ export default function FlightMap() {
     }
     src.setData({ type: 'FeatureCollection', features: feats } as any)
   }, [formations, mapReady])
+
+  /* ---- CPA Predictor detection + overlay ---- */
+  const cpaHits = useMemo<CpaHit[]>(() => {
+    if (!showCpa) return []
+    return detectCpa(
+      filtered.map(f => ({
+        icao: f.icao, callsign: f.callsign, operator: f.operator, type: f.type,
+        lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt,
+        velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground,
+      })),
+      {
+        horizonSec: cpaHorizon,
+        maxMissNm: cpaMaxMissNm,
+        maxMissFt: cpaMaxMissFt,
+        includeGround: cpaGround,
+        ignoreSameOperator: cpaSameOp,
+      },
+    )
+  }, [filtered, showCpa, cpaHorizon, cpaMaxMissNm, cpaMaxMissFt, cpaGround, cpaSameOp])
+
+  useEffect(() => {
+    const m = mapRef.current; if (!m || !mapReady) return
+    const src = m.getSource('cpa') as maplibregl.GeoJSONSource | undefined
+    if (!src) return
+    const SEV_HEX: Record<CpaHit['severity'], string> = {
+      imminent: '#fb7185', critical: '#fb923c', warning: '#fbbf24', advisory: '#38bdf8',
+    }
+    const SEV_N: Record<CpaHit['severity'], number> = { imminent: 0, critical: 1, warning: 2, advisory: 3 }
+    const feats: any[] = []
+    // Cap rendered overlays to avoid flooding the map when filters loosen.
+    const shown = cpaHits.slice(0, 40)
+    for (const h of shown) {
+      const color = SEV_HEX[h.severity]
+      // Predicted track for each aircraft (current -> CPA position)
+      feats.push({
+        type: 'Feature',
+        properties: { kind: 'track', color, id: h.id, icao: h.a.icao },
+        geometry: { type: 'LineString', coordinates: [[h.a.lng, h.a.lat], [h.aLng, h.aLat]] },
+      })
+      feats.push({
+        type: 'Feature',
+        properties: { kind: 'track', color, id: h.id, icao: h.b.icao },
+        geometry: { type: 'LineString', coordinates: [[h.b.lng, h.b.lat], [h.bLng, h.bLat]] },
+      })
+      // Solid CPA miss line between predicted positions
+      feats.push({
+        type: 'Feature',
+        properties: { kind: 'miss', color, id: h.id },
+        geometry: { type: 'LineString', coordinates: [[h.aLng, h.aLat], [h.bLng, h.bLat]] },
+      })
+      // Midpoint marker + label with miss distance and time
+      const min = Math.floor(h.ttcSec / 60)
+      const sec = Math.round(h.ttcSec - min * 60)
+      const tLabel = min > 0 ? `${min}m${sec.toString().padStart(2, '0')}s` : `${sec}s`
+      feats.push({
+        type: 'Feature',
+        properties: {
+          kind: 'mid', color, id: h.id, sev: SEV_N[h.severity],
+          label: `${h.missNm.toFixed(1)}nm / ${Math.round(h.missFt)}ft · T-${tLabel}`,
+        },
+        geometry: { type: 'Point', coordinates: [h.midLng, h.midLat] },
+      })
+    }
+    src.setData({ type: 'FeatureCollection', features: feats } as any)
+  }, [cpaHits, mapReady])
 
   // Day/night terminator overlay + sun position; tick every 60s when active
   useEffect(() => {
@@ -1900,6 +2027,7 @@ export default function FlightMap() {
           { id: 'toggle-ruler', group: 'View', label: showRuler ? 'Close great-circle ruler' : 'Great-circle ruler (measure distance)', run: () => setShowRuler(v => !v), keywords: ['measure', 'distance', 'ruler', 'geodesic'] },
           { id: 'toggle-bullseye', group: 'View', label: showBullseye ? 'Close bullseye (BRA reference)' : 'Bullseye / BRA tactical reference', run: () => setShowBullseye(v => !v), keywords: ['bullseye', 'bra', 'tactical', 'bearing', 'range', 'compass', 'rose', 'radial'] },
           { id: 'toggle-formation', group: 'View', label: showFormation ? 'Close formation flight detector' : 'Formation flight detector', run: () => { const nv = !showFormation; setShowFormation(nv); lsSet('ft-form', nv) }, keywords: ['formation', 'flight', 'group', 'flock', 'wingman', 'echelon', 'trail', 'tight', 'mil', 'military', 'pack', 'cluster'] },
+          { id: 'toggle-cpa', group: 'View', label: showCpa ? 'Close CPA predictor' : 'CPA predictor (predicted near-miss)', run: () => { const nv = !showCpa; setShowCpa(nv); lsSet('ft-cpa', nv) }, keywords: ['cpa', 'closest', 'point', 'approach', 'tcas', 'conflict', 'predict', 'forecast', 'near miss', 'separation', 'collision'] },
           { id: 'toggle-pip', group: 'View', label: showPip ? 'Hide picture-in-picture mini-map' : 'Show picture-in-picture mini-map', run: () => { setShowPip(v => { const nv = !v; try { localStorage.setItem('ft-pip', nv ? '1' : '0') } catch {}; return nv }) }, keywords: ['pip', 'minimap', 'mini', 'inset', 'follow'] },
           { id: 'toggle-3d', group: 'Mode', label: show3D ? 'Exit 3D view' : 'Enter 3D view', run: () => setShow3D(v => !v) },
           { id: 'toggle-chase', group: 'Mode', label: chase ? 'Stop chase camera' : 'Start chase camera (select a plane first)', run: () => { if (!selected) return; setChase(v => { const nv = !v; chaseRef.current = nv; if (nv) setShow3D(true); return nv }) } },
@@ -1977,6 +2105,7 @@ export default function FlightMap() {
             <Toggle on={showSun} onClick={()=>{ const nv = !showSun; setShowSun(nv); lsSet('ft-sun', nv) }} label="SUN" />
             <Toggle on={showHolding} onClick={()=>{ const nv = !showHolding; setShowHolding(nv); lsSet('ft-hold', nv) }} label="HOLD" />
             <Toggle on={showFormation} onClick={()=>{ const nv = !showFormation; setShowFormation(nv); lsSet('ft-form', nv) }} label="FORM" />
+            <Toggle on={showCpa} onClick={()=>{ const nv = !showCpa; setShowCpa(nv); lsSet('ft-cpa', nv) }} label="CPA" />
             <Toggle on={showEventLog} onClick={()=>{ const nv = !showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }} label="LOG" />
             <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
             <Toggle on={showPhase} onClick={()=>{ const nv = !showPhase; setShowPhase(nv); lsSet('ft-phase', nv) }} label="PHASE" />
@@ -2978,6 +3107,39 @@ export default function FlightMap() {
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 10), duration: 700 }) } catch {} }
           }}
           onClose={() => { setShowFormation(false); lsSet('ft-form', false) }}
+        />
+      )}
+
+      {showCpa && (
+        <CpaPanel
+          hits={cpaHits}
+          horizonSec={cpaHorizon}
+          maxMissNm={cpaMaxMissNm}
+          maxMissFt={cpaMaxMissFt}
+          includeGround={cpaGround}
+          ignoreSameOperator={cpaSameOp}
+          onChangeHorizon={(v) => { setCpaHorizon(v); lsSet('ft-cpa-hor', v) }}
+          onChangeMissNm={(v) => { setCpaMaxMissNm(v); lsSet('ft-cpa-mnm', v) }}
+          onChangeMissFt={(v) => { setCpaMaxMissFt(v); lsSet('ft-cpa-mft', v) }}
+          onChangeGround={(v) => { setCpaGround(v); lsSet('ft-cpa-grd', v) }}
+          onChangeSameOp={(v) => { setCpaSameOp(v); lsSet('ft-cpa-sop', v) }}
+          onSelectPair={(h) => {
+            try {
+              const minLat = Math.min(h.a.lat, h.b.lat, h.aLat, h.bLat)
+              const maxLat = Math.max(h.a.lat, h.b.lat, h.aLat, h.bLat)
+              const minLng = Math.min(h.a.lng, h.b.lng, h.aLng, h.bLng)
+              const maxLng = Math.max(h.a.lng, h.b.lng, h.aLng, h.bLng)
+              mapRef.current?.fitBounds(
+                [[minLng - 0.2, minLat - 0.2], [maxLng + 0.2, maxLat + 0.2]],
+                { padding: 80, duration: 700, maxZoom: 10 },
+              )
+            } catch {}
+          }}
+          onSelectIcao={(icao) => {
+            const f = flights.find(ff => ff.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 }) } catch {} }
+          }}
+          onClose={() => { setShowCpa(false); lsSet('ft-cpa', false) }}
         />
       )}
 
