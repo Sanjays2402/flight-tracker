@@ -30,6 +30,7 @@ import BullseyeTool from './bullseye-tool'
 import WindsAloft from './winds-aloft'
 import AirportBoard from './airport-board'
 import SpeedAltScatter from './speed-alt-scatter'
+import SquawkMonitor from './squawk-monitor'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -180,6 +181,7 @@ export default function FlightMap() {
   const [showWinds, setShowWinds] = useState<boolean>(() => lsGet('ft-winds', false))
   const [showBoard, setShowBoard] = useState<boolean>(() => lsGet('ft-board', false))
   const [showScatter, setShowScatter] = useState<boolean>(() => lsGet('ft-scatter', false))
+  const [showSquawk, setShowSquawk] = useState<boolean>(() => lsGet('ft-squawk', false))
   const [showPip, setShowPip] = useState<boolean>(() => { try { return localStorage.getItem('ft-pip') === '1' } catch { return false } })
   const [pipRadius, setPipRadius] = useState<number>(() => { try { const n = Number(localStorage.getItem('ft-pip-r') || '80'); return Number.isFinite(n) && n > 5 ? n : 80 } catch { return 80 } })
   const [holdMinTurn, setHoldMinTurn] = useState<number>(() => lsGet('ft-hold-turn', 360))
@@ -1756,6 +1758,7 @@ export default function FlightMap() {
             <Toggle on={showWinds} onClick={()=>{ const nv = !showWinds; setShowWinds(nv); lsSet('ft-winds', nv) }} label="Wind" />
             <Toggle on={showBoard} onClick={()=>{ const nv = !showBoard; setShowBoard(nv); lsSet('ft-board', nv) }} label="APT" />
             <Toggle on={showScatter} onClick={()=>{ const nv = !showScatter; setShowScatter(nv); lsSet('ft-scatter', nv) }} label="S×A" />
+            <Toggle on={showSquawk} onClick={()=>{ const nv = !showSquawk; setShowSquawk(nv); lsSet('ft-squawk', nv) }} label="SQK" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2868,6 +2871,24 @@ export default function FlightMap() {
           onSelect={(sf) => {
             const full = flights.find(x => x.icao === sf.icao)
             if (full) { setSelected(full); flyToLatLng(full.lat, full.lng, Math.max(mapRef.current?.getZoom() ?? 0, 7)) }
+          }}
+        />
+      )}
+
+      {showSquawk && (
+        <SquawkMonitor
+          flights={flights.map(f => ({
+            icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator,
+            squawk: f.squawk || '', altitudeFt: f.altitudeFt, velocityKts: f.velocityKts,
+            lat: f.lat, lng: f.lng, ground: f.ground, emergency: f.emergency, military: f.military,
+          }))}
+          onClose={() => { setShowSquawk(false); lsSet('ft-squawk', false) }}
+          onFly={(icao) => {
+            const full = flights.find(x => x.icao === icao)
+            if (full && mapRef.current) {
+              try { mapRef.current.flyTo({ center: [full.lng, full.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {}
+              setSelected(full)
+            }
           }}
         />
       )}
