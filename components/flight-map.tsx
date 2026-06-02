@@ -28,6 +28,7 @@ import RulerTool from './ruler-tool'
 import PipMinimap from './pip-minimap'
 import BullseyeTool from './bullseye-tool'
 import WindsAloft from './winds-aloft'
+import AirportBoard from './airport-board'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -176,6 +177,7 @@ export default function FlightMap() {
   const [showRuler, setShowRuler] = useState<boolean>(false)
   const [showBullseye, setShowBullseye] = useState<boolean>(false)
   const [showWinds, setShowWinds] = useState<boolean>(() => lsGet('ft-winds', false))
+  const [showBoard, setShowBoard] = useState<boolean>(() => lsGet('ft-board', false))
   const [showPip, setShowPip] = useState<boolean>(() => { try { return localStorage.getItem('ft-pip') === '1' } catch { return false } })
   const [pipRadius, setPipRadius] = useState<number>(() => { try { const n = Number(localStorage.getItem('ft-pip-r') || '80'); return Number.isFinite(n) && n > 5 ? n : 80 } catch { return 80 } })
   const [holdMinTurn, setHoldMinTurn] = useState<number>(() => lsGet('ft-hold-turn', 360))
@@ -1750,6 +1752,7 @@ export default function FlightMap() {
             <Toggle on={showRuler} onClick={()=>setShowRuler(v=>!v)} label="Ruler" />
             <Toggle on={showBullseye} onClick={()=>setShowBullseye(v=>!v)} label="Bull" />
             <Toggle on={showWinds} onClick={()=>{ const nv = !showWinds; setShowWinds(nv); lsSet('ft-winds', nv) }} label="Wind" />
+            <Toggle on={showBoard} onClick={()=>{ const nv = !showBoard; setShowBoard(nv); lsSet('ft-board', nv) }} label="APT" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2827,6 +2830,28 @@ export default function FlightMap() {
           }}
         />
       )}
+
+      {showBoard && (() => {
+        const c = (() => { try { const ctr = mapRef.current?.getCenter(); return ctr ? { lat: ctr.lat, lng: ctr.lng } : { lat: 40, lng: -95 } } catch { return { lat: 40, lng: -95 } } })()
+        return (
+          <AirportBoard
+            flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, registration: f.registration, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, vertRate: f.vertRate, track: f.track, ground: f.ground, emergency: f.emergency }))}
+            centerLat={c.lat}
+            centerLng={c.lng}
+            onClose={() => { setShowBoard(false); lsSet('ft-board', false) }}
+            onFly={(icao) => {
+              const f = flights.find(x => x.icao === icao)
+              if (f && mapRef.current) {
+                try { mapRef.current.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {}
+                setSelected(f)
+              }
+            }}
+            onFlyAirport={(a) => {
+              try { mapRef.current?.flyTo({ center: [a.lon, a.lat], zoom: 11, duration: 800 }) } catch {}
+            }}
+          />
+        )
+      })()}
 
       {showPip && (
         <PipMinimap
