@@ -49,6 +49,7 @@ import TodPredictor from './tod-predictor'
 import Tripwire from './tripwire'
 import GeofenceStudio from './geofence-studio'
 import VoronoiTerritory from './voronoi-territory'
+import SkySymphony from './sky-symphony'
 import TimeMachine from './time-machine'
 import ReachAtlas from './reach-atlas'
 import TripPlanner from './trip-planner'
@@ -212,6 +213,7 @@ export default function FlightMap() {
   const [showTripwire, setShowTripwire] = useState<boolean>(() => lsGet('ft-tripwire', false))
   const [showGeofence, setShowGeofence] = useState<boolean>(() => lsGet('ft-geofence', false))
   const [showVoronoi, setShowVoronoi] = useState<boolean>(() => lsGet('ft-voronoi', false))
+  const [showSymphony, setShowSymphony] = useState<boolean>(() => lsGet('ft-symphony', false))
   const [showTimeMachine, setShowTimeMachine] = useState<boolean>(() => lsGet('ft-timemachine', false))
   const [showReach, setShowReach] = useState<boolean>(() => lsGet('ft-reach', false))
   const [showTrip, setShowTrip] = useState<boolean>(() => lsGet('ft-trip', false))
@@ -2077,6 +2079,7 @@ export default function FlightMap() {
           { id: 'toggle-tripwire', group: 'View', label: showTripwire ? 'Close tripwire' : 'Tripwire / virtual gate (line crossing predictor)', run: () => { const nv = !showTripwire; setShowTripwire(nv); lsSet('ft-tripwire', nv) }, keywords: ['tripwire', 'gate', 'line', 'cross', 'crossing', 'fence', 'wire', 'threshold', 'border', 'spotter line'] },
           { id: 'toggle-geofence', group: 'View', label: showGeofence ? 'Close geofence studio' : 'Geofence studio (polygon zone monitor)', run: () => { const nv = !showGeofence; setShowGeofence(nv); lsSet('ft-geofence', nv) }, keywords: ['geofence', 'zone', 'polygon', 'area', 'fence', 'studio', 'dwell', 'entry', 'exit', 'monitor', 'intrusion'] },
           { id: 'toggle-voronoi', group: 'View', label: showVoronoi ? 'Close Voronoi territory' : 'Voronoi territory (airspace partition)', run: () => { const nv = !showVoronoi; setShowVoronoi(nv); lsSet('ft-voronoi', nv) }, keywords: ['voronoi', 'territory', 'partition', 'cell', 'isolated', 'crowded', 'nearest', 'neighbor', 'tessellation'] },
+          { id: 'toggle-symphony', group: 'View', label: showSymphony ? 'Close Sky Symphony' : 'Sky Symphony (sonify live traffic)', run: () => { const nv = !showSymphony; setShowSymphony(nv); lsSet('ft-symphony', nv) }, keywords: ['symphony', 'synth', 'audio', 'sound', 'music', 'sonify', 'sonification', 'tone', 'ambient', 'sound design'] },
           { id: 'toggle-timemachine', group: 'View', label: showTimeMachine ? 'Close Time Machine' : 'Time Machine (playback / scrub history)', run: () => { const nv = !showTimeMachine; setShowTimeMachine(nv); lsSet('ft-timemachine', nv) }, keywords: ['time', 'machine', 'playback', 'scrub', 'history', 'replay', 'rewind', 'past', 'ghost'] },
           { id: 'toggle-reach', group: 'View', label: showReach ? 'Close reachability atlas' : 'Reachability atlas (kinematic divert footprint)', run: () => { const nv = !showReach; setShowReach(nv); lsSet('ft-reach', nv) }, keywords: ['reach', 'reachability', 'divert', 'range', 'footprint', 'atlas', 'dubins', 'turn'] },
           { id: 'toggle-trip', group: 'View', label: showTrip ? 'Close trip planner' : 'Trip planner (great-circle route + winds + fuel)', run: () => { const nv = !showTrip; setShowTrip(nv); lsSet('ft-trip', nv) }, keywords: ['trip', 'planner', 'route', 'flight plan', 'great circle', 'fuel', 'eta', 'wind', 'destination', 'origin'] },
@@ -2175,6 +2178,7 @@ export default function FlightMap() {
             <Toggle on={showTripwire} onClick={()=>{ const nv = !showTripwire; setShowTripwire(nv); lsSet('ft-tripwire', nv) }} label="WIRE" />
             <Toggle on={showGeofence} onClick={()=>{ const nv = !showGeofence; setShowGeofence(nv); lsSet('ft-geofence', nv) }} label="FENCE" />
             <Toggle on={showVoronoi} onClick={()=>{ const nv = !showVoronoi; setShowVoronoi(nv); lsSet('ft-voronoi', nv) }} label="VOR" />
+            <Toggle on={showSymphony} onClick={()=>{ const nv = !showSymphony; setShowSymphony(nv); lsSet('ft-symphony', nv) }} label="SYNTH" />
             <Toggle on={showTimeMachine} onClick={()=>{ const nv = !showTimeMachine; setShowTimeMachine(nv); lsSet('ft-timemachine', nv) }} label="TIME" />
             <Toggle on={showReach} onClick={()=>{ const nv = !showReach; setShowReach(nv); lsSet('ft-reach', nv) }} label="REACH" />
             <Toggle on={showTrip} onClick={()=>{ const nv = !showTrip; setShowTrip(nv); lsSet('ft-trip', nv) }} label="TRIP" />
@@ -3476,6 +3480,18 @@ export default function FlightMap() {
           map={mapRef.current}
           flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, ground: f.ground }))}
           onClose={() => { setShowVoronoi(false); lsSet('ft-voronoi', false) }}
+          onFly={(icao) => {
+            const f = flights.find(x => x.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
+          }}
+        />
+      )}
+
+      {showSymphony && (
+        <SkySymphony
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, ground: f.ground }))}
+          mapCenter={selected ? { lat: selected.lat, lng: selected.lng } : { lat: mapCenter.lat, lng: mapCenter.lng }}
+          onClose={() => { setShowSymphony(false); lsSet('ft-symphony', false) }}
           onFly={(icao) => {
             const f = flights.find(x => x.icao === icao)
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
