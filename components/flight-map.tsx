@@ -87,6 +87,7 @@ import MetarMonitor from './metar-monitor'
 import TafForecast from './taf-forecast'
 import TocPredictor from './toc-predictor'
 import CabinPressure from './cabin-pressure'
+import ApproachMinimums from './approach-minimums'
 import ConvectiveCells from './convective-cells'
 import SarPlanner from './sar-planner'
 import StableApproach from './stable-approach'
@@ -286,6 +287,7 @@ export default function FlightMap() {
   const [showTaf, setShowTaf] = useState<boolean>(() => lsGet('ft-taf', false))
   const [showToc, setShowToc] = useState<boolean>(() => lsGet('ft-toc', false))
   const [showCabin, setShowCabin] = useState<boolean>(() => lsGet('ft-cabin', false))
+  const [showApMin, setShowApMin] = useState<boolean>(() => lsGet('ft-apmin', false))
   const [showAnomaly, setShowAnomaly] = useState<boolean>(() => lsGet('ft-anomaly', false))
   const [showCompareStudio, setShowCompareStudio] = useState<boolean>(() => lsGet('ft-compare-studio', false))
   const [compareStudioIcaos, setCompareStudioIcaos] = useState<string[]>(() => lsGet<string[]>('ft-compare-studio-icaos', []))
@@ -380,7 +382,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2193,6 +2195,7 @@ export default function FlightMap() {
           { id: 'toggle-taf', group: 'View', label: showTaf ? 'Close TAF Forecast' : 'TAF Forecast (24h lagrangian terminal forecast)', run: () => { const nv = !showTaf; setShowTaf(nv); lsSet('ft-taf', nv) }, keywords: ['taf', 'forecast', 'terminal', 'aerodrome', 'metar', 'becmg', 'tempo', 'prob30', 'lagrangian', 'upwind', 'fm', 'weather'] },
           { id: 'toggle-toc', group: 'View', label: showToc ? 'Close Top of Climb Predictor' : 'Top of Climb Predictor (climb performance vs class)', run: () => { const nv = !showToc; setShowToc(nv); lsSet('ft-toc', nv) }, keywords: ['toc', 'top of climb', 'climb', 'gradient', 'fpm', 'level off', 'cruise', 'rvsm', 'step climb', 'performance'] },
           { id: 'toggle-cabin', group: 'View', label: showCabin ? 'Close Cabin Pressure Monitor' : 'Cabin Pressure Monitor (ΔP / TUC / emergency descent)', run: () => { const nv = !showCabin; setShowCabin(nv); lsSet('ft-cabin', nv) }, keywords: ['cabin', 'pressurization', 'pressure', 'differential', 'delta p', 'tuc', 'time of useful consciousness', 'hypoxia', 'oxygen', 'o2', 'depressurization', 'emergency descent', 'far 121.333', 'rapid decompression'] },
+          { id: 'toggle-apmin', group: 'View', label: showApMin ? 'Close Approach Minimums Monitor' : 'Approach Minimums Monitor (CAT I/II/IIIa/IIIb legality)', run: () => { const nv = !showApMin; setShowApMin(nv); lsSet('ft-apmin', nv) }, keywords: ['approach', 'minimums', 'mins', 'cat i', 'cat ii', 'cat iii', 'catiiia', 'catiiib', 'autoland', 'dh', 'decision height', 'rvr', 'ceiling', 'low vis', 'lvto', 'opspec', 'icao annex 14'] },
           { id: 'toggle-anomaly', group: 'View', label: showAnomaly ? 'Close anomaly radar' : 'Anomaly radar (tick-to-tick state deltas)', run: () => { const nv = !showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }, keywords: ['anomaly', 'radar', 'jump', 'swerve', 'spike', 'squawk', 'flip', 'glitch', 'delta', 'detect', 'alert'] },
           { id: 'toggle-compare', group: 'View', label: showCompareStudio ? 'Close compare studio' : 'Compare studio (side-by-side spec + spider)', run: () => { const nv = !showCompareStudio; setShowCompareStudio(nv); lsSet('ft-compare-studio', nv); if (nv && selected && !compareStudioIcaos.includes(selected.icao)) { const next = [...compareStudioIcaos, selected.icao].slice(0, 4); setCompareStudioIcaos(next); lsSet('ft-compare-studio-icaos', next) } }, keywords: ['compare', 'comparison', 'side by side', 'spec', 'radar chart', 'spider', 'vs', 'diff', 'studio'] },
           { id: 'toggle-symphony', group: 'View', label: showSymphony ? 'Close Sky Symphony' : 'Sky Symphony (sonify live traffic)', run: () => { const nv = !showSymphony; setShowSymphony(nv); lsSet('ft-symphony', nv) }, keywords: ['symphony', 'synth', 'audio', 'sound', 'music', 'sonify', 'sonification', 'tone', 'ambient', 'sound design'] },
@@ -3894,6 +3897,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showApMin && (
+        <ApproachMinimums
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowApMin(false); lsSet('ft-apmin', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
+
       {showSua && (
         <SuaMonitor
           map={mapRef.current}
@@ -4349,6 +4361,7 @@ export default function FlightMap() {
                 ['FIR load', showFir, ()=>{ const nv=!showFir; setShowFir(nv); lsSet('ft-fir', nv) }],
                 ['SAR planner', showSar, ()=>{ const nv=!showSar; setShowSar(nv); lsSet('ft-sar', nv) }],
                 ['Stable approach', showStable, ()=>{ const nv=!showStable; setShowStable(nv); lsSet('ft-stable', nv) }],
+                ['Approach mins', showApMin, ()=>{ const nv=!showApMin; setShowApMin(nv); lsSet('ft-apmin', nv) }],
                 ['FIR crossings', showFirX, ()=>{ const nv=!showFirX; setShowFirX(nv); lsSet('ft-firx', nv) }],
                 ['Runway config', showRwyCfg, ()=>{ const nv=!showRwyCfg; setShowRwyCfg(nv); lsSet('ft-rwycfg', nv) }],
                 ['Pass-by', showPass, ()=>{ const nv=!showPass; setShowPass(nv); lsSet('ft-pass', nv) }],
