@@ -70,6 +70,7 @@ import HypoxiaMonitor from './hypoxia-monitor'
 import StepClimb from './step-climb'
 import EtopsMonitor from './etops-monitor'
 import JetStreamFinder from './jetstream-finder'
+import HoldingStackDesigner from './holding-stack'
 import DepartureSequencer from './departure-sequencer'
 import CrosswindCompass from './crosswind-compass'
 
@@ -247,6 +248,7 @@ export default function FlightMap() {
   const [showDepSeq, setShowDepSeq] = useState<boolean>(() => lsGet('ft-depseq', false))
   const [showXwind, setShowXwind] = useState<boolean>(() => lsGet('ft-xwind', false))
   const [showJet, setShowJet] = useState<boolean>(() => lsGet('ft-jet', false))
+  const [showHstack, setShowHstack] = useState<boolean>(() => lsGet('ft-hstack', false))
   const [showAnomaly, setShowAnomaly] = useState<boolean>(() => lsGet('ft-anomaly', false))
   const [showCompareStudio, setShowCompareStudio] = useState<boolean>(() => lsGet('ft-compare-studio', false))
   const [compareStudioIcaos, setCompareStudioIcaos] = useState<string[]>(() => lsGet<string[]>('ft-compare-studio-icaos', []))
@@ -340,7 +342,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet].filter(Boolean).length
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack].filter(Boolean).length
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2134,6 +2136,7 @@ export default function FlightMap() {
           { id: 'toggle-depseq', group: 'View', label: showDepSeq ? 'Close Departure Sequencer' : 'Departure Sequencer (initial-climb wake & order)', run: () => { const nv = !showDepSeq; setShowDepSeq(nv); lsSet('ft-depseq', nv) }, keywords: ['departure', 'depart', 'takeoff', 'climb', 'wake', 'sequence', 'sid', 'initial', 'sequencer'] },
           { id: 'toggle-xwind', group: 'View', label: showXwind ? 'Close Crosswind Compass' : 'Crosswind Compass (runway picker from live wind)', run: () => { const nv = !showXwind; setShowXwind(nv); lsSet('ft-xwind', nv) }, keywords: ['crosswind', 'wind', 'runway', 'rwy', 'headwind', 'tailwind', 'compass', 'rose', 'vxw'] },
           { id: 'toggle-jet', group: 'View', label: showJet ? 'Close Jet Stream Finder' : 'Jet Stream Finder (detect cores, rank riders)', run: () => { const nv = !showJet; setShowJet(nv); lsSet('ft-jet', nv) }, keywords: ['jet', 'stream', 'wind', 'tailwind', 'core', 'ride', 'surf', 'aloft'] },
+          { id: 'toggle-hstack', group: 'View', label: showHstack ? 'Close Holding Stack Designer' : 'Holding Stack Designer (auto-assign racetrack levels)', run: () => { const nv = !showHstack; setShowHstack(nv); lsSet('ft-hstack', nv) }, keywords: ['holding', 'stack', 'racetrack', 'hold', 'eth', 'aar', 'level', 'fl'] },
           { id: 'toggle-anomaly', group: 'View', label: showAnomaly ? 'Close anomaly radar' : 'Anomaly radar (tick-to-tick state deltas)', run: () => { const nv = !showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }, keywords: ['anomaly', 'radar', 'jump', 'swerve', 'spike', 'squawk', 'flip', 'glitch', 'delta', 'detect', 'alert'] },
           { id: 'toggle-compare', group: 'View', label: showCompareStudio ? 'Close compare studio' : 'Compare studio (side-by-side spec + spider)', run: () => { const nv = !showCompareStudio; setShowCompareStudio(nv); lsSet('ft-compare-studio', nv); if (nv && selected && !compareStudioIcaos.includes(selected.icao)) { const next = [...compareStudioIcaos, selected.icao].slice(0, 4); setCompareStudioIcaos(next); lsSet('ft-compare-studio-icaos', next) } }, keywords: ['compare', 'comparison', 'side by side', 'spec', 'radar chart', 'spider', 'vs', 'diff', 'studio'] },
           { id: 'toggle-symphony', group: 'View', label: showSymphony ? 'Close Sky Symphony' : 'Sky Symphony (sonify live traffic)', run: () => { const nv = !showSymphony; setShowSymphony(nv); lsSet('ft-symphony', nv) }, keywords: ['symphony', 'synth', 'audio', 'sound', 'music', 'sonify', 'sonification', 'tone', 'ambient', 'sound design'] },
@@ -3630,6 +3633,18 @@ export default function FlightMap() {
         />
       )}
 
+      {showHstack && (
+        <HoldingStackDesigner
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, category: f.category, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          mapCenterLat={mapCenter.lat}
+          mapCenterLng={mapCenter.lng}
+          onClose={() => { setShowHstack(false); lsSet('ft-hstack', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 9) } }}
+          onFlyLatLng={(lat, lng, zoom) => flyToLatLng(lat, lng, zoom)}
+        />
+      )}
+
       {showSua && (
         <SuaMonitor
           map={mapRef.current}
@@ -4067,6 +4082,7 @@ export default function FlightMap() {
                 ['Departure seq', showDepSeq, ()=>{ const nv=!showDepSeq; setShowDepSeq(nv); lsSet('ft-depseq', nv) }],
                 ['Crosswind', showXwind, ()=>{ const nv=!showXwind; setShowXwind(nv); lsSet('ft-xwind', nv) }],
                 ['Jet stream', showJet, ()=>{ const nv=!showJet; setShowJet(nv); lsSet('ft-jet', nv) }],
+                ['Holding stack', showHstack, ()=>{ const nv=!showHstack; setShowHstack(nv); lsSet('ft-hstack', nv) }],
                 ['Approach seq', showAprSeq, ()=>{ const nv=!showAprSeq; setShowAprSeq(nv); lsSet('ft-aprseq', nv) }],
                 ['Pass-by', showPass, ()=>{ const nv=!showPass; setShowPass(nv); lsSet('ft-pass', nv) }],
                 ['Flow', showFlow, ()=>{ const nv=!showFlow; setShowFlow(nv); lsSet('ft-flow', nv) }],
