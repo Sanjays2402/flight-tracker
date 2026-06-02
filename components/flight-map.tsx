@@ -48,6 +48,7 @@ import NoiseMonitor from './noise-monitor'
 import TodPredictor from './tod-predictor'
 import Tripwire from './tripwire'
 import GeofenceStudio from './geofence-studio'
+import TimeMachine from './time-machine'
 import ReachAtlas from './reach-atlas'
 
 /* ============================================================
@@ -206,6 +207,7 @@ export default function FlightMap() {
   const [showTod, setShowTod] = useState<boolean>(() => lsGet('ft-tod', false))
   const [showTripwire, setShowTripwire] = useState<boolean>(() => lsGet('ft-tripwire', false))
   const [showGeofence, setShowGeofence] = useState<boolean>(() => lsGet('ft-geofence', false))
+  const [showTimeMachine, setShowTimeMachine] = useState<boolean>(() => lsGet('ft-timemachine', false))
   const [showReach, setShowReach] = useState<boolean>(() => lsGet('ft-reach', false))
   const [cpaHorizon, setCpaHorizon] = useState<number>(() => lsGet('ft-cpa-hor', 300))
   const [cpaMaxMissNm, setCpaMaxMissNm] = useState<number>(() => lsGet('ft-cpa-mnm', 5))
@@ -2067,6 +2069,7 @@ export default function FlightMap() {
           { id: 'toggle-tod', group: 'View', label: showTod ? 'Close TOD predictor' : 'Top-of-Descent predictor (3° profile)', run: () => { const nv = !showTod; setShowTod(nv); lsSet('ft-tod', nv) }, keywords: ['tod', 'top of descent', 'descent', 'profile', 'arrival', 'destination', 'glide', '3 degree'] },
           { id: 'toggle-tripwire', group: 'View', label: showTripwire ? 'Close tripwire' : 'Tripwire / virtual gate (line crossing predictor)', run: () => { const nv = !showTripwire; setShowTripwire(nv); lsSet('ft-tripwire', nv) }, keywords: ['tripwire', 'gate', 'line', 'cross', 'crossing', 'fence', 'wire', 'threshold', 'border', 'spotter line'] },
           { id: 'toggle-geofence', group: 'View', label: showGeofence ? 'Close geofence studio' : 'Geofence studio (polygon zone monitor)', run: () => { const nv = !showGeofence; setShowGeofence(nv); lsSet('ft-geofence', nv) }, keywords: ['geofence', 'zone', 'polygon', 'area', 'fence', 'studio', 'dwell', 'entry', 'exit', 'monitor', 'intrusion'] },
+          { id: 'toggle-timemachine', group: 'View', label: showTimeMachine ? 'Close Time Machine' : 'Time Machine (playback / scrub history)', run: () => { const nv = !showTimeMachine; setShowTimeMachine(nv); lsSet('ft-timemachine', nv) }, keywords: ['time', 'machine', 'playback', 'scrub', 'history', 'replay', 'rewind', 'past', 'ghost'] },
           { id: 'toggle-reach', group: 'View', label: showReach ? 'Close reachability atlas' : 'Reachability atlas (kinematic divert footprint)', run: () => { const nv = !showReach; setShowReach(nv); lsSet('ft-reach', nv) }, keywords: ['reach', 'reachability', 'divert', 'range', 'footprint', 'atlas', 'dubins', 'turn'] },
           { id: 'toggle-atlas', group: 'View', label: showAtlas ? 'Close registry atlas' : 'Registry atlas (country leaderboard)', run: () => { const nv = !showAtlas; setShowAtlas(nv); lsSet('ft-atlas', nv) }, keywords: ['atlas', 'country', 'registry', 'flag', 'nationality', 'iso', 'icao', 'origin'] },
           { id: 'toggle-vip', group: 'View', label: showVip ? 'Close VIP hunter' : 'VIP hunter (notable aircraft)', run: () => { const nv = !showVip; setShowVip(nv); lsSet('ft-vip', nv) }, keywords: ['vip', 'notable', 'interesting', 'hunter', 'celebrity', 'royal', 'state', 'military', 'rare', 'b2', 'a380', 'air force one'] },
@@ -2161,6 +2164,7 @@ export default function FlightMap() {
             <Toggle on={showTod} onClick={()=>{ const nv = !showTod; setShowTod(nv); lsSet('ft-tod', nv) }} label="TOD" />
             <Toggle on={showTripwire} onClick={()=>{ const nv = !showTripwire; setShowTripwire(nv); lsSet('ft-tripwire', nv) }} label="WIRE" />
             <Toggle on={showGeofence} onClick={()=>{ const nv = !showGeofence; setShowGeofence(nv); lsSet('ft-geofence', nv) }} label="FENCE" />
+            <Toggle on={showTimeMachine} onClick={()=>{ const nv = !showTimeMachine; setShowTimeMachine(nv); lsSet('ft-timemachine', nv) }} label="TIME" />
             <Toggle on={showReach} onClick={()=>{ const nv = !showReach; setShowReach(nv); lsSet('ft-reach', nv) }} label="REACH" />
             <Toggle on={showEventLog} onClick={()=>{ const nv = !showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }} label="LOG" />
             <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
@@ -3448,6 +3452,19 @@ export default function FlightMap() {
           map={mapRef.current}
           flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
           onClose={() => { setShowGeofence(false); lsSet('ft-geofence', false) }}
+          onFly={(icao) => {
+            const f = flights.find(x => x.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
+          }}
+        />
+      )}
+
+      {showTimeMachine && (
+        <TimeMachine
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, ground: f.ground }))}
+          trails={trailsRef.current}
+          onClose={() => { setShowTimeMachine(false); lsSet('ft-timemachine', false) }}
           onFly={(icao) => {
             const f = flights.find(x => x.icao === icao)
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
