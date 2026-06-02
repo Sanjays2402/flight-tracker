@@ -31,6 +31,7 @@ import WindsAloft from './winds-aloft'
 import AirportBoard from './airport-board'
 import SpeedAltScatter from './speed-alt-scatter'
 import SquawkMonitor from './squawk-monitor'
+import OperatorRace from './operator-race'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -182,6 +183,7 @@ export default function FlightMap() {
   const [showBoard, setShowBoard] = useState<boolean>(() => lsGet('ft-board', false))
   const [showScatter, setShowScatter] = useState<boolean>(() => lsGet('ft-scatter', false))
   const [showSquawk, setShowSquawk] = useState<boolean>(() => lsGet('ft-squawk', false))
+  const [showRace, setShowRace] = useState<boolean>(() => lsGet('ft-race', false))
   const [showPip, setShowPip] = useState<boolean>(() => { try { return localStorage.getItem('ft-pip') === '1' } catch { return false } })
   const [pipRadius, setPipRadius] = useState<number>(() => { try { const n = Number(localStorage.getItem('ft-pip-r') || '80'); return Number.isFinite(n) && n > 5 ? n : 80 } catch { return 80 } })
   const [holdMinTurn, setHoldMinTurn] = useState<number>(() => lsGet('ft-hold-turn', 360))
@@ -1759,6 +1761,7 @@ export default function FlightMap() {
             <Toggle on={showBoard} onClick={()=>{ const nv = !showBoard; setShowBoard(nv); lsSet('ft-board', nv) }} label="APT" />
             <Toggle on={showScatter} onClick={()=>{ const nv = !showScatter; setShowScatter(nv); lsSet('ft-scatter', nv) }} label="S×A" />
             <Toggle on={showSquawk} onClick={()=>{ const nv = !showSquawk; setShowSquawk(nv); lsSet('ft-squawk', nv) }} label="SQK" />
+            <Toggle on={showRace} onClick={()=>{ const nv = !showRace; setShowRace(nv); lsSet('ft-race', nv) }} label="RACE" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2890,6 +2893,25 @@ export default function FlightMap() {
               setSelected(full)
             }
           }}
+        />
+      )}
+
+      {showRace && (
+        <OperatorRace
+          flights={flights.map(f => ({
+            icao: f.icao, callsign: f.callsign, operator: f.operator, type: f.type,
+            altitudeFt: f.altitudeFt, velocityKts: f.velocityKts,
+            ground: f.ground, military: f.military, emergency: f.emergency,
+          }))}
+          onSelectOperator={(g, key) => {
+            if (g === 'operator') {
+              setAirlinePrefix(key.length <= 4 ? key : key.slice(0, 3))
+              setShowFilters(true)
+            } else {
+              setQuery(key)
+            }
+          }}
+          onClose={() => { setShowRace(false); lsSet('ft-race', false) }}
         />
       )}
 
