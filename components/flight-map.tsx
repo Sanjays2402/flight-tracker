@@ -25,6 +25,7 @@ import AltitudeLadder from './altitude-ladder'
 import CockpitHUD from './cockpit-hud'
 import RulerTool from './ruler-tool'
 import PipMinimap from './pip-minimap'
+import BullseyeTool from './bullseye-tool'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -170,6 +171,7 @@ export default function FlightMap() {
   const [showLadder, setShowLadder] = useState<boolean>(() => lsGet('ft-ladder', false))
   const [showCockpit, setShowCockpit] = useState<boolean>(() => lsGet('ft-pfd', false))
   const [showRuler, setShowRuler] = useState<boolean>(false)
+  const [showBullseye, setShowBullseye] = useState<boolean>(false)
   const [showPip, setShowPip] = useState<boolean>(() => { try { return localStorage.getItem('ft-pip') === '1' } catch { return false } })
   const [pipRadius, setPipRadius] = useState<number>(() => { try { const n = Number(localStorage.getItem('ft-pip-r') || '80'); return Number.isFinite(n) && n > 5 ? n : 80 } catch { return 80 } })
   const [holdMinTurn, setHoldMinTurn] = useState<number>(() => lsGet('ft-hold-turn', 360))
@@ -1660,6 +1662,7 @@ export default function FlightMap() {
           { id: 'toggle-list', group: 'View', label: showList ? 'Hide flight list' : 'Show flight list', hint: 'L', run: () => setShowList(v => !v) },
           { id: 'toggle-radar', group: 'View', label: showRadar ? 'Hide traffic radar' : 'Show traffic radar', run: () => { const nv = !showRadar; setShowRadar(nv); lsSet('ft-radar', nv) }, keywords: ['scope', 'tcas', 'ppi'] },
           { id: 'toggle-ruler', group: 'View', label: showRuler ? 'Close great-circle ruler' : 'Great-circle ruler (measure distance)', run: () => setShowRuler(v => !v), keywords: ['measure', 'distance', 'ruler', 'geodesic'] },
+          { id: 'toggle-bullseye', group: 'View', label: showBullseye ? 'Close bullseye (BRA reference)' : 'Bullseye / BRA tactical reference', run: () => setShowBullseye(v => !v), keywords: ['bullseye', 'bra', 'tactical', 'bearing', 'range', 'compass', 'rose', 'radial'] },
           { id: 'toggle-pip', group: 'View', label: showPip ? 'Hide picture-in-picture mini-map' : 'Show picture-in-picture mini-map', run: () => { setShowPip(v => { const nv = !v; try { localStorage.setItem('ft-pip', nv ? '1' : '0') } catch {}; return nv }) }, keywords: ['pip', 'minimap', 'mini', 'inset', 'follow'] },
           { id: 'toggle-3d', group: 'Mode', label: show3D ? 'Exit 3D view' : 'Enter 3D view', run: () => setShow3D(v => !v) },
           { id: 'toggle-chase', group: 'Mode', label: chase ? 'Stop chase camera' : 'Start chase camera (select a plane first)', run: () => { if (!selected) return; setChase(v => { const nv = !v; chaseRef.current = nv; if (nv) setShow3D(true); return nv }) } },
@@ -1740,6 +1743,7 @@ export default function FlightMap() {
             <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
             <Toggle on={showCockpit} onClick={()=>{ const nv = !showCockpit; setShowCockpit(nv); lsSet('ft-pfd', nv) }} label="PFD" />
             <Toggle on={showRuler} onClick={()=>setShowRuler(v=>!v)} label="Ruler" />
+            <Toggle on={showBullseye} onClick={()=>setShowBullseye(v=>!v)} label="Bull" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2775,6 +2779,21 @@ export default function FlightMap() {
 
       {showRuler && (
         <RulerTool map={mapRef.current} onClose={() => setShowRuler(false)} />
+      )}
+
+      {showBullseye && (
+        <BullseyeTool
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, ground: f.ground, track: f.track, velocityKts: f.velocityKts, emergency: f.emergency }))}
+          onClose={() => setShowBullseye(false)}
+          onFly={(icao) => {
+            const f = flights.find(x => x.icao === icao)
+            if (f && mapRef.current) {
+              try { mapRef.current.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {}
+              setSelected(f)
+            }
+          }}
+        />
       )}
 
       {showPip && (
