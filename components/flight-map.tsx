@@ -58,6 +58,7 @@ import ReachAtlas from './reach-atlas'
 import TripPlanner from './trip-planner'
 import RecordsHall from './records-hall'
 import ShadowCaster from './shadow-caster'
+import DopplerScope from './doppler-scope'
 import ApproachSequencer from './approach-sequencer'
 
 /* ============================================================
@@ -213,6 +214,7 @@ export default function FlightMap() {
   const [showFlow, setShowFlow] = useState<boolean>(() => lsGet('ft-flow', false))
   const [showRecords, setShowRecords] = useState<boolean>(() => lsGet('ft-records', false))
   const [showShadow, setShowShadow] = useState<boolean>(() => lsGet('ft-shadow', false))
+  const [showDoppler, setShowDoppler] = useState<boolean>(() => lsGet('ft-doppler', false))
   const [showAprSeq, setShowAprSeq] = useState<boolean>(() => lsGet('ft-aprseq', false))
   const [showPass, setShowPass] = useState<boolean>(() => lsGet('ft-pass', false))
   const [showNoise, setShowNoise] = useState<boolean>(() => lsGet('ft-noise', false))
@@ -2085,6 +2087,7 @@ export default function FlightMap() {
           { id: 'toggle-flow', group: 'View', label: showFlow ? 'Close flow rose' : 'Flow rose (heading wind-rose)', run: () => { const nv = !showFlow; setShowFlow(nv); lsSet('ft-flow', nv) }, keywords: ['flow', 'rose', 'wind rose', 'heading', 'direction', 'track', 'sector', 'compass'] },
           { id: 'toggle-records', group: 'View', label: showRecords ? 'Close records hall of fame' : 'Records hall of fame (top-3 podiums)', run: () => { const nv = !showRecords; setShowRecords(nv); lsSet('ft-records', nv) }, keywords: ['records', 'hall', 'fame', 'podium', 'leaderboard', 'best', 'fastest', 'highest', 'mach', 'gold', 'silver', 'bronze', 'trophy'] },
           { id: 'toggle-shadow', group: 'View', label: showShadow ? 'Close shadow caster' : 'Shadow caster (sun-cast ground shadows)', run: () => { const nv = !showShadow; setShowShadow(nv); lsSet('ft-shadow', nv) }, keywords: ['shadow', 'caster', 'sun', 'ground', 'cast', 'anti', 'solar', 'projection'] },
+          { id: 'toggle-doppler', group: 'View', label: showDoppler ? 'Close Doppler scope' : 'Doppler scope (radial velocity radar)', run: () => { const nv = !showDoppler; setShowDoppler(nv); lsSet('ft-doppler', nv) }, keywords: ['doppler', 'radar', 'scope', 'radial', 'velocity', 'approach', 'recede', 'closing'] },
           { id: 'toggle-aprseq', group: 'View', label: showAprSeq ? 'Close approach sequencer' : 'Approach sequencer (arrival queue)', run: () => { const nv = !showAprSeq; setShowAprSeq(nv); lsSet('ft-aprseq', nv) }, keywords: ['approach', 'sequence', 'sequencer', 'arrival', 'queue', 'in-trail', 'spacing', 'final', 'land', 'apr'] },
           { id: 'toggle-pass', group: 'View', label: showPass ? 'Close pass predictor' : 'Pass predictor (overhead photo windows)', run: () => { const nv = !showPass; setShowPass(nv); lsSet('ft-pass', nv) }, keywords: ['pass', 'overhead', 'photo', 'spotter', 'predict', 'cpa', 'sun', 'light', 'elevation'] },
           { id: 'toggle-noise', group: 'View', label: showNoise ? 'Close noise monitor' : 'Noise footprint monitor (ground dBA)', run: () => { const nv = !showNoise; setShowNoise(nv); lsSet('ft-noise', nv) }, keywords: ['noise', 'sound', 'db', 'dba', 'decibel', 'footprint', 'loud', 'quiet', 'community', 'annoyance'] },
@@ -2189,6 +2192,7 @@ export default function FlightMap() {
             <Toggle on={showFlow} onClick={()=>{ const nv = !showFlow; setShowFlow(nv); lsSet('ft-flow', nv) }} label="FLOW" />
             <Toggle on={showRecords} onClick={()=>{ const nv = !showRecords; setShowRecords(nv); lsSet('ft-records', nv) }} label="REC" />
             <Toggle on={showShadow} onClick={()=>{ const nv = !showShadow; setShowShadow(nv); lsSet('ft-shadow', nv) }} label="SHAD" />
+            <Toggle on={showDoppler} onClick={()=>{ const nv = !showDoppler; setShowDoppler(nv); lsSet('ft-doppler', nv) }} label="DOP" />
             <Toggle on={showAprSeq} onClick={()=>{ const nv = !showAprSeq; setShowAprSeq(nv); lsSet('ft-aprseq', nv) }} label="APR" />
             <Toggle on={showPass} onClick={()=>{ const nv = !showPass; setShowPass(nv); lsSet('ft-pass', nv) }} label="PASS" />
             <Toggle on={showNoise} onClick={()=>{ const nv = !showNoise; setShowNoise(nv); lsSet('ft-noise', nv) }} label="NOISE" />
@@ -3625,6 +3629,22 @@ export default function FlightMap() {
             lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, track: f.track, ground: f.ground,
           }))}
           onClose={() => { setShowShadow(false); lsSet('ft-shadow', false) }}
+          onFly={(icao) => {
+            const f = flights.find(x => x.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 7), duration: 700 }) } catch {} }
+          }}
+        />
+      )}
+
+      {showDoppler && (
+        <DopplerScope
+          map={mapRef.current}
+          flights={flights.map(f => ({
+            icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator,
+            lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts,
+            track: f.track, ground: f.ground,
+          }))}
+          onClose={() => { setShowDoppler(false); lsSet('ft-doppler', false) }}
           onFly={(icao) => {
             const f = flights.find(x => x.icao === icao)
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 7), duration: 700 }) } catch {} }
