@@ -19,6 +19,7 @@ import EmissionsPanel from './emissions-panel'
 import ConflictPanel, { detectConflicts, type ConflictPair } from './conflict-panel'
 import OverheadPanel from './overhead-panel'
 import HoldingPanel, { detectHolding, type HoldingHit } from './holding-panel'
+import EventLog, { detectEvents, type LogEvent, type EventKind, type SnapshotEntry } from './event-log'
 import AltitudeLadder from './altitude-ladder'
 import CockpitHUD from './cockpit-hud'
 import RulerTool from './ruler-tool'
@@ -172,6 +173,16 @@ export default function FlightMap() {
   const [holdMinTurn, setHoldMinTurn] = useState<number>(() => lsGet('ft-hold-turn', 360))
   const [holdMaxRadius, setHoldMaxRadius] = useState<number>(() => lsGet('ft-hold-rad', 10))
   const [holdMinSpan, setHoldMinSpan] = useState<number>(() => lsGet('ft-hold-span', 120))
+  const [showEventLog, setShowEventLog] = useState<boolean>(() => lsGet('ft-evlog', false))
+  const [events, setEvents] = useState<LogEvent[]>([])
+  const [evEnabled, setEvEnabled] = useState<Set<EventKind>>(() => {
+    try {
+      const raw = localStorage.getItem('ft-evlog-kinds')
+      if (raw) return new Set(JSON.parse(raw) as EventKind[])
+    } catch {}
+    return new Set<EventKind>(['takeoff','landing','emergency','watch','climb','descend','fast'])
+  })
+  const evSnapshotRef = useRef<Map<string, SnapshotEntry>>(new Map())
   const [conflictLat, setConflictLat] = useState<number>(() => lsGet('ft-cflx-lat', 5))
   const [conflictVert, setConflictVert] = useState<number>(() => lsGet('ft-cflx-vert', 1000))
   const [conflictGround, setConflictGround] = useState<boolean>(() => lsGet('ft-cflx-grd', false))
@@ -291,6 +302,32 @@ export default function FlightMap() {
 
   // chime on watchlist hit (debounced per icao, 60s)
   const watchHitsRef = useRef<Map<string, number>>(new Map())
+  useEffect(() => {
+    // Event log detection — runs on every flights update
+    if (!flights.length) return
+    const snap: SnapshotEntry[] = flights.map(f => ({
+      icao: f.icao, callsign: f.callsign, altitudeFt: f.altitudeFt, ground: f.ground,
+      mach: f.mach || 0, squawk: f.squawk || '', lat: f.lat, lng: f.lng,
+    }))
+    const wlSet = new Set(watchlist.map(w => w.toUpperCase()))
+    const isW = (icao: string, cs: string) => {
+      const I = icao.toUpperCase(), C = (cs || '').toUpperCase()
+      if (wlSet.has(I) || wlSet.has(C)) return true
+      for (const w of wlSet) if (C.startsWith(w) && w.length >= 3) return true
+      return false
+    }
+    const newEvts = detectEvents(evSnapshotRef.current, snap, isW)
+    if (newEvts.length) {
+      setEvents(prev => {
+        const merged = [...newEvts.reverse(), ...prev]
+        return merged.slice(0, 500)
+      })
+    }
+    const m = new Map<string, SnapshotEntry>()
+    for (const s of snap) m.set(s.icao, s)
+    evSnapshotRef.current = m
+  }, [flights, watchlist])
+
   useEffect(() => {
     if (!flights.length || !watchlist.length) return
     const now = Date.now()
@@ -1682,6 +1719,7 @@ export default function FlightMap() {
             <Toggle on={showConflict} onClick={()=>{ const nv = !showConflict; setShowConflict(nv); lsSet('ft-cflx', nv) }} label="CFLX" />
             <Toggle on={showOverhead} onClick={()=>{ const nv = !showOverhead; setShowOverhead(nv); lsSet('ft-overhead', nv) }} label="OVHD" />
             <Toggle on={showHolding} onClick={()=>{ const nv = !showHolding; setShowHolding(nv); lsSet('ft-hold', nv) }} label="HOLD" />
+            <Toggle on={showEventLog} onClick={()=>{ const nv = !showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }} label="LOG" />
             <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
             <Toggle on={showCockpit} onClick={()=>{ const nv = !showCockpit; setShowCockpit(nv); lsSet('ft-pfd', nv) }} label="PFD" />
             <Toggle on={showRuler} onClick={()=>setShowRuler(v=>!v)} label="Ruler" />
@@ -2640,6 +2678,28 @@ export default function FlightMap() {
             if (hit) { try { mapRef.current?.flyTo({ center: [hit.centerLng, hit.centerLat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 }) } catch {} }
           }}
           onClose={() => { setShowHolding(false); lsSet('ft-hold', false) }}
+        />
+      )}
+
+      {showEventLog && (
+        <EventLog
+          events={events}
+          enabled={evEnabled}
+          setEnabled={(s) => {
+            setEvEnabled(s)
+            try { localStorage.setItem('ft-evlog-kinds', JSON.stringify(Array.from(s))) } catch {}
+          }}
+          onClear={() => setEvents([])}
+          onClose={() => { setShowEventLog(false); lsSet('ft-evlog', false) }}
+          onSelect={(e) => {
+            const f = flights.find(ff => ff.icao === e.icao)
+            if (f) {
+              setSelected(f); setSelectedAirport(null)
+              try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 }) } catch {}
+            } else if (e.lat != null && e.lng != null) {
+              try { mapRef.current?.flyTo({ center: [e.lng, e.lat], zoom: 8, duration: 700 }) } catch {}
+            }
+          }}
         />
       )}
 
