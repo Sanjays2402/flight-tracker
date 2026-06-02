@@ -50,6 +50,7 @@ import Tripwire from './tripwire'
 import GeofenceStudio from './geofence-studio'
 import TimeMachine from './time-machine'
 import ReachAtlas from './reach-atlas'
+import TripPlanner from './trip-planner'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -209,6 +210,7 @@ export default function FlightMap() {
   const [showGeofence, setShowGeofence] = useState<boolean>(() => lsGet('ft-geofence', false))
   const [showTimeMachine, setShowTimeMachine] = useState<boolean>(() => lsGet('ft-timemachine', false))
   const [showReach, setShowReach] = useState<boolean>(() => lsGet('ft-reach', false))
+  const [showTrip, setShowTrip] = useState<boolean>(() => lsGet('ft-trip', false))
   const [cpaHorizon, setCpaHorizon] = useState<number>(() => lsGet('ft-cpa-hor', 300))
   const [cpaMaxMissNm, setCpaMaxMissNm] = useState<number>(() => lsGet('ft-cpa-mnm', 5))
   const [cpaMaxMissFt, setCpaMaxMissFt] = useState<number>(() => lsGet('ft-cpa-mft', 1500))
@@ -2071,6 +2073,7 @@ export default function FlightMap() {
           { id: 'toggle-geofence', group: 'View', label: showGeofence ? 'Close geofence studio' : 'Geofence studio (polygon zone monitor)', run: () => { const nv = !showGeofence; setShowGeofence(nv); lsSet('ft-geofence', nv) }, keywords: ['geofence', 'zone', 'polygon', 'area', 'fence', 'studio', 'dwell', 'entry', 'exit', 'monitor', 'intrusion'] },
           { id: 'toggle-timemachine', group: 'View', label: showTimeMachine ? 'Close Time Machine' : 'Time Machine (playback / scrub history)', run: () => { const nv = !showTimeMachine; setShowTimeMachine(nv); lsSet('ft-timemachine', nv) }, keywords: ['time', 'machine', 'playback', 'scrub', 'history', 'replay', 'rewind', 'past', 'ghost'] },
           { id: 'toggle-reach', group: 'View', label: showReach ? 'Close reachability atlas' : 'Reachability atlas (kinematic divert footprint)', run: () => { const nv = !showReach; setShowReach(nv); lsSet('ft-reach', nv) }, keywords: ['reach', 'reachability', 'divert', 'range', 'footprint', 'atlas', 'dubins', 'turn'] },
+          { id: 'toggle-trip', group: 'View', label: showTrip ? 'Close trip planner' : 'Trip planner (great-circle route + winds + fuel)', run: () => { const nv = !showTrip; setShowTrip(nv); lsSet('ft-trip', nv) }, keywords: ['trip', 'planner', 'route', 'flight plan', 'great circle', 'fuel', 'eta', 'wind', 'destination', 'origin'] },
           { id: 'toggle-atlas', group: 'View', label: showAtlas ? 'Close registry atlas' : 'Registry atlas (country leaderboard)', run: () => { const nv = !showAtlas; setShowAtlas(nv); lsSet('ft-atlas', nv) }, keywords: ['atlas', 'country', 'registry', 'flag', 'nationality', 'iso', 'icao', 'origin'] },
           { id: 'toggle-vip', group: 'View', label: showVip ? 'Close VIP hunter' : 'VIP hunter (notable aircraft)', run: () => { const nv = !showVip; setShowVip(nv); lsSet('ft-vip', nv) }, keywords: ['vip', 'notable', 'interesting', 'hunter', 'celebrity', 'royal', 'state', 'military', 'rare', 'b2', 'a380', 'air force one'] },
           { id: 'toggle-pip', group: 'View', label: showPip ? 'Hide picture-in-picture mini-map' : 'Show picture-in-picture mini-map', run: () => { setShowPip(v => { const nv = !v; try { localStorage.setItem('ft-pip', nv ? '1' : '0') } catch {}; return nv }) }, keywords: ['pip', 'minimap', 'mini', 'inset', 'follow'] },
@@ -2166,6 +2169,7 @@ export default function FlightMap() {
             <Toggle on={showGeofence} onClick={()=>{ const nv = !showGeofence; setShowGeofence(nv); lsSet('ft-geofence', nv) }} label="FENCE" />
             <Toggle on={showTimeMachine} onClick={()=>{ const nv = !showTimeMachine; setShowTimeMachine(nv); lsSet('ft-timemachine', nv) }} label="TIME" />
             <Toggle on={showReach} onClick={()=>{ const nv = !showReach; setShowReach(nv); lsSet('ft-reach', nv) }} label="REACH" />
+            <Toggle on={showTrip} onClick={()=>{ const nv = !showTrip; setShowTrip(nv); lsSet('ft-trip', nv) }} label="TRIP" />
             <Toggle on={showEventLog} onClick={()=>{ const nv = !showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }} label="LOG" />
             <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
             <Toggle on={showPhase} onClick={()=>{ const nv = !showPhase; setShowPhase(nv); lsSet('ft-phase', nv) }} label="PHASE" />
@@ -3479,6 +3483,14 @@ export default function FlightMap() {
           selectedIcao={selected?.icao ?? null}
           onClose={() => { setShowReach(false); lsSet('ft-reach', false) }}
           onFlyAirport={(lat, lng) => { try { mapRef.current?.flyTo({ center: [lng, lat], zoom: 10, duration: 800 }) } catch {} }}
+        />
+      )}
+
+      {showTrip && (
+        <TripPlanner
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, ground: f.ground, windDir: f.windDir, windKts: f.windKts }))}
+          onClose={() => { setShowTrip(false); lsSet('ft-trip', false) }}
         />
       )}
 
