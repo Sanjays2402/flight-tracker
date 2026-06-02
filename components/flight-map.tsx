@@ -13,6 +13,7 @@ import { pushToast } from '../lib/toast'
 import { playEmergencyChime, playRadioChirp } from '../lib/audio'
 import { lsGet, lsSet } from '../lib/storage'
 import { t as i18nT } from '../lib/i18n'
+import CommandPalette, { CPAction } from './command-palette'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -1413,6 +1414,46 @@ export default function FlightMap() {
     <div className="relative h-screen w-screen overflow-hidden bg-[#07090d]">
       {/* [BATCH-A] */}
       <SkipToMap />
+      <CommandPalette
+        flights={flights as any}
+        onSelectFlight={(icao) => {
+          const f = flights.find(ff => ff.icao === icao)
+          if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 800 }) } catch {} }
+        }}
+        onSelectAirport={(ap) => {
+          setSelectedAirport(ap); setSelected(null)
+          try { mapRef.current?.flyTo({ center: [ap.lon, ap.lat], zoom: 10, duration: 800 }) } catch {}
+        }}
+        actions={useMemo<CPAction[]>(() => ([
+          { id: 'toggle-trails', group: 'Layers', label: showTrails ? 'Hide trails' : 'Show trails', hint: 'T', run: () => setShowTrails(v => !v) },
+          { id: 'toggle-weather', group: 'Layers', label: showWeather ? 'Hide weather radar' : 'Show weather radar', hint: 'W', run: () => setShowWeather(v => !v) },
+          { id: 'toggle-night', group: 'Layers', label: showNight ? 'Hide day/night terminator' : 'Show day/night terminator', hint: 'N', run: () => setShowNight(v => !v) },
+          { id: 'toggle-heat', group: 'Layers', label: showHeat ? 'Hide density heatmap' : 'Show density heatmap', hint: 'H', run: () => setShowHeat(v => !v) },
+          { id: 'toggle-list', group: 'View', label: showList ? 'Hide flight list' : 'Show flight list', hint: 'L', run: () => setShowList(v => !v) },
+          { id: 'toggle-3d', group: 'Mode', label: show3D ? 'Exit 3D view' : 'Enter 3D view', run: () => setShow3D(v => !v) },
+          { id: 'toggle-chase', group: 'Mode', label: chase ? 'Stop chase camera' : 'Start chase camera (select a plane first)', run: () => { if (!selected) return; setChase(v => { const nv = !v; chaseRef.current = nv; if (nv) setShow3D(true); return nv }) } },
+          { id: 'toggle-follow', group: 'Mode', label: follow ? 'Stop follow' : 'Follow selected plane', hint: 'F', run: () => { if (selected) setFollow(v => !v) } },
+          { id: 'toggle-audio', group: 'Mode', label: audioOn ? 'Mute alerts' : 'Enable audio alerts', run: () => setAudioOn(v => !v) },
+          { id: 'style-dark', group: 'View', label: 'Map style: Dark', run: () => setMapStyle('dark') },
+          { id: 'style-light', group: 'View', label: 'Map style: Light', run: () => setMapStyle('light') },
+          { id: 'style-sat', group: 'View', label: 'Map style: Satellite', run: () => setMapStyle('sat'), keywords: ['imagery', 'aerial'] },
+          { id: 'color-alt', group: 'Color', label: 'Color by altitude', run: () => setColorBy('alt') },
+          { id: 'color-spd', group: 'Color', label: 'Color by speed', run: () => setColorBy('spd') },
+          { id: 'color-cat', group: 'Color', label: 'Color by category', run: () => setColorBy('cat') },
+          { id: 'color-mil', group: 'Color', label: 'Highlight military', run: () => setColorBy('mil') },
+          { id: 'clear-sel', group: 'Nav', label: 'Clear selection', hint: 'ESC', run: () => { setSelected(null); setSelectedAirport(null) } },
+          { id: 'help', group: 'Nav', label: 'Keyboard shortcuts', hint: '?', run: () => setShowHelp(v => !v) },
+          { id: 'styles-panel', group: 'View', label: 'Open map styles panel', hint: 'M', run: () => setShowStyles(v => !v) },
+          { id: 'goto-world', group: 'Nav', label: 'Go to world view', run: () => { try { mapRef.current?.flyTo({ center: [0, 20], zoom: 2, duration: 900 }) } catch {} } },
+          { id: 'locate', group: 'Nav', label: 'Locate me', run: () => {
+            if (!navigator.geolocation) return
+            navigator.geolocation.getCurrentPosition(p => {
+              setUserLoc({ lat: p.coords.latitude, lng: p.coords.longitude })
+              try { mapRef.current?.flyTo({ center: [p.coords.longitude, p.coords.latitude], zoom: 9, duration: 900 }) } catch {}
+            })
+          } },
+        ]), [showTrails, showWeather, showNight, showHeat, showList, show3D, chase, follow, audioOn, selected])}
+      />
       <OfflineBanner />
       <ToastHost />
       <EmergencyLive text={emergLog[0] ? `Emergency squawk ${emergLog[0].sq} from ${emergLog[0].cs || emergLog[0].icao}` : ''} />
