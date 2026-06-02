@@ -51,6 +51,7 @@ import GeofenceStudio from './geofence-studio'
 import VoronoiTerritory from './voronoi-territory'
 import SunGlarePanel from './sun-glare'
 import GlideAtlasPanel from './glide-atlas'
+import CoffinCornerPanel from './coffin-corner'
 import AnomalyRadar from './anomaly-radar'
 import ComparePanel from './compare-panel'
 import SkySymphony from './sky-symphony'
@@ -225,6 +226,7 @@ export default function FlightMap() {
   const [showVoronoi, setShowVoronoi] = useState<boolean>(() => lsGet('ft-voronoi', false))
   const [showSunGlare, setShowSunGlare] = useState<boolean>(() => lsGet('ft-sunglare', false))
   const [showGlide, setShowGlide] = useState<boolean>(() => lsGet('ft-glide', false))
+  const [showCoffin, setShowCoffin] = useState<boolean>(() => lsGet('ft-coffin', false))
   const [showAnomaly, setShowAnomaly] = useState<boolean>(() => lsGet('ft-anomaly', false))
   const [showCompareStudio, setShowCompareStudio] = useState<boolean>(() => lsGet('ft-compare-studio', false))
   const [compareStudioIcaos, setCompareStudioIcaos] = useState<string[]>(() => lsGet<string[]>('ft-compare-studio-icaos', []))
@@ -318,7 +320,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity].filter(Boolean).length
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity].filter(Boolean).length
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2101,6 +2103,7 @@ export default function FlightMap() {
           { id: 'toggle-voronoi', group: 'View', label: showVoronoi ? 'Close Voronoi territory' : 'Voronoi territory (airspace partition)', run: () => { const nv = !showVoronoi; setShowVoronoi(nv); lsSet('ft-voronoi', nv) }, keywords: ['voronoi', 'territory', 'partition', 'cell', 'isolated', 'crowded', 'nearest', 'neighbor', 'tessellation'] },
           { id: 'toggle-sunglare', group: 'View', label: showSunGlare ? 'Close sun glare predictor' : 'Sun glare predictor (cockpit clock + elevation)', run: () => { const nv = !showSunGlare; setShowSunGlare(nv); lsSet('ft-sunglare', nv) }, keywords: ['sun', 'glare', 'cockpit', 'clock', 'azimuth', 'elevation', 'blinding', 'visibility', 'solar'] },
           { id: 'toggle-glide', group: 'View', label: showGlide ? 'Close Glide Atlas' : 'Glide Atlas (engine-out reach + reachable airports)', run: () => { const nv = !showGlide; setShowGlide(nv); lsSet('ft-glide', nv) }, keywords: ['glide', 'engine out', 'emergency', 'reach', 'footprint', 'airport', 'safety', 'ditch', 'divert'] },
+          { id: 'toggle-coffin', group: 'View', label: showCoffin ? 'Close Coffin Corner' : 'Coffin Corner (flight envelope: stall vs Mmo at altitude)', run: () => { const nv = !showCoffin; setShowCoffin(nv); lsSet('ft-coffin', nv) }, keywords: ['coffin', 'corner', 'envelope', 'stall', 'mmo', 'mach', 'buffet', 'high altitude', 'margin'] },
           { id: 'toggle-anomaly', group: 'View', label: showAnomaly ? 'Close anomaly radar' : 'Anomaly radar (tick-to-tick state deltas)', run: () => { const nv = !showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }, keywords: ['anomaly', 'radar', 'jump', 'swerve', 'spike', 'squawk', 'flip', 'glitch', 'delta', 'detect', 'alert'] },
           { id: 'toggle-compare', group: 'View', label: showCompareStudio ? 'Close compare studio' : 'Compare studio (side-by-side spec + spider)', run: () => { const nv = !showCompareStudio; setShowCompareStudio(nv); lsSet('ft-compare-studio', nv); if (nv && selected && !compareStudioIcaos.includes(selected.icao)) { const next = [...compareStudioIcaos, selected.icao].slice(0, 4); setCompareStudioIcaos(next); lsSet('ft-compare-studio-icaos', next) } }, keywords: ['compare', 'comparison', 'side by side', 'spec', 'radar chart', 'spider', 'vs', 'diff', 'studio'] },
           { id: 'toggle-symphony', group: 'View', label: showSymphony ? 'Close Sky Symphony' : 'Sky Symphony (sonify live traffic)', run: () => { const nv = !showSymphony; setShowSymphony(nv); lsSet('ft-symphony', nv) }, keywords: ['symphony', 'synth', 'audio', 'sound', 'music', 'sonify', 'sonification', 'tone', 'ambient', 'sound design'] },
@@ -3489,6 +3492,18 @@ export default function FlightMap() {
         />
       )}
 
+      {showCoffin && (
+        <CoffinCornerPanel
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, ground: f.ground, windDir: f.windDir, windKts: f.windKts, mach: f.mach }))}
+          onClose={() => { setShowCoffin(false); lsSet('ft-coffin', false) }}
+          onFly={(icao) => {
+            const f = flights.find(x => x.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
+          }}
+        />
+      )}
+
       {showAnomaly && (
         <AnomalyRadar
           map={mapRef.current}
@@ -3877,6 +3892,7 @@ export default function FlightMap() {
                 ['Formation', showFormation, ()=>{ const nv=!showFormation; setShowFormation(nv); lsSet('ft-form', nv) }],
                 ['Anomaly', showAnomaly, ()=>{ const nv=!showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }],
                 ['Glide atlas', showGlide, ()=>{ const nv=!showGlide; setShowGlide(nv); lsSet('ft-glide', nv) }],
+                ['Coffin corner', showCoffin, ()=>{ const nv=!showCoffin; setShowCoffin(nv); lsSet('ft-coffin', nv) }],
                 ['Squawk', showSquawk, ()=>{ const nv=!showSquawk; setShowSquawk(nv); lsSet('ft-squawk', nv) }],
               ]},
               {group:'Environment', items:[
