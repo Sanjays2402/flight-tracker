@@ -51,6 +51,7 @@ import GeofenceStudio from './geofence-studio'
 import TimeMachine from './time-machine'
 import ReachAtlas from './reach-atlas'
 import TripPlanner from './trip-planner'
+import RecordsHall from './records-hall'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -203,6 +204,7 @@ export default function FlightMap() {
   const [showAtlas, setShowAtlas] = useState<boolean>(() => lsGet('ft-atlas', false))
   const [showVip, setShowVip] = useState<boolean>(() => lsGet('ft-vip', false))
   const [showFlow, setShowFlow] = useState<boolean>(() => lsGet('ft-flow', false))
+  const [showRecords, setShowRecords] = useState<boolean>(() => lsGet('ft-records', false))
   const [showPass, setShowPass] = useState<boolean>(() => lsGet('ft-pass', false))
   const [showNoise, setShowNoise] = useState<boolean>(() => lsGet('ft-noise', false))
   const [showTod, setShowTod] = useState<boolean>(() => lsGet('ft-tod', false))
@@ -2066,6 +2068,7 @@ export default function FlightMap() {
           { id: 'toggle-wake', group: 'View', label: showWake ? 'Close wake turbulence' : 'Wake turbulence (corridors + risk)', run: () => { const nv = !showWake; setShowWake(nv); lsSet('ft-wake', nv) }, keywords: ['wake', 'turbulence', 'heavy', 'super', 'separation', 'recat', 'vortex', 'corridor'] },
           { id: 'toggle-contrail', group: 'View', label: showContrail ? 'Close contrail forecast' : 'Contrail forecast (Schmidt-Appleman)', run: () => { const nv = !showContrail; setShowContrail(nv); lsSet('ft-contrail', nv) }, keywords: ['contrail', 'climate', 'schmidt', 'appleman', 'ISSR', 'cirrus', 'plume', 'forcing'] },
           { id: 'toggle-flow', group: 'View', label: showFlow ? 'Close flow rose' : 'Flow rose (heading wind-rose)', run: () => { const nv = !showFlow; setShowFlow(nv); lsSet('ft-flow', nv) }, keywords: ['flow', 'rose', 'wind rose', 'heading', 'direction', 'track', 'sector', 'compass'] },
+          { id: 'toggle-records', group: 'View', label: showRecords ? 'Close records hall of fame' : 'Records hall of fame (top-3 podiums)', run: () => { const nv = !showRecords; setShowRecords(nv); lsSet('ft-records', nv) }, keywords: ['records', 'hall', 'fame', 'podium', 'leaderboard', 'best', 'fastest', 'highest', 'mach', 'gold', 'silver', 'bronze', 'trophy'] },
           { id: 'toggle-pass', group: 'View', label: showPass ? 'Close pass predictor' : 'Pass predictor (overhead photo windows)', run: () => { const nv = !showPass; setShowPass(nv); lsSet('ft-pass', nv) }, keywords: ['pass', 'overhead', 'photo', 'spotter', 'predict', 'cpa', 'sun', 'light', 'elevation'] },
           { id: 'toggle-noise', group: 'View', label: showNoise ? 'Close noise monitor' : 'Noise footprint monitor (ground dBA)', run: () => { const nv = !showNoise; setShowNoise(nv); lsSet('ft-noise', nv) }, keywords: ['noise', 'sound', 'db', 'dba', 'decibel', 'footprint', 'loud', 'quiet', 'community', 'annoyance'] },
           { id: 'toggle-tod', group: 'View', label: showTod ? 'Close TOD predictor' : 'Top-of-Descent predictor (3° profile)', run: () => { const nv = !showTod; setShowTod(nv); lsSet('ft-tod', nv) }, keywords: ['tod', 'top of descent', 'descent', 'profile', 'arrival', 'destination', 'glide', '3 degree'] },
@@ -2162,6 +2165,7 @@ export default function FlightMap() {
             <Toggle on={showAtlas} onClick={()=>{ const nv = !showAtlas; setShowAtlas(nv); lsSet('ft-atlas', nv) }} label="ATLAS" />
             <Toggle on={showVip} onClick={()=>{ const nv = !showVip; setShowVip(nv); lsSet('ft-vip', nv) }} label="VIP" />
             <Toggle on={showFlow} onClick={()=>{ const nv = !showFlow; setShowFlow(nv); lsSet('ft-flow', nv) }} label="FLOW" />
+            <Toggle on={showRecords} onClick={()=>{ const nv = !showRecords; setShowRecords(nv); lsSet('ft-records', nv) }} label="REC" />
             <Toggle on={showPass} onClick={()=>{ const nv = !showPass; setShowPass(nv); lsSet('ft-pass', nv) }} label="PASS" />
             <Toggle on={showNoise} onClick={()=>{ const nv = !showNoise; setShowNoise(nv); lsSet('ft-noise', nv) }} label="NOISE" />
             <Toggle on={showTod} onClick={()=>{ const nv = !showTod; setShowTod(nv); lsSet('ft-tod', nv) }} label="TOD" />
@@ -3498,6 +3502,22 @@ export default function FlightMap() {
         <FlowRose
           flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, ground: f.ground }))}
           onClose={() => { setShowFlow(false); lsSet('ft-flow', false) }}
+          onFly={(icao) => {
+            const f = flights.find(x => x.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 7), duration: 700 }) } catch {} }
+          }}
+        />
+      )}
+
+      {showRecords && (
+        <RecordsHall
+          flights={flights.map(f => ({
+            icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator,
+            lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, ground: f.ground,
+            velocityKts: f.velocityKts, mach: f.mach, vertRate: f.vertRate,
+            windDir: f.windDir, windKts: f.windKts, oat: f.oat, track: f.track,
+          }))}
+          onClose={() => { setShowRecords(false); lsSet('ft-records', false) }}
           onFly={(icao) => {
             const f = flights.find(x => x.icao === icao)
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 7), duration: 700 }) } catch {} }
