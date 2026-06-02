@@ -20,6 +20,7 @@ import ConflictPanel, { detectConflicts, type ConflictPair } from './conflict-pa
 import OverheadPanel from './overhead-panel'
 import HoldingPanel, { detectHolding, type HoldingHit } from './holding-panel'
 import CockpitHUD from './cockpit-hud'
+import RulerTool from './ruler-tool'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -162,6 +163,7 @@ export default function FlightMap() {
   const [showOverhead, setShowOverhead] = useState<boolean>(() => lsGet('ft-overhead', false))
   const [showHolding, setShowHolding] = useState<boolean>(() => lsGet('ft-hold', false))
   const [showCockpit, setShowCockpit] = useState<boolean>(() => lsGet('ft-pfd', false))
+  const [showRuler, setShowRuler] = useState<boolean>(false)
   const [holdMinTurn, setHoldMinTurn] = useState<number>(() => lsGet('ft-hold-turn', 360))
   const [holdMaxRadius, setHoldMaxRadius] = useState<number>(() => lsGet('ft-hold-rad', 10))
   const [holdMinSpan, setHoldMinSpan] = useState<number>(() => lsGet('ft-hold-span', 120))
@@ -1599,6 +1601,7 @@ export default function FlightMap() {
           { id: 'toggle-heat', group: 'Layers', label: showHeat ? 'Hide density heatmap' : 'Show density heatmap', hint: 'H', run: () => setShowHeat(v => !v) },
           { id: 'toggle-list', group: 'View', label: showList ? 'Hide flight list' : 'Show flight list', hint: 'L', run: () => setShowList(v => !v) },
           { id: 'toggle-radar', group: 'View', label: showRadar ? 'Hide traffic radar' : 'Show traffic radar', run: () => { const nv = !showRadar; setShowRadar(nv); lsSet('ft-radar', nv) }, keywords: ['scope', 'tcas', 'ppi'] },
+          { id: 'toggle-ruler', group: 'View', label: showRuler ? 'Close great-circle ruler' : 'Great-circle ruler (measure distance)', run: () => setShowRuler(v => !v), keywords: ['measure', 'distance', 'ruler', 'geodesic'] },
           { id: 'toggle-3d', group: 'Mode', label: show3D ? 'Exit 3D view' : 'Enter 3D view', run: () => setShow3D(v => !v) },
           { id: 'toggle-chase', group: 'Mode', label: chase ? 'Stop chase camera' : 'Start chase camera (select a plane first)', run: () => { if (!selected) return; setChase(v => { const nv = !v; chaseRef.current = nv; if (nv) setShow3D(true); return nv }) } },
           { id: 'toggle-follow', group: 'Mode', label: follow ? 'Stop follow' : 'Follow selected plane', hint: 'F', run: () => { if (selected) setFollow(v => !v) } },
@@ -1621,7 +1624,7 @@ export default function FlightMap() {
               try { mapRef.current?.flyTo({ center: [p.coords.longitude, p.coords.latitude], zoom: 9, duration: 900 }) } catch {}
             })
           } },
-        ]), [showTrails, showWeather, showNight, showHeat, showList, show3D, chase, follow, audioOn, selected])}
+        ]), [showTrails, showWeather, showNight, showHeat, showList, show3D, chase, follow, audioOn, selected, showRadar, showRuler])}
       />
       <OfflineBanner />
       <ToastHost />
@@ -1674,6 +1677,7 @@ export default function FlightMap() {
             <Toggle on={showOverhead} onClick={()=>{ const nv = !showOverhead; setShowOverhead(nv); lsSet('ft-overhead', nv) }} label="OVHD" />
             <Toggle on={showHolding} onClick={()=>{ const nv = !showHolding; setShowHolding(nv); lsSet('ft-hold', nv) }} label="HOLD" />
             <Toggle on={showCockpit} onClick={()=>{ const nv = !showCockpit; setShowCockpit(nv); lsSet('ft-pfd', nv) }} label="PFD" />
+            <Toggle on={showRuler} onClick={()=>setShowRuler(v=>!v)} label="Ruler" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2664,6 +2668,10 @@ export default function FlightMap() {
           flight={selected as any}
           onClose={() => { setShowCockpit(false); lsSet('ft-pfd', false) }}
         />
+      )}
+
+      {showRuler && (
+        <RulerTool map={mapRef.current} onClose={() => setShowRuler(false)} />
       )}
 
       {/* About link in bottom-left, only when nothing selected */}
