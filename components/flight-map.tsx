@@ -73,6 +73,7 @@ import JetStreamFinder from './jetstream-finder'
 import HoldingStackDesigner from './holding-stack'
 import IcingMonitor from './icing-monitor'
 import CurfewMonitor from './curfew-monitor'
+import MountainWave from './mountain-wave'
 import DepartureSequencer from './departure-sequencer'
 import CrosswindCompass from './crosswind-compass'
 
@@ -253,6 +254,7 @@ export default function FlightMap() {
   const [showHstack, setShowHstack] = useState<boolean>(() => lsGet('ft-hstack', false))
   const [showIcing, setShowIcing] = useState<boolean>(() => lsGet('ft-icing', false))
   const [showCurfew, setShowCurfew] = useState<boolean>(() => lsGet('ft-curfew', false))
+  const [showMtnWave, setShowMtnWave] = useState<boolean>(() => lsGet('ft-mwave', false))
   const [showAnomaly, setShowAnomaly] = useState<boolean>(() => lsGet('ft-anomaly', false))
   const [showCompareStudio, setShowCompareStudio] = useState<boolean>(() => lsGet('ft-compare-studio', false))
   const [compareStudioIcaos, setCompareStudioIcaos] = useState<string[]>(() => lsGet<string[]>('ft-compare-studio-icaos', []))
@@ -346,7 +348,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew].filter(Boolean).length
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave].filter(Boolean).length
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2143,6 +2145,7 @@ export default function FlightMap() {
           { id: 'toggle-hstack', group: 'View', label: showHstack ? 'Close Holding Stack Designer' : 'Holding Stack Designer (auto-assign racetrack levels)', run: () => { const nv = !showHstack; setShowHstack(nv); lsSet('ft-hstack', nv) }, keywords: ['holding', 'stack', 'racetrack', 'hold', 'eth', 'aar', 'level', 'fl'] },
           { id: 'toggle-icing', group: 'View', label: showIcing ? 'Close Icing Monitor' : 'Icing Monitor (SAT / SLD airframe ice risk)', run: () => { const nv = !showIcing; setShowIcing(nv); lsSet('ft-icing', nv) }, keywords: ['icing', 'ice', 'sat', 'tat', 'sld', 'supercooled', 'anti-ice', 'boots', 'bleed', 'airframe'] },
           { id: 'toggle-curfew', group: 'View', label: showCurfew ? 'Close Curfew Monitor' : 'Curfew Monitor (night-flight ban watch)', run: () => { const nv = !showCurfew; setShowCurfew(nv); lsSet('ft-curfew', nv) }, keywords: ['curfew', 'night', 'noise', 'quota', 'lhr', 'fra', 'syd', 'ban', 'slot'] },
+          { id: 'toggle-mwave', group: 'View', label: showMtnWave ? 'Close Mountain Wave' : 'Mountain Wave (lee wave / rotor turbulence)', run: () => { const nv = !showMtnWave; setShowMtnWave(nv); lsSet('ft-mwave', nv) }, keywords: ['mountain', 'wave', 'lee', 'rotor', 'turbulence', 'ridge', 'sierra', 'alps', 'andes', 'crest'] },
           { id: 'toggle-anomaly', group: 'View', label: showAnomaly ? 'Close anomaly radar' : 'Anomaly radar (tick-to-tick state deltas)', run: () => { const nv = !showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }, keywords: ['anomaly', 'radar', 'jump', 'swerve', 'spike', 'squawk', 'flip', 'glitch', 'delta', 'detect', 'alert'] },
           { id: 'toggle-compare', group: 'View', label: showCompareStudio ? 'Close compare studio' : 'Compare studio (side-by-side spec + spider)', run: () => { const nv = !showCompareStudio; setShowCompareStudio(nv); lsSet('ft-compare-studio', nv); if (nv && selected && !compareStudioIcaos.includes(selected.icao)) { const next = [...compareStudioIcaos, selected.icao].slice(0, 4); setCompareStudioIcaos(next); lsSet('ft-compare-studio-icaos', next) } }, keywords: ['compare', 'comparison', 'side by side', 'spec', 'radar chart', 'spider', 'vs', 'diff', 'studio'] },
           { id: 'toggle-symphony', group: 'View', label: showSymphony ? 'Close Sky Symphony' : 'Sky Symphony (sonify live traffic)', run: () => { const nv = !showSymphony; setShowSymphony(nv); lsSet('ft-symphony', nv) }, keywords: ['symphony', 'synth', 'audio', 'sound', 'music', 'sonify', 'sonification', 'tone', 'ambient', 'sound design'] },
@@ -3670,6 +3673,16 @@ export default function FlightMap() {
         />
       )}
 
+      {showMtnWave && (
+        <MountainWave
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, windDir: f.windDir, windKts: f.windKts, ground: f.ground }))}
+          onClose={() => { setShowMtnWave(false); lsSet('ft-mwave', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+          onFlyLatLng={(lat, lng, zoom) => flyToLatLng(lat, lng, zoom)}
+        />
+      )}
+
       {showSua && (
         <SuaMonitor
           map={mapRef.current}
@@ -4089,6 +4102,7 @@ export default function FlightMap() {
                 ['Shear atlas', showShear, ()=>{ const nv=!showShear; setShowShear(nv); lsSet('ft-shear', nv) }],
                 ['Cosmic dose', showCosmic, ()=>{ const nv=!showCosmic; setShowCosmic(nv); lsSet('ft-cosmic', nv) }],
                 ['Icing', showIcing, ()=>{ const nv=!showIcing; setShowIcing(nv); lsSet('ft-icing', nv) }],
+                ['Mountain wave', showMtnWave, ()=>{ const nv=!showMtnWave; setShowMtnWave(nv); lsSet('ft-mwave', nv) }],
               ]},
               {group:'Analysis', items:[
                 ['Vertical profile', showVProfile, ()=>{ const nv=!showVProfile; setShowVProfile(nv); lsSet('ft-vp', nv) }],
