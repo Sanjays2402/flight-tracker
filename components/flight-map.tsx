@@ -26,6 +26,7 @@ import AltitudeLadder from './altitude-ladder'
 import PhasePanel from './phase-panel'
 import CockpitHUD from './cockpit-hud'
 import RulerTool from './ruler-tool'
+import E6bComputer from './e6b-computer'
 import PipMinimap from './pip-minimap'
 import BullseyeTool from './bullseye-tool'
 import VerticalProfilePanel from './vertical-profile-panel'
@@ -287,6 +288,7 @@ export default function FlightMap() {
   const [showPhase, setShowPhase] = useState<boolean>(() => lsGet('ft-phase', false))
   const [showCockpit, setShowCockpit] = useState<boolean>(() => lsGet('ft-pfd', false))
   const [showRuler, setShowRuler] = useState<boolean>(false)
+  const [showE6b, setShowE6b] = useState<boolean>(false)
   const [showBullseye, setShowBullseye] = useState<boolean>(false)
   const [showWinds, setShowWinds] = useState<boolean>(() => lsGet('ft-winds', false))
   const [showBoard, setShowBoard] = useState<boolean>(() => lsGet('ft-board', false))
@@ -358,7 +360,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showMetar].filter(Boolean).length
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar].filter(Boolean).length
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -3364,6 +3366,10 @@ export default function FlightMap() {
         <RulerTool map={mapRef.current} onClose={() => setShowRuler(false)} />
       )}
 
+      {showE6b && (
+        <E6bComputer onClose={() => setShowE6b(false)} />
+      )}
+
       {showBullseye && (
         <BullseyeTool
           map={mapRef.current}
@@ -4205,6 +4211,7 @@ export default function FlightMap() {
               ]},
               {group:'Tools', items:[
                 ['Ruler', showRuler, ()=>setShowRuler(v=>!v)],
+                ['E6B computer', showE6b, ()=>setShowE6b(v=>!v)],
                 ['Bullseye', showBullseye, ()=>setShowBullseye(v=>!v)],
                 ['Tripwire', showTripwire, ()=>{ const nv=!showTripwire; setShowTripwire(nv); lsSet('ft-tripwire', nv) }],
                 ['Geofence', showGeofence, ()=>{ const nv=!showGeofence; setShowGeofence(nv); lsSet('ft-geofence', nv) }],
