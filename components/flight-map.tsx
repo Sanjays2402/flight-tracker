@@ -31,6 +31,7 @@ import BullseyeTool from './bullseye-tool'
 import VerticalProfilePanel from './vertical-profile-panel'
 import TcasPanel from './tcas-panel'
 import WakePanel from './wake-panel'
+import RegistryAtlas from './registry-atlas'
 import WindsAloft from './winds-aloft'
 import AirportBoard from './airport-board'
 import SpeedAltScatter from './speed-alt-scatter'
@@ -187,6 +188,7 @@ export default function FlightMap() {
   const [showVProfile, setShowVProfile] = useState<boolean>(() => lsGet('ft-vp', false))
   const [showTcas, setShowTcas] = useState<boolean>(() => lsGet('ft-tcas', false))
   const [showWake, setShowWake] = useState<boolean>(() => lsGet('ft-wake', false))
+  const [showAtlas, setShowAtlas] = useState<boolean>(() => lsGet('ft-atlas', false))
   const [cpaHorizon, setCpaHorizon] = useState<number>(() => lsGet('ft-cpa-hor', 300))
   const [cpaMaxMissNm, setCpaMaxMissNm] = useState<number>(() => lsGet('ft-cpa-mnm', 5))
   const [cpaMaxMissFt, setCpaMaxMissFt] = useState<number>(() => lsGet('ft-cpa-mft', 1500))
@@ -2040,6 +2042,7 @@ export default function FlightMap() {
           { id: 'toggle-vp', group: 'View', label: showVProfile ? 'Close vertical profile' : 'Vertical profile (side view from center)', run: () => { const nv = !showVProfile; setShowVProfile(nv); lsSet('ft-vp', nv) }, keywords: ['vertical', 'profile', 'side', 'view', 'altitude', 'range', 'cross', 'section', 'arrival', 'descent', 'climb'] },
           { id: 'toggle-tcas', group: 'View', label: showTcas ? 'Close TCAS scope' : 'TCAS traffic display (head-up scope)', run: () => { const nv = !showTcas; setShowTcas(nv); lsSet('ft-tcas', nv) }, keywords: ['tcas', 'traffic', 'collision', 'avoidance', 'scope', 'ra', 'ta', 'proximate', 'cockpit'] },
           { id: 'toggle-wake', group: 'View', label: showWake ? 'Close wake turbulence' : 'Wake turbulence (corridors + risk)', run: () => { const nv = !showWake; setShowWake(nv); lsSet('ft-wake', nv) }, keywords: ['wake', 'turbulence', 'heavy', 'super', 'separation', 'recat', 'vortex', 'corridor'] },
+          { id: 'toggle-atlas', group: 'View', label: showAtlas ? 'Close registry atlas' : 'Registry atlas (country leaderboard)', run: () => { const nv = !showAtlas; setShowAtlas(nv); lsSet('ft-atlas', nv) }, keywords: ['atlas', 'country', 'registry', 'flag', 'nationality', 'iso', 'icao', 'origin'] },
           { id: 'toggle-pip', group: 'View', label: showPip ? 'Hide picture-in-picture mini-map' : 'Show picture-in-picture mini-map', run: () => { setShowPip(v => { const nv = !v; try { localStorage.setItem('ft-pip', nv ? '1' : '0') } catch {}; return nv }) }, keywords: ['pip', 'minimap', 'mini', 'inset', 'follow'] },
           { id: 'toggle-3d', group: 'Mode', label: show3D ? 'Exit 3D view' : 'Enter 3D view', run: () => setShow3D(v => !v) },
           { id: 'toggle-chase', group: 'Mode', label: chase ? 'Stop chase camera' : 'Start chase camera (select a plane first)', run: () => { if (!selected) return; setChase(v => { const nv = !v; chaseRef.current = nv; if (nv) setShow3D(true); return nv }) } },
@@ -2122,6 +2125,7 @@ export default function FlightMap() {
             <Toggle on={showVProfile} onClick={()=>{ const nv = !showVProfile; setShowVProfile(nv); lsSet('ft-vp', nv) }} label="VP" />
             <Toggle on={showTcas} onClick={()=>{ const nv = !showTcas; setShowTcas(nv); lsSet('ft-tcas', nv) }} label="TCAS" />
             <Toggle on={showWake} onClick={()=>{ const nv = !showWake; setShowWake(nv); lsSet('ft-wake', nv) }} label="WAKE" />
+            <Toggle on={showAtlas} onClick={()=>{ const nv = !showAtlas; setShowAtlas(nv); lsSet('ft-atlas', nv) }} label="ATLAS" />
             <Toggle on={showEventLog} onClick={()=>{ const nv = !showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }} label="LOG" />
             <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
             <Toggle on={showPhase} onClick={()=>{ const nv = !showPhase; setShowPhase(nv); lsSet('ft-phase', nv) }} label="PHASE" />
@@ -3311,6 +3315,18 @@ export default function FlightMap() {
           map={mapRef.current}
           flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
           onClose={() => { setShowWake(false); lsSet('ft-wake', false) }}
+          onFly={(icao) => {
+            const f = flights.find(x => x.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
+          }}
+        />
+      )}
+
+      {showAtlas && (
+        <RegistryAtlas
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, ground: f.ground, military: f.military }))}
+          onClose={() => { setShowAtlas(false); lsSet('ft-atlas', false) }}
           onFly={(icao) => {
             const f = flights.find(x => x.icao === icao)
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
