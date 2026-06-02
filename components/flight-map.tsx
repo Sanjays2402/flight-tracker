@@ -29,6 +29,7 @@ import PipMinimap from './pip-minimap'
 import BullseyeTool from './bullseye-tool'
 import WindsAloft from './winds-aloft'
 import AirportBoard from './airport-board'
+import SpeedAltScatter from './speed-alt-scatter'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -178,6 +179,7 @@ export default function FlightMap() {
   const [showBullseye, setShowBullseye] = useState<boolean>(false)
   const [showWinds, setShowWinds] = useState<boolean>(() => lsGet('ft-winds', false))
   const [showBoard, setShowBoard] = useState<boolean>(() => lsGet('ft-board', false))
+  const [showScatter, setShowScatter] = useState<boolean>(() => lsGet('ft-scatter', false))
   const [showPip, setShowPip] = useState<boolean>(() => { try { return localStorage.getItem('ft-pip') === '1' } catch { return false } })
   const [pipRadius, setPipRadius] = useState<number>(() => { try { const n = Number(localStorage.getItem('ft-pip-r') || '80'); return Number.isFinite(n) && n > 5 ? n : 80 } catch { return 80 } })
   const [holdMinTurn, setHoldMinTurn] = useState<number>(() => lsGet('ft-hold-turn', 360))
@@ -1753,6 +1755,7 @@ export default function FlightMap() {
             <Toggle on={showBullseye} onClick={()=>setShowBullseye(v=>!v)} label="Bull" />
             <Toggle on={showWinds} onClick={()=>{ const nv = !showWinds; setShowWinds(nv); lsSet('ft-winds', nv) }} label="Wind" />
             <Toggle on={showBoard} onClick={()=>{ const nv = !showBoard; setShowBoard(nv); lsSet('ft-board', nv) }} label="APT" />
+            <Toggle on={showScatter} onClick={()=>{ const nv = !showScatter; setShowScatter(nv); lsSet('ft-scatter', nv) }} label="S×A" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2852,6 +2855,22 @@ export default function FlightMap() {
           />
         )
       })()}
+
+      {showScatter && (
+        <SpeedAltScatter
+          flights={flights.map(f => ({
+            icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator,
+            altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, mach: f.mach || 0,
+            vsFpm: 0, lat: f.lat, lng: f.lng, ground: f.ground,
+            emergency: f.emergency, category: f.category || '',
+          }))}
+          onClose={() => { setShowScatter(false); lsSet('ft-scatter', false) }}
+          onSelect={(sf) => {
+            const full = flights.find(x => x.icao === sf.icao)
+            if (full) { setSelected(full); flyToLatLng(full.lat, full.lng, Math.max(mapRef.current?.getZoom() ?? 0, 7)) }
+          }}
+        />
+      )}
 
       {showPip && (
         <PipMinimap
