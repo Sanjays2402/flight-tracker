@@ -47,6 +47,7 @@ import PassPredictor from './pass-predictor'
 import NoiseMonitor from './noise-monitor'
 import TodPredictor from './tod-predictor'
 import Tripwire from './tripwire'
+import ReachAtlas from './reach-atlas'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -203,6 +204,7 @@ export default function FlightMap() {
   const [showNoise, setShowNoise] = useState<boolean>(() => lsGet('ft-noise', false))
   const [showTod, setShowTod] = useState<boolean>(() => lsGet('ft-tod', false))
   const [showTripwire, setShowTripwire] = useState<boolean>(() => lsGet('ft-tripwire', false))
+  const [showReach, setShowReach] = useState<boolean>(() => lsGet('ft-reach', false))
   const [cpaHorizon, setCpaHorizon] = useState<number>(() => lsGet('ft-cpa-hor', 300))
   const [cpaMaxMissNm, setCpaMaxMissNm] = useState<number>(() => lsGet('ft-cpa-mnm', 5))
   const [cpaMaxMissFt, setCpaMaxMissFt] = useState<number>(() => lsGet('ft-cpa-mft', 1500))
@@ -2062,6 +2064,7 @@ export default function FlightMap() {
           { id: 'toggle-noise', group: 'View', label: showNoise ? 'Close noise monitor' : 'Noise footprint monitor (ground dBA)', run: () => { const nv = !showNoise; setShowNoise(nv); lsSet('ft-noise', nv) }, keywords: ['noise', 'sound', 'db', 'dba', 'decibel', 'footprint', 'loud', 'quiet', 'community', 'annoyance'] },
           { id: 'toggle-tod', group: 'View', label: showTod ? 'Close TOD predictor' : 'Top-of-Descent predictor (3° profile)', run: () => { const nv = !showTod; setShowTod(nv); lsSet('ft-tod', nv) }, keywords: ['tod', 'top of descent', 'descent', 'profile', 'arrival', 'destination', 'glide', '3 degree'] },
           { id: 'toggle-tripwire', group: 'View', label: showTripwire ? 'Close tripwire' : 'Tripwire / virtual gate (line crossing predictor)', run: () => { const nv = !showTripwire; setShowTripwire(nv); lsSet('ft-tripwire', nv) }, keywords: ['tripwire', 'gate', 'line', 'cross', 'crossing', 'fence', 'wire', 'threshold', 'border', 'spotter line'] },
+          { id: 'toggle-reach', group: 'View', label: showReach ? 'Close reachability atlas' : 'Reachability atlas (kinematic divert footprint)', run: () => { const nv = !showReach; setShowReach(nv); lsSet('ft-reach', nv) }, keywords: ['reach', 'reachability', 'divert', 'range', 'footprint', 'atlas', 'dubins', 'turn'] },
           { id: 'toggle-atlas', group: 'View', label: showAtlas ? 'Close registry atlas' : 'Registry atlas (country leaderboard)', run: () => { const nv = !showAtlas; setShowAtlas(nv); lsSet('ft-atlas', nv) }, keywords: ['atlas', 'country', 'registry', 'flag', 'nationality', 'iso', 'icao', 'origin'] },
           { id: 'toggle-vip', group: 'View', label: showVip ? 'Close VIP hunter' : 'VIP hunter (notable aircraft)', run: () => { const nv = !showVip; setShowVip(nv); lsSet('ft-vip', nv) }, keywords: ['vip', 'notable', 'interesting', 'hunter', 'celebrity', 'royal', 'state', 'military', 'rare', 'b2', 'a380', 'air force one'] },
           { id: 'toggle-pip', group: 'View', label: showPip ? 'Hide picture-in-picture mini-map' : 'Show picture-in-picture mini-map', run: () => { setShowPip(v => { const nv = !v; try { localStorage.setItem('ft-pip', nv ? '1' : '0') } catch {}; return nv }) }, keywords: ['pip', 'minimap', 'mini', 'inset', 'follow'] },
@@ -2154,6 +2157,7 @@ export default function FlightMap() {
             <Toggle on={showNoise} onClick={()=>{ const nv = !showNoise; setShowNoise(nv); lsSet('ft-noise', nv) }} label="NOISE" />
             <Toggle on={showTod} onClick={()=>{ const nv = !showTod; setShowTod(nv); lsSet('ft-tod', nv) }} label="TOD" />
             <Toggle on={showTripwire} onClick={()=>{ const nv = !showTripwire; setShowTripwire(nv); lsSet('ft-tripwire', nv) }} label="WIRE" />
+            <Toggle on={showReach} onClick={()=>{ const nv = !showReach; setShowReach(nv); lsSet('ft-reach', nv) }} label="REACH" />
             <Toggle on={showEventLog} onClick={()=>{ const nv = !showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }} label="LOG" />
             <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
             <Toggle on={showPhase} onClick={()=>{ const nv = !showPhase; setShowPhase(nv); lsSet('ft-phase', nv) }} label="PHASE" />
@@ -3432,6 +3436,16 @@ export default function FlightMap() {
             const f = flights.find(x => x.icao === icao)
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
           }}
+        />
+      )}
+
+      {showReach && (
+        <ReachAtlas
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, ground: f.ground }))}
+          selectedIcao={selected?.icao ?? null}
+          onClose={() => { setShowReach(false); lsSet('ft-reach', false) }}
+          onFlyAirport={(lat, lng) => { try { mapRef.current?.flyTo({ center: [lng, lat], zoom: 10, duration: 800 }) } catch {} }}
         />
       )}
 
