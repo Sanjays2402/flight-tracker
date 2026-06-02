@@ -18,6 +18,7 @@ import TrafficRadar from './traffic-radar'
 import EmissionsPanel from './emissions-panel'
 import ConflictPanel, { detectConflicts, type ConflictPair } from './conflict-panel'
 import OverheadPanel from './overhead-panel'
+import { SunPanel, solarPosition, installTerminator, updateTerminator, removeTerminator } from './terminator-layer'
 import HoldingPanel, { detectHolding, type HoldingHit } from './holding-panel'
 import EventLog, { detectEvents, type LogEvent, type EventKind, type SnapshotEntry } from './event-log'
 import AltitudeLadder from './altitude-ladder'
@@ -164,6 +165,7 @@ export default function FlightMap() {
   const [showEmissions, setShowEmissions] = useState<boolean>(() => lsGet('ft-em', false))
   const [showConflict, setShowConflict] = useState<boolean>(() => lsGet('ft-cflx', false))
   const [showOverhead, setShowOverhead] = useState<boolean>(() => lsGet('ft-overhead', false))
+  const [showSun, setShowSun] = useState<boolean>(() => lsGet('ft-sun', false))
   const [showHolding, setShowHolding] = useState<boolean>(() => lsGet('ft-hold', false))
   const [showLadder, setShowLadder] = useState<boolean>(() => lsGet('ft-ladder', false))
   const [showCockpit, setShowCockpit] = useState<boolean>(() => lsGet('ft-pfd', false))
@@ -1130,6 +1132,20 @@ export default function FlightMap() {
     src.setData({ type: 'FeatureCollection', features: feats } as any)
   }, [holdingHits, mapReady])
 
+  // Day/night terminator overlay + sun position; tick every 60s when active
+  useEffect(() => {
+    const m = mapRef.current
+    if (!m || !mapReady) return
+    if (!showSun) {
+      try { removeTerminator(m) } catch {}
+      return
+    }
+    const apply = () => { try { updateTerminator(m, solarPosition()) } catch {} }
+    try { installTerminator(m, solarPosition()) } catch {}
+    const t = setInterval(apply, 60_000)
+    return () => { clearInterval(t); try { removeTerminator(m) } catch {} }
+  }, [showSun, mapReady])
+
   /* ---- Render planes (symbol layer) + 60fps dead-reckon interpolation ---- */
   // Snapshot of last-known authoritative positions per icao
   const lastPosRef = useRef<Map<string, { lng:number; lat:number; t:number; track:number; gs:number; ground:boolean; altFt:number; emergency:boolean; isSel:boolean; heli:boolean; color:string }>>(new Map())
@@ -1718,6 +1734,7 @@ export default function FlightMap() {
             <Toggle on={showEmissions} onClick={()=>{ const nv = !showEmissions; setShowEmissions(nv); lsSet('ft-em', nv) }} label="CO₂" />
             <Toggle on={showConflict} onClick={()=>{ const nv = !showConflict; setShowConflict(nv); lsSet('ft-cflx', nv) }} label="CFLX" />
             <Toggle on={showOverhead} onClick={()=>{ const nv = !showOverhead; setShowOverhead(nv); lsSet('ft-overhead', nv) }} label="OVHD" />
+            <Toggle on={showSun} onClick={()=>{ const nv = !showSun; setShowSun(nv); lsSet('ft-sun', nv) }} label="SUN" />
             <Toggle on={showHolding} onClick={()=>{ const nv = !showHolding; setShowHolding(nv); lsSet('ft-hold', nv) }} label="HOLD" />
             <Toggle on={showEventLog} onClick={()=>{ const nv = !showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }} label="LOG" />
             <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
@@ -2659,6 +2676,13 @@ export default function FlightMap() {
             const f = flights.find(ff => ff.icao === icao)
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 }) } catch {} }
           }}
+        />
+      )}
+
+      {showSun && (
+        <SunPanel
+          onClose={() => { setShowSun(false); lsSet('ft-sun', false) }}
+          onFlyToSun={(lng, lat) => { try { mapRef.current?.flyTo({ center: [lng, lat], zoom: Math.max(mapRef.current.getZoom(), 3), duration: 900 }) } catch {} }}
         />
       )}
 
