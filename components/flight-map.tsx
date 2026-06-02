@@ -79,6 +79,7 @@ import MountainWave from './mountain-wave'
 import BirdStrikeMonitor from './birdstrike-monitor'
 import VolcanicAshMonitor from './volcanic-ash-monitor'
 import FirLoadMonitor from './fir-load-monitor'
+import EnergyMonitor from './energy-monitor'
 import RaimMonitor from './raim-monitor'
 import DepartureSequencer from './departure-sequencer'
 import CrosswindCompass from './crosswind-compass'
@@ -276,6 +277,7 @@ export default function FlightMap() {
   const [showBird, setShowBird] = useState<boolean>(() => lsGet('ft-bird', false))
   const [showAsh, setShowAsh] = useState<boolean>(() => lsGet('ft-ash', false))
   const [showFir, setShowFir] = useState<boolean>(() => lsGet('ft-fir', false))
+  const [showEnergy, setShowEnergy] = useState<boolean>(() => lsGet('ft-energy', false))
   const [showRaim, setShowRaim] = useState<boolean>(() => lsGet('ft-raim', false))
   const [showOcean, setShowOcean] = useState<boolean>(() => lsGet('ft-ocean', false))
   const [showMetar, setShowMetar] = useState<boolean>(() => lsGet('ft-metar', false))
@@ -382,7 +384,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2184,6 +2186,7 @@ export default function FlightMap() {
           { id: 'toggle-bird', group: 'View', label: showBird ? 'Close Bird Strike' : 'Bird Strike (flyway / wildlife hazard)', run: () => { const nv = !showBird; setShowBird(nv); lsSet('ft-bird', nv) }, keywords: ['bird', 'strike', 'wildlife', 'flyway', 'migration', 'hazard', 'goose', 'duck', 'hudson'] },
           { id: 'toggle-ash', group: 'View', label: showAsh ? 'Close Volcanic Ash' : 'Volcanic Ash (VAAC plume drift)', run: () => { const nv = !showAsh; setShowAsh(nv); lsSet('ft-ash', nv) }, keywords: ['ash', 'volcano', 'volcanic', 'vaac', 'plume', 'eyjafjallajokull', 'eruption', 'so2', 'sigmet'] },
           { id: 'toggle-fir', group: 'View', label: showFir ? 'Close FIR Load Monitor' : 'FIR / Sector Load Monitor (ATFM capacity)', run: () => { const nv = !showFir; setShowFir(nv); lsSet('ft-fir', nv) }, keywords: ['fir', 'sector', 'load', 'capacity', 'atfm', 'acc', 'controller', 'workload', 'atc', 'eurocontrol', 'artcc', 'overload', 'nmoc'] },
+          { id: 'toggle-energy', group: 'View', label: showEnergy ? 'Close Energy Profile Monitor' : 'Energy Profile Monitor (Es / Ps / hot-high / low-energy)', run: () => { const nv = !showEnergy; setShowEnergy(nv); lsSet('ft-energy', nv) }, keywords: ['energy', 'es', 'ps', 'total', 'specific', 'kinetic', 'potential', 'climb', 'descent', 'gradient', 'hot', 'high', 'low', 'speed', 'trade'] },
           { id: 'toggle-raim', group: 'View', label: showRaim ? 'Close GPS / RAIM' : 'GPS / RAIM (scintillation + jamming)', run: () => { const nv = !showRaim; setShowRaim(nv); lsSet('ft-raim', nv) }, keywords: ['gps', 'raim', 'gnss', 'jamming', 'spoofing', 'ionosphere', 'scintillation', 's4', 'kp', 'auroral', 'lpv', 'rnp'] },
           { id: 'toggle-ocean', group: 'View', label: showOcean ? 'Close Oceanic Tracks' : 'Oceanic Tracks (NAT-OTS / PACOTS)', run: () => { const nv = !showOcean; setShowOcean(nv); lsSet('ft-ocean', nv) }, keywords: ['oceanic', 'nat', 'ots', 'pacots', 'track', 'xtk', 'slop', 'mnt', 'in-trail', 'random'] },
           { id: 'toggle-metar', group: 'View', label: showMetar ? 'Close METAR Monitor' : 'METAR Monitor (surface obs)', run: () => { const nv = !showMetar; setShowMetar(nv); lsSet('ft-metar', nv) }, keywords: ['metar', 'taf', 'weather', 'wind', 'visibility', 'ceiling', 'vfr', 'mvfr', 'ifr', 'lifr', 'altimeter', 'qnh'] },
@@ -3780,6 +3783,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showEnergy && (
+        <EnergyMonitor
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, mach: f.mach, ground: f.ground }))}
+          onClose={() => { setShowEnergy(false); lsSet('ft-energy', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 7) } }}
+        />
+      )}
+
       {showRaim && (
         <RaimMonitor
           map={mapRef.current}
@@ -4343,6 +4355,7 @@ export default function FlightMap() {
                 ['Scatter S×A', showScatter, ()=>{ const nv=!showScatter; setShowScatter(nv); lsSet('ft-scatter', nv) }],
                 ['Density', showDensity, ()=>{ const nv=!showDensity; setShowDensity(nv); lsSet('ft-dens', nv) }],
                 ['Voronoi', showVoronoi, ()=>{ const nv=!showVoronoi; setShowVoronoi(nv); lsSet('ft-voronoi', nv) }],
+                ['Energy profile', showEnergy, ()=>{ const nv=!showEnergy; setShowEnergy(nv); lsSet('ft-energy', nv) }],
                 ['Records', showRecords, ()=>{ const nv=!showRecords; setShowRecords(nv); lsSet('ft-records', nv) }],
                 ['Cost index', showCostIdx, ()=>{ const nv=!showCostIdx; setShowCostIdx(nv); lsSet('ft-costidx', nv) }],
               ]},
