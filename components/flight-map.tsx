@@ -82,6 +82,7 @@ import FirLoadMonitor from './fir-load-monitor'
 import EnergyMonitor from './energy-monitor'
 import TurbulenceEdr from './turbulence-edr'
 import NordoMonitor from './nordo-monitor'
+import TerrainClearance from './terrain-clearance'
 import RaimMonitor from './raim-monitor'
 import DepartureSequencer from './departure-sequencer'
 import CrosswindCompass from './crosswind-compass'
@@ -287,6 +288,7 @@ export default function FlightMap() {
   const [showEnergy, setShowEnergy] = useState<boolean>(() => lsGet('ft-energy', false))
   const [showTurb, setShowTurb] = useState<boolean>(() => lsGet('ft-turb', false))
   const [showNordo, setShowNordo] = useState<boolean>(() => lsGet('ft-nordo', false))
+  const [showTerrain, setShowTerrain] = useState<boolean>(() => lsGet('ft-terrain', false))
   const [showRaim, setShowRaim] = useState<boolean>(() => lsGet('ft-raim', false))
   const [showOcean, setShowOcean] = useState<boolean>(() => lsGet('ft-ocean', false))
   const [showMetar, setShowMetar] = useState<boolean>(() => lsGet('ft-metar', false))
@@ -398,7 +400,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2203,6 +2205,7 @@ export default function FlightMap() {
           { id: 'toggle-energy', group: 'View', label: showEnergy ? 'Close Energy Profile Monitor' : 'Energy Profile Monitor (Es / Ps / hot-high / low-energy)', run: () => { const nv = !showEnergy; setShowEnergy(nv); lsSet('ft-energy', nv) }, keywords: ['energy', 'es', 'ps', 'total', 'specific', 'kinetic', 'potential', 'climb', 'descent', 'gradient', 'hot', 'high', 'low', 'speed', 'trade'] },
           { id: 'toggle-turb', group: 'View', label: showTurb ? 'Close Turbulence EDR Estimator' : 'Turbulence EDR Estimator (Eddy Dissipation Rate from VS scatter)', run: () => { const nv = !showTurb; setShowTurb(nv); lsSet('ft-turb', nv) }, keywords: ['turbulence', 'edr', 'eddy', 'dissipation', 'chop', 'bumpy', 'cat', 'shear', 'rough', 'severe', 'moderate', 'light', 'forecast'] },
           { id: 'toggle-nordo', group: 'View', label: showNordo ? 'Close NORDO / Lost-Comm Monitor' : 'NORDO / Lost-Comm Monitor (FAR 91.185 radio-failure detector)', run: () => { const nv = !showNordo; setShowNordo(nv); lsSet('ft-nordo', nv) }, keywords: ['nordo', 'lost', 'comm', 'communication', 'radio', 'failure', '7600', 'squawk', 'far', '91.185', 'icao', '4444', 'silent', 'efc', 'mea'] },
+          { id: 'toggle-terrain', group: 'View', label: showTerrain ? 'Close Terrain Clearance (TAWS)' : 'Terrain Clearance / TAWS (GPWS Mode 2 surrogate, HAT + closure rate)', run: () => { const nv = !showTerrain; setShowTerrain(nv); lsSet('ft-terrain', nv) }, keywords: ['terrain', 'taws', 'gpws', 'cfit', 'pull', 'up', 'msa', 'mea', 'hat', 'height', 'above', 'clearance', 'mountain', 'rockies', 'andes', 'himalaya', 'alps'] },
           { id: 'toggle-raim', group: 'View', label: showRaim ? 'Close GPS / RAIM' : 'GPS / RAIM (scintillation + jamming)', run: () => { const nv = !showRaim; setShowRaim(nv); lsSet('ft-raim', nv) }, keywords: ['gps', 'raim', 'gnss', 'jamming', 'spoofing', 'ionosphere', 'scintillation', 's4', 'kp', 'auroral', 'lpv', 'rnp'] },
           { id: 'toggle-ocean', group: 'View', label: showOcean ? 'Close Oceanic Tracks' : 'Oceanic Tracks (NAT-OTS / PACOTS)', run: () => { const nv = !showOcean; setShowOcean(nv); lsSet('ft-ocean', nv) }, keywords: ['oceanic', 'nat', 'ots', 'pacots', 'track', 'xtk', 'slop', 'mnt', 'in-trail', 'random'] },
           { id: 'toggle-metar', group: 'View', label: showMetar ? 'Close METAR Monitor' : 'METAR Monitor (surface obs)', run: () => { const nv = !showMetar; setShowMetar(nv); lsSet('ft-metar', nv) }, keywords: ['metar', 'taf', 'weather', 'wind', 'visibility', 'ceiling', 'vfr', 'mvfr', 'ifr', 'lifr', 'altimeter', 'qnh'] },
@@ -3832,6 +3835,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showTerrain && (
+        <TerrainClearance
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowTerrain(false); lsSet('ft-terrain', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 7) } }}
+        />
+      )}
+
       {showRaim && (
         <RaimMonitor
           map={mapRef.current}
@@ -4417,6 +4429,7 @@ export default function FlightMap() {
                 ['Drift-down OEI', showDrift, ()=>{ const nv=!showDrift; setShowDrift(nv); lsSet('ft-drift', nv) }],
                 ['Reserve fuel', showReserve, ()=>{ const nv=!showReserve; setShowReserve(nv); lsSet('ft-reserve', nv) }],
                 ['NORDO', showNordo, ()=>{ const nv=!showNordo; setShowNordo(nv); lsSet('ft-nordo', nv) }],
+                ['Terrain TAWS', showTerrain, ()=>{ const nv=!showTerrain; setShowTerrain(nv); lsSet('ft-terrain', nv) }],
               ]},
               {group:'Environment', items:[
                 ['Wake', showWake, ()=>{ const nv=!showWake; setShowWake(nv); lsSet('ft-wake', nv) }],
