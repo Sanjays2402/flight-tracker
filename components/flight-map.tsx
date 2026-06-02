@@ -84,6 +84,7 @@ import OceanicTracks from './oceanic-tracks'
 import MetarMonitor from './metar-monitor'
 import ConvectiveCells from './convective-cells'
 import SarPlanner from './sar-planner'
+import StableApproach from './stable-approach'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -270,6 +271,7 @@ export default function FlightMap() {
   const [showMetar, setShowMetar] = useState<boolean>(() => lsGet('ft-metar', false))
   const [showCells, setShowCells] = useState<boolean>(() => lsGet('ft-cells', false))
   const [showSar, setShowSar] = useState<boolean>(() => lsGet('ft-sar', false))
+  const [showStable, setShowStable] = useState<boolean>(() => lsGet('ft-stable', false))
   const [showAnomaly, setShowAnomaly] = useState<boolean>(() => lsGet('ft-anomaly', false))
   const [showCompareStudio, setShowCompareStudio] = useState<boolean>(() => lsGet('ft-compare-studio', false))
   const [compareStudioIcaos, setCompareStudioIcaos] = useState<string[]>(() => lsGet<string[]>('ft-compare-studio-icaos', []))
@@ -364,7 +366,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar].filter(Boolean).length
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable].filter(Boolean).length
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2169,6 +2171,7 @@ export default function FlightMap() {
           { id: 'toggle-metar', group: 'View', label: showMetar ? 'Close METAR Monitor' : 'METAR Monitor (surface obs)', run: () => { const nv = !showMetar; setShowMetar(nv); lsSet('ft-metar', nv) }, keywords: ['metar', 'taf', 'weather', 'wind', 'visibility', 'ceiling', 'vfr', 'mvfr', 'ifr', 'lifr', 'altimeter', 'qnh'] },
           { id: 'toggle-cells', group: 'View', label: showCells ? 'Close Convective Cells' : 'Convective Cells (CB/TCU penetration)', run: () => { const nv = !showCells; setShowCells(nv); lsSet('ft-cells', nv) }, keywords: ['convective', 'cells', 'thunderstorm', 'cb', 'tcu', 'storm', 'lightning', 'penetration', 'deviation', 'turbulence'] },
           { id: 'toggle-sar', group: 'View', label: showSar ? 'Close SAR Planner' : 'SAR Planner (search & rescue patterns)', run: () => { const nv = !showSar; setShowSar(nv); lsSet('ft-sar', nv) }, keywords: ['sar', 'search', 'rescue', 'pattern', 'expanding', 'square', 'sector', 'parallel', 'creeping', 'koopman', 'pod', 'datum', 'drift', 'leeway'] },
+          { id: 'toggle-stable', group: 'View', label: showStable ? 'Close Stable Approach Monitor' : 'Stable Approach Monitor (FSF ALAR gates)', run: () => { const nv = !showStable; setShowStable(nv); lsSet('ft-stable', nv) }, keywords: ['stable', 'approach', 'unstable', 'go-around', 'fsf', 'alar', 'glideslope', 'glidepath', 'centerline', 'vref', 'sink', 'gate', '1000', '500'] },
           { id: 'toggle-anomaly', group: 'View', label: showAnomaly ? 'Close anomaly radar' : 'Anomaly radar (tick-to-tick state deltas)', run: () => { const nv = !showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }, keywords: ['anomaly', 'radar', 'jump', 'swerve', 'spike', 'squawk', 'flip', 'glitch', 'delta', 'detect', 'alert'] },
           { id: 'toggle-compare', group: 'View', label: showCompareStudio ? 'Close compare studio' : 'Compare studio (side-by-side spec + spider)', run: () => { const nv = !showCompareStudio; setShowCompareStudio(nv); lsSet('ft-compare-studio', nv); if (nv && selected && !compareStudioIcaos.includes(selected.icao)) { const next = [...compareStudioIcaos, selected.icao].slice(0, 4); setCompareStudioIcaos(next); lsSet('ft-compare-studio-icaos', next) } }, keywords: ['compare', 'comparison', 'side by side', 'spec', 'radar chart', 'spider', 'vs', 'diff', 'studio'] },
           { id: 'toggle-symphony', group: 'View', label: showSymphony ? 'Close Sky Symphony' : 'Sky Symphony (sonify live traffic)', run: () => { const nv = !showSymphony; setShowSymphony(nv); lsSet('ft-symphony', nv) }, keywords: ['symphony', 'synth', 'audio', 'sound', 'music', 'sonify', 'sonification', 'tone', 'ambient', 'sound design'] },
@@ -3781,6 +3784,19 @@ export default function FlightMap() {
         />
       )}
 
+      {showStable && (
+        <StableApproach
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowStable(false); lsSet('ft-stable', false) }}
+          onFly={(icao) => {
+            const f = flights.find(x => x.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
+          }}
+          onFlyLatLng={(lat, lng, zoom) => flyToLatLng(lat, lng, zoom ?? 10)}
+        />
+      )}
+
       {showSua && (
         <SuaMonitor
           map={mapRef.current}
@@ -4230,6 +4246,7 @@ export default function FlightMap() {
                 ['Approach seq', showAprSeq, ()=>{ const nv=!showAprSeq; setShowAprSeq(nv); lsSet('ft-aprseq', nv) }],
                 ['Oceanic tracks', showOcean, ()=>{ const nv=!showOcean; setShowOcean(nv); lsSet('ft-ocean', nv) }],
                 ['SAR planner', showSar, ()=>{ const nv=!showSar; setShowSar(nv); lsSet('ft-sar', nv) }],
+                ['Stable approach', showStable, ()=>{ const nv=!showStable; setShowStable(nv); lsSet('ft-stable', nv) }],
                 ['Pass-by', showPass, ()=>{ const nv=!showPass; setShowPass(nv); lsSet('ft-pass', nv) }],
                 ['Flow', showFlow, ()=>{ const nv=!showFlow; setShowFlow(nv); lsSet('ft-flow', nv) }],
                 ['Reach', showReach, ()=>{ const nv=!showReach; setShowReach(nv); lsSet('ft-reach', nv) }],
