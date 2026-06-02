@@ -16,6 +16,7 @@ import { t as i18nT } from '../lib/i18n'
 import CommandPalette, { CPAction } from './command-palette'
 import TrafficRadar from './traffic-radar'
 import EmissionsPanel from './emissions-panel'
+import ConflictPanel, { detectConflicts, type ConflictPair } from './conflict-panel'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -154,6 +155,10 @@ export default function FlightMap() {
   const [selected, setSelected] = useState<Flight | null>(null)
   const [showRadar, setShowRadar] = useState<boolean>(() => lsGet('ft-radar', false))
   const [showEmissions, setShowEmissions] = useState<boolean>(() => lsGet('ft-em', false))
+  const [showConflict, setShowConflict] = useState<boolean>(() => lsGet('ft-cflx', false))
+  const [conflictLat, setConflictLat] = useState<number>(() => lsGet('ft-cflx-lat', 5))
+  const [conflictVert, setConflictVert] = useState<number>(() => lsGet('ft-cflx-vert', 1000))
+  const [conflictGround, setConflictGround] = useState<boolean>(() => lsGet('ft-cflx-grd', false))
   const [selectedAirport, setSelectedAirport] = useState<AirportPin | null>(null)
   const [airportMetar, setAirportMetar] = useState<{rawOb:string; temp:number; dewp:number; wdir:number; wspd:number; visib:string; altim:number; fltCat:string; clouds?:{cover:string;base:number}[]} | null>(null)
   const [mapZoom, setMapZoom] = useState(4)
@@ -490,6 +495,7 @@ export default function FlightMap() {
       map.addSource('route-points', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('planes', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('alt-columns', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      map.addSource('conflicts', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
 
       // Sky / atmosphere (only renders when pitched)
       try {
@@ -583,6 +589,34 @@ export default function FlightMap() {
           'circle-stroke-color': ['get', 'color'],
           'circle-stroke-width': 2,
           'circle-opacity': 0.45,
+        },
+      })
+
+      // Conflict pair lines (rendered beneath planes, above routes)
+      map.addLayer({
+        id: 'conflicts-line',
+        type: 'line',
+        source: 'conflicts',
+        filter: ['==', ['geometry-type'], 'LineString'],
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': ['case', ['==', ['get', 'sev'], 'critical'], 3, ['==', ['get', 'sev'], 'warning'], 2.2, 1.4],
+          'line-opacity': 0.9,
+          'line-dasharray': ['case', ['==', ['get', 'sev'], 'advisory'], ['literal', [2, 2]], ['literal', [1]]],
+        },
+      })
+      map.addLayer({
+        id: 'conflicts-mid',
+        type: 'circle',
+        source: 'conflicts',
+        filter: ['==', ['geometry-type'], 'Point'],
+        paint: {
+          'circle-radius': ['case', ['==', ['get', 'sev'], 'critical'], 7, ['==', ['get', 'sev'], 'warning'], 5, 3.5],
+          'circle-color': ['get', 'color'],
+          'circle-stroke-color': '#0b1220',
+          'circle-stroke-width': 1.5,
+          'circle-opacity': 0.85,
         },
       })
 
@@ -923,6 +957,42 @@ export default function FlightMap() {
              f.icao.includes(q) || f.squawk.includes(q)
     })
   }, [flights, query, hideGround, onlyMil, onlyEmerg, altMin, altMax, spdMin, airlinePrefix])
+
+  /* ---- Conflict detection (pairs of aircraft within proximity thresholds) ---- */
+  const conflicts = useMemo<ConflictPair[]>(() => {
+    if (!showConflict) return []
+    return detectConflicts(
+      filtered.map(f => ({
+        icao: f.icao, callsign: f.callsign, operator: f.operator, type: f.type,
+        lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts,
+        track: f.track, vertRate: f.vertRate, ground: f.ground,
+      })),
+      conflictLat, conflictVert, conflictGround,
+    )
+  }, [filtered, showConflict, conflictLat, conflictVert, conflictGround])
+
+  /* push conflict pair lines + midpoints into map source */
+  useEffect(() => {
+    const m = mapRef.current; if (!m || !mapReady) return
+    const src = m.getSource('conflicts') as maplibregl.GeoJSONSource | undefined
+    if (!src) return
+    const SEV_HEX = { critical: '#f43f5e', warning: '#f59e0b', advisory: '#38bdf8' } as const
+    const feats: any[] = []
+    for (const p of conflicts) {
+      const color = SEV_HEX[p.severity]
+      feats.push({
+        type: 'Feature',
+        properties: { sev: p.severity, color, pair: `${p.a.icao}-${p.b.icao}` },
+        geometry: { type: 'LineString', coordinates: [[p.a.lng, p.a.lat], [p.b.lng, p.b.lat]] },
+      })
+      feats.push({
+        type: 'Feature',
+        properties: { sev: p.severity, color, pair: `${p.a.icao}-${p.b.icao}` },
+        geometry: { type: 'Point', coordinates: [p.midLng, p.midLat] },
+      })
+    }
+    src.setData({ type: 'FeatureCollection', features: feats } as any)
+  }, [conflicts, mapReady])
 
   /* ---- Render planes (symbol layer) + 60fps dead-reckon interpolation ---- */
   // Snapshot of last-known authoritative positions per icao
@@ -1508,6 +1578,7 @@ export default function FlightMap() {
             <Toggle on={showStats} onClick={()=>setShowStats(v=>!v)} label="Stats" />
             <Toggle on={showRadar} onClick={()=>{ const nv = !showRadar; setShowRadar(nv); lsSet('ft-radar', nv) }} label="Radar" />
             <Toggle on={showEmissions} onClick={()=>{ const nv = !showEmissions; setShowEmissions(nv); lsSet('ft-em', nv) }} label="CO₂" />
+            <Toggle on={showConflict} onClick={()=>{ const nv = !showConflict; setShowConflict(nv); lsSet('ft-cflx', nv) }} label="CFLX" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2433,6 +2504,33 @@ export default function FlightMap() {
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
           }}
           onClose={() => { setShowEmissions(false); lsSet('ft-em', false) }}
+        />
+      )}
+
+      {showConflict && (
+        <ConflictPanel
+          pairs={conflicts}
+          latNm={conflictLat}
+          vertFt={conflictVert}
+          includeGround={conflictGround}
+          onChange={(n) => {
+            if (n.latNm !== undefined) { setConflictLat(n.latNm); lsSet('ft-cflx-lat', n.latNm) }
+            if (n.vertFt !== undefined) { setConflictVert(n.vertFt); lsSet('ft-cflx-vert', n.vertFt) }
+            if (n.includeGround !== undefined) { setConflictGround(n.includeGround); lsSet('ft-cflx-grd', n.includeGround) }
+          }}
+          onSelect={(icao) => {
+            const f = flights.find(ff => ff.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
+          }}
+          onZoomPair={(p) => {
+            try {
+              const m = mapRef.current; if (!m) return
+              const b = new maplibregl.LngLatBounds([p.a.lng, p.a.lat], [p.a.lng, p.a.lat])
+              b.extend([p.b.lng, p.b.lat])
+              m.fitBounds(b, { padding: 120, maxZoom: 11, duration: 700 })
+            } catch {}
+          }}
+          onClose={() => { setShowConflict(false); lsSet('ft-cflx', false) }}
         />
       )}
 
