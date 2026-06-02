@@ -1323,6 +1323,23 @@ export default function FlightMap() {
     return { total, airborne, avgAlt, avgVel, emerg }
   }, [filtered])
 
+  /* ---- Fullscreen ---- */
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+  const toggleFullscreen = useCallback(() => {
+    try {
+      if (!document.fullscreenElement) {
+        (document.documentElement as any).requestFullscreen?.()
+      } else {
+        document.exitFullscreen?.()
+      }
+    } catch {}
+  }, [])
+
   /* ---- Keyboard shortcuts ---- */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1430,6 +1447,7 @@ export default function FlightMap() {
             )}
             <Toggle on={showFilters} onClick={()=>setShowFilters(v=>!v)} label="Filter" />
             <Toggle on={showStats} onClick={()=>setShowStats(v=>!v)} label="Stats" />
+            <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
           <div className="bg-slate-950/85 backdrop-blur-xl border border-slate-800 rounded-2xl px-3 py-2 shadow-2xl items-center gap-2 w-44 sm:w-60 flex">
