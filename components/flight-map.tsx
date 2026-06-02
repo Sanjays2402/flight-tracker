@@ -14,6 +14,7 @@ import { playEmergencyChime, playRadioChirp } from '../lib/audio'
 import { lsGet, lsSet } from '../lib/storage'
 import { t as i18nT } from '../lib/i18n'
 import CommandPalette, { CPAction } from './command-palette'
+import TrafficRadar from './traffic-radar'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -150,9 +151,11 @@ export default function FlightMap() {
 
   const [flights, setFlights] = useState<Flight[]>([])
   const [selected, setSelected] = useState<Flight | null>(null)
+  const [showRadar, setShowRadar] = useState<boolean>(() => lsGet('ft-radar', false))
   const [selectedAirport, setSelectedAirport] = useState<AirportPin | null>(null)
   const [airportMetar, setAirportMetar] = useState<{rawOb:string; temp:number; dewp:number; wdir:number; wspd:number; visib:string; altim:number; fltCat:string; clouds?:{cover:string;base:number}[]} | null>(null)
   const [mapZoom, setMapZoom] = useState(4)
+  const [mapCenter, setMapCenter] = useState<{lng:number; lat:number}>({lng: 0, lat: 20})
   const [mapBounds, setMapBounds] = useState<{n:number,s:number,e:number,w:number} | null>(null)
   const [toasts, setToasts] = useState<{id:string; icao:string; cs:string; sq:string; lat:number; lng:number; t:number}[]>([])
   const knownEmergRef = useRef<Set<string>>(new Set())
@@ -637,6 +640,7 @@ export default function FlightMap() {
       if (selectedIcaoRef.current) q.set('icao', selectedIcaoRef.current)
       window.history.replaceState(null, '', `#${q.toString()}`)
       setMapZoom(map.getZoom())
+      setMapCenter({ lng: c.lng, lat: c.lat })
       setMapBounds({ n: b.getNorth(), s: b.getSouth(), e: b.getEast(), w: b.getWest() })
     }
     map.on('moveend', saveUrl)
@@ -1430,6 +1434,7 @@ export default function FlightMap() {
           { id: 'toggle-night', group: 'Layers', label: showNight ? 'Hide day/night terminator' : 'Show day/night terminator', hint: 'N', run: () => setShowNight(v => !v) },
           { id: 'toggle-heat', group: 'Layers', label: showHeat ? 'Hide density heatmap' : 'Show density heatmap', hint: 'H', run: () => setShowHeat(v => !v) },
           { id: 'toggle-list', group: 'View', label: showList ? 'Hide flight list' : 'Show flight list', hint: 'L', run: () => setShowList(v => !v) },
+          { id: 'toggle-radar', group: 'View', label: showRadar ? 'Hide traffic radar' : 'Show traffic radar', run: () => { const nv = !showRadar; setShowRadar(nv); lsSet('ft-radar', nv) }, keywords: ['scope', 'tcas', 'ppi'] },
           { id: 'toggle-3d', group: 'Mode', label: show3D ? 'Exit 3D view' : 'Enter 3D view', run: () => setShow3D(v => !v) },
           { id: 'toggle-chase', group: 'Mode', label: chase ? 'Stop chase camera' : 'Start chase camera (select a plane first)', run: () => { if (!selected) return; setChase(v => { const nv = !v; chaseRef.current = nv; if (nv) setShow3D(true); return nv }) } },
           { id: 'toggle-follow', group: 'Mode', label: follow ? 'Stop follow' : 'Follow selected plane', hint: 'F', run: () => { if (selected) setFollow(v => !v) } },
@@ -1499,6 +1504,7 @@ export default function FlightMap() {
             )}
             <Toggle on={showFilters} onClick={()=>setShowFilters(v=>!v)} label="Filter" />
             <Toggle on={showStats} onClick={()=>setShowStats(v=>!v)} label="Stats" />
+            <Toggle on={showRadar} onClick={()=>{ const nv = !showRadar; setShowRadar(nv); lsSet('ft-radar', nv) }} label="Radar" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2398,6 +2404,22 @@ export default function FlightMap() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Traffic Radar overlay */}
+      {showRadar && (
+        <TrafficRadar
+          flights={filtered as any}
+          centerLat={selected ? selected.lat : mapCenter.lat}
+          centerLng={selected ? selected.lng : mapCenter.lng}
+          centerLabel={selected ? `${selected.callsign || selected.icao.toUpperCase()} (own ship)` : 'Map center'}
+          selectedIcao={selected?.icao || null}
+          onSelect={(f) => {
+            const full = flights.find(ff => ff.icao === f.icao)
+            if (full) { setSelected(full); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [full.lng, full.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
+          }}
+          onClose={() => { setShowRadar(false); lsSet('ft-radar', false) }}
+        />
       )}
 
       {/* About link in bottom-left, only when nothing selected */}
