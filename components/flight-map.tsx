@@ -42,6 +42,7 @@ import DensityHeatPanel, { installHeat, updateHeat, setHeatVisibility, setHeatRa
 import CpaPanel, { detectCpa, type CpaHit } from './cpa-panel'
 import DiversionPanel from './diversion-panel'
 import VipHunter from './vip-hunter'
+import FlowRose from './flow-rose'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -193,6 +194,7 @@ export default function FlightMap() {
   const [showContrail, setShowContrail] = useState<boolean>(() => lsGet('ft-contrail', false))
   const [showAtlas, setShowAtlas] = useState<boolean>(() => lsGet('ft-atlas', false))
   const [showVip, setShowVip] = useState<boolean>(() => lsGet('ft-vip', false))
+  const [showFlow, setShowFlow] = useState<boolean>(() => lsGet('ft-flow', false))
   const [cpaHorizon, setCpaHorizon] = useState<number>(() => lsGet('ft-cpa-hor', 300))
   const [cpaMaxMissNm, setCpaMaxMissNm] = useState<number>(() => lsGet('ft-cpa-mnm', 5))
   const [cpaMaxMissFt, setCpaMaxMissFt] = useState<number>(() => lsGet('ft-cpa-mft', 1500))
@@ -2047,6 +2049,7 @@ export default function FlightMap() {
           { id: 'toggle-tcas', group: 'View', label: showTcas ? 'Close TCAS scope' : 'TCAS traffic display (head-up scope)', run: () => { const nv = !showTcas; setShowTcas(nv); lsSet('ft-tcas', nv) }, keywords: ['tcas', 'traffic', 'collision', 'avoidance', 'scope', 'ra', 'ta', 'proximate', 'cockpit'] },
           { id: 'toggle-wake', group: 'View', label: showWake ? 'Close wake turbulence' : 'Wake turbulence (corridors + risk)', run: () => { const nv = !showWake; setShowWake(nv); lsSet('ft-wake', nv) }, keywords: ['wake', 'turbulence', 'heavy', 'super', 'separation', 'recat', 'vortex', 'corridor'] },
           { id: 'toggle-contrail', group: 'View', label: showContrail ? 'Close contrail forecast' : 'Contrail forecast (Schmidt-Appleman)', run: () => { const nv = !showContrail; setShowContrail(nv); lsSet('ft-contrail', nv) }, keywords: ['contrail', 'climate', 'schmidt', 'appleman', 'ISSR', 'cirrus', 'plume', 'forcing'] },
+          { id: 'toggle-flow', group: 'View', label: showFlow ? 'Close flow rose' : 'Flow rose (heading wind-rose)', run: () => { const nv = !showFlow; setShowFlow(nv); lsSet('ft-flow', nv) }, keywords: ['flow', 'rose', 'wind rose', 'heading', 'direction', 'track', 'sector', 'compass'] },
           { id: 'toggle-atlas', group: 'View', label: showAtlas ? 'Close registry atlas' : 'Registry atlas (country leaderboard)', run: () => { const nv = !showAtlas; setShowAtlas(nv); lsSet('ft-atlas', nv) }, keywords: ['atlas', 'country', 'registry', 'flag', 'nationality', 'iso', 'icao', 'origin'] },
           { id: 'toggle-vip', group: 'View', label: showVip ? 'Close VIP hunter' : 'VIP hunter (notable aircraft)', run: () => { const nv = !showVip; setShowVip(nv); lsSet('ft-vip', nv) }, keywords: ['vip', 'notable', 'interesting', 'hunter', 'celebrity', 'royal', 'state', 'military', 'rare', 'b2', 'a380', 'air force one'] },
           { id: 'toggle-pip', group: 'View', label: showPip ? 'Hide picture-in-picture mini-map' : 'Show picture-in-picture mini-map', run: () => { setShowPip(v => { const nv = !v; try { localStorage.setItem('ft-pip', nv ? '1' : '0') } catch {}; return nv }) }, keywords: ['pip', 'minimap', 'mini', 'inset', 'follow'] },
@@ -2134,6 +2137,7 @@ export default function FlightMap() {
             <Toggle on={showContrail} onClick={()=>{ const nv = !showContrail; setShowContrail(nv); lsSet('ft-contrail', nv) }} label="CTRL" />
             <Toggle on={showAtlas} onClick={()=>{ const nv = !showAtlas; setShowAtlas(nv); lsSet('ft-atlas', nv) }} label="ATLAS" />
             <Toggle on={showVip} onClick={()=>{ const nv = !showVip; setShowVip(nv); lsSet('ft-vip', nv) }} label="VIP" />
+            <Toggle on={showFlow} onClick={()=>{ const nv = !showFlow; setShowFlow(nv); lsSet('ft-flow', nv) }} label="FLOW" />
             <Toggle on={showEventLog} onClick={()=>{ const nv = !showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }} label="LOG" />
             <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
             <Toggle on={showPhase} onClick={()=>{ const nv = !showPhase; setShowPhase(nv); lsSet('ft-phase', nv) }} label="PHASE" />
@@ -3362,6 +3366,17 @@ export default function FlightMap() {
           onFly={(icao) => {
             const f = flights.find(x => x.icao === icao)
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 8), duration: 700 }) } catch {} }
+          }}
+        />
+      )}
+
+      {showFlow && (
+        <FlowRose
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, ground: f.ground }))}
+          onClose={() => { setShowFlow(false); lsSet('ft-flow', false) }}
+          onFly={(icao) => {
+            const f = flights.find(x => x.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 7), duration: 700 }) } catch {} }
           }}
         />
       )}
