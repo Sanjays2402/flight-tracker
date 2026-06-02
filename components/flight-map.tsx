@@ -20,6 +20,7 @@ import ConflictPanel, { detectConflicts, type ConflictPair } from './conflict-pa
 import OverheadPanel from './overhead-panel'
 import { SunPanel, solarPosition, installTerminator, updateTerminator, removeTerminator } from './terminator-layer'
 import HoldingPanel, { detectHolding, type HoldingHit } from './holding-panel'
+import FormationPanel, { detectFormations, type Formation } from './formation-panel'
 import EventLog, { detectEvents, type LogEvent, type EventKind, type SnapshotEntry } from './event-log'
 import AltitudeLadder from './altitude-ladder'
 import PhasePanel from './phase-panel'
@@ -175,6 +176,13 @@ export default function FlightMap() {
   const [showOverhead, setShowOverhead] = useState<boolean>(() => lsGet('ft-overhead', false))
   const [showSun, setShowSun] = useState<boolean>(() => lsGet('ft-sun', false))
   const [showHolding, setShowHolding] = useState<boolean>(() => lsGet('ft-hold', false))
+  const [showFormation, setShowFormation] = useState<boolean>(() => lsGet('ft-form', false))
+  const [formMaxRadius, setFormMaxRadius] = useState<number>(() => lsGet('ft-form-rad', 2))
+  const [formMaxAlt, setFormMaxAlt] = useState<number>(() => lsGet('ft-form-alt', 500))
+  const [formMaxTrack, setFormMaxTrack] = useState<number>(() => lsGet('ft-form-trk', 15))
+  const [formMaxSpeed, setFormMaxSpeed] = useState<number>(() => lsGet('ft-form-spd', 30))
+  const [formMinMembers, setFormMinMembers] = useState<number>(() => lsGet('ft-form-min', 2))
+  const [formGround, setFormGround] = useState<boolean>(() => lsGet('ft-form-grd', false))
   const [showLadder, setShowLadder] = useState<boolean>(() => lsGet('ft-ladder', false))
   const [showPhase, setShowPhase] = useState<boolean>(() => lsGet('ft-phase', false))
   const [showCockpit, setShowCockpit] = useState<boolean>(() => lsGet('ft-pfd', false))
@@ -573,6 +581,7 @@ export default function FlightMap() {
       map.addSource('alt-columns', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('conflicts', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('holding', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      map.addSource('formations', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
 
       // Sky / atmosphere (only renders when pitched)
       try {
@@ -730,6 +739,72 @@ export default function FlightMap() {
           'circle-color': ['get', 'color'],
           'circle-stroke-color': '#0b1220',
           'circle-stroke-width': 1.5,
+        },
+      })
+
+      // Formation overlays (convex hull fill + edges + leader pin + label)
+      map.addLayer({
+        id: 'formations-fill',
+        type: 'fill',
+        source: 'formations',
+        filter: ['all', ['==', ['geometry-type'], 'Polygon'], ['==', ['get', 'kind'], 'hull']],
+        paint: {
+          'fill-color': ['get', 'color'],
+          'fill-opacity': 0.14,
+        },
+      })
+      map.addLayer({
+        id: 'formations-outline',
+        type: 'line',
+        source: 'formations',
+        filter: ['all', ['==', ['geometry-type'], 'Polygon'], ['==', ['get', 'kind'], 'hull']],
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 1.4,
+          'line-opacity': 0.85,
+        },
+      })
+      map.addLayer({
+        id: 'formations-edges',
+        type: 'line',
+        source: 'formations',
+        filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'kind'], 'edge']],
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 1.2,
+          'line-opacity': 0.7,
+          'line-dasharray': [2, 2],
+        },
+      })
+      map.addLayer({
+        id: 'formations-leader',
+        type: 'circle',
+        source: 'formations',
+        filter: ['all', ['==', ['geometry-type'], 'Point'], ['==', ['get', 'kind'], 'leader']],
+        paint: {
+          'circle-radius': 7,
+          'circle-color': ['get', 'color'],
+          'circle-stroke-color': '#0b1220',
+          'circle-stroke-width': 2,
+          'circle-opacity': 0.95,
+        },
+      })
+      map.addLayer({
+        id: 'formations-label',
+        type: 'symbol',
+        source: 'formations',
+        filter: ['all', ['==', ['geometry-type'], 'Point'], ['==', ['get', 'kind'], 'label']],
+        layout: {
+          'text-field': ['get', 'label'],
+          'text-size': 11,
+          'text-font': ['Noto Sans Bold'],
+          'text-offset': [0, -1.4],
+          'text-allow-overlap': false,
+        } as any,
+        paint: {
+          'text-color': ['get', 'color'],
+          'text-halo-color': '#0b1220',
+          'text-halo-width': 1.5,
         },
       })
 
@@ -1152,6 +1227,111 @@ export default function FlightMap() {
     }
     src.setData({ type: 'FeatureCollection', features: feats } as any)
   }, [holdingHits, mapReady])
+
+  /* ---- Formation flight detection ---- */
+  const formations = useMemo<Formation[]>(() => {
+    if (!showFormation) return []
+    return detectFormations(
+      filtered.map(f => ({
+        icao: f.icao, callsign: f.callsign, registration: f.registration,
+        type: f.type, operator: f.operator,
+        lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt,
+        track: f.track, velocityKts: f.velocityKts, ground: f.ground,
+      })),
+      {
+        maxRadiusNm: formMaxRadius, maxAltDiffFt: formMaxAlt,
+        maxTrackDiffDeg: formMaxTrack, maxSpeedDiffKts: formMaxSpeed,
+        minMembers: formMinMembers, includeGround: formGround,
+      },
+    )
+  }, [filtered, showFormation, formMaxRadius, formMaxAlt, formMaxTrack, formMaxSpeed, formMinMembers, formGround])
+
+  useEffect(() => {
+    const m = mapRef.current; if (!m || !mapReady) return
+    const src = m.getSource('formations') as maplibregl.GeoJSONSource | undefined
+    if (!src) return
+    const CLASS_HEX: Record<Formation['classification'], string> = {
+      tight: '#f43f5e', echelon: '#a78bfa', trail: '#22d3ee', loose: '#34d399',
+    }
+    const feats: any[] = []
+    // 2D convex hull (monotonic chain)
+    const hull = (pts: Array<[number, number]>): Array<[number, number]> => {
+      if (pts.length <= 1) return pts.slice()
+      const sorted = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1])
+      const cross = (o: [number, number], a: [number, number], b: [number, number]) =>
+        (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+      const lower: Array<[number, number]> = []
+      for (const p of sorted) {
+        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop()
+        lower.push(p)
+      }
+      const upper: Array<[number, number]> = []
+      for (let i = sorted.length - 1; i >= 0; i--) {
+        const p = sorted[i]
+        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop()
+        upper.push(p)
+      }
+      lower.pop(); upper.pop()
+      return lower.concat(upper)
+    }
+    for (const f of formations) {
+      const color = f.militaryHint ? '#fbbf24' : CLASS_HEX[f.classification]
+      const pts: Array<[number, number]> = f.members.map(m => [m.lng, m.lat])
+      // Edges from leader to each member (star)
+      for (const m of f.members) {
+        if (m.icao === f.leader.icao) continue
+        feats.push({
+          type: 'Feature',
+          properties: { kind: 'edge', color, id: f.id },
+          geometry: { type: 'LineString', coordinates: [[f.leader.lng, f.leader.lat], [m.lng, m.lat]] },
+        })
+      }
+      // Hull polygon (only if 3+ points; otherwise fall back to small buffer around midpoint)
+      if (pts.length >= 3) {
+        const h = hull(pts)
+        if (h.length >= 3) {
+          h.push(h[0])
+          feats.push({
+            type: 'Feature',
+            properties: { kind: 'hull', color, id: f.id },
+            geometry: { type: 'Polygon', coordinates: [h] },
+          })
+        }
+      } else if (pts.length === 2) {
+        // small pill: buffer around midpoint
+        const latRad = (f.centerLat * Math.PI) / 180
+        const r = 0.3 // nm
+        const dLat = r / 60
+        const dLng = r / (60 * Math.max(Math.cos(latRad), 0.0001))
+        const ring: Array<[number, number]> = []
+        for (let i = 0; i <= 24; i++) {
+          const a = (i / 24) * Math.PI * 2
+          ring.push([f.centerLng + dLng * Math.cos(a), f.centerLat + dLat * Math.sin(a)])
+        }
+        feats.push({
+          type: 'Feature',
+          properties: { kind: 'hull', color, id: f.id },
+          geometry: { type: 'Polygon', coordinates: [ring] },
+        })
+      }
+      // Leader pin
+      feats.push({
+        type: 'Feature',
+        properties: { kind: 'leader', color, id: f.id, icao: f.leader.icao },
+        geometry: { type: 'Point', coordinates: [f.leader.lng, f.leader.lat] },
+      })
+      // Label at group centroid
+      feats.push({
+        type: 'Feature',
+        properties: {
+          kind: 'label', color, id: f.id,
+          label: `${f.members.length}-SHIP${f.militaryHint ? ' MIL' : ''} · ${f.classification.toUpperCase()}`,
+        },
+        geometry: { type: 'Point', coordinates: [f.centerLng, f.centerLat] },
+      })
+    }
+    src.setData({ type: 'FeatureCollection', features: feats } as any)
+  }, [formations, mapReady])
 
   // Day/night terminator overlay + sun position; tick every 60s when active
   useEffect(() => {
@@ -1719,6 +1899,7 @@ export default function FlightMap() {
           { id: 'toggle-radar', group: 'View', label: showRadar ? 'Hide traffic radar' : 'Show traffic radar', run: () => { const nv = !showRadar; setShowRadar(nv); lsSet('ft-radar', nv) }, keywords: ['scope', 'tcas', 'ppi'] },
           { id: 'toggle-ruler', group: 'View', label: showRuler ? 'Close great-circle ruler' : 'Great-circle ruler (measure distance)', run: () => setShowRuler(v => !v), keywords: ['measure', 'distance', 'ruler', 'geodesic'] },
           { id: 'toggle-bullseye', group: 'View', label: showBullseye ? 'Close bullseye (BRA reference)' : 'Bullseye / BRA tactical reference', run: () => setShowBullseye(v => !v), keywords: ['bullseye', 'bra', 'tactical', 'bearing', 'range', 'compass', 'rose', 'radial'] },
+          { id: 'toggle-formation', group: 'View', label: showFormation ? 'Close formation flight detector' : 'Formation flight detector', run: () => { const nv = !showFormation; setShowFormation(nv); lsSet('ft-form', nv) }, keywords: ['formation', 'flight', 'group', 'flock', 'wingman', 'echelon', 'trail', 'tight', 'mil', 'military', 'pack', 'cluster'] },
           { id: 'toggle-pip', group: 'View', label: showPip ? 'Hide picture-in-picture mini-map' : 'Show picture-in-picture mini-map', run: () => { setShowPip(v => { const nv = !v; try { localStorage.setItem('ft-pip', nv ? '1' : '0') } catch {}; return nv }) }, keywords: ['pip', 'minimap', 'mini', 'inset', 'follow'] },
           { id: 'toggle-3d', group: 'Mode', label: show3D ? 'Exit 3D view' : 'Enter 3D view', run: () => setShow3D(v => !v) },
           { id: 'toggle-chase', group: 'Mode', label: chase ? 'Stop chase camera' : 'Start chase camera (select a plane first)', run: () => { if (!selected) return; setChase(v => { const nv = !v; chaseRef.current = nv; if (nv) setShow3D(true); return nv }) } },
@@ -1795,6 +1976,7 @@ export default function FlightMap() {
             <Toggle on={showOverhead} onClick={()=>{ const nv = !showOverhead; setShowOverhead(nv); lsSet('ft-overhead', nv) }} label="OVHD" />
             <Toggle on={showSun} onClick={()=>{ const nv = !showSun; setShowSun(nv); lsSet('ft-sun', nv) }} label="SUN" />
             <Toggle on={showHolding} onClick={()=>{ const nv = !showHolding; setShowHolding(nv); lsSet('ft-hold', nv) }} label="HOLD" />
+            <Toggle on={showFormation} onClick={()=>{ const nv = !showFormation; setShowFormation(nv); lsSet('ft-form', nv) }} label="FORM" />
             <Toggle on={showEventLog} onClick={()=>{ const nv = !showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }} label="LOG" />
             <Toggle on={showLadder} onClick={()=>{ const nv = !showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }} label="FL" />
             <Toggle on={showPhase} onClick={()=>{ const nv = !showPhase; setShowPhase(nv); lsSet('ft-phase', nv) }} label="PHASE" />
@@ -2769,6 +2951,33 @@ export default function FlightMap() {
             if (hit) { try { mapRef.current?.flyTo({ center: [hit.centerLng, hit.centerLat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 }) } catch {} }
           }}
           onClose={() => { setShowHolding(false); lsSet('ft-hold', false) }}
+        />
+      )}
+
+      {showFormation && (
+        <FormationPanel
+          formations={formations}
+          maxRadiusNm={formMaxRadius}
+          maxAltDiffFt={formMaxAlt}
+          maxTrackDiffDeg={formMaxTrack}
+          maxSpeedDiffKts={formMaxSpeed}
+          minMembers={formMinMembers}
+          includeGround={formGround}
+          onChangeRadius={(v) => { setFormMaxRadius(v); lsSet('ft-form-rad', v) }}
+          onChangeAlt={(v) => { setFormMaxAlt(v); lsSet('ft-form-alt', v) }}
+          onChangeTrack={(v) => { setFormMaxTrack(v); lsSet('ft-form-trk', v) }}
+          onChangeSpeed={(v) => { setFormMaxSpeed(v); lsSet('ft-form-spd', v) }}
+          onChangeMin={(v) => { setFormMinMembers(v); lsSet('ft-form-min', v) }}
+          onChangeGround={(v) => { setFormGround(v); lsSet('ft-form-grd', v) }}
+          onSelectFormation={(id) => {
+            const f = formations.find(ff => ff.id === id)
+            if (f) { try { mapRef.current?.flyTo({ center: [f.centerLng, f.centerLat], zoom: Math.max(mapRef.current.getZoom(), 10), duration: 700 }) } catch {} }
+          }}
+          onSelectMember={(icao) => {
+            const f = flights.find(ff => ff.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 10), duration: 700 }) } catch {} }
+          }}
+          onClose={() => { setShowFormation(false); lsSet('ft-form', false) }}
         />
       )}
 
