@@ -212,6 +212,13 @@ export default function FlightMap() {
     try { return JSON.parse(localStorage.getItem('ft-units-v1') || '') as Units } catch { return { alt: 'ft', spd: 'kt' } }
   })
   useEffect(() => { try { localStorage.setItem('ft-units-v1', JSON.stringify(units)) } catch {} }, [units])
+  // Keep map scale bar in sync with speed unit choice
+  useEffect(() => {
+    const ctl = (mapRef as any).__scaleCtl as maplibregl.ScaleControl | undefined
+    if (!ctl) return
+    const u: 'nautical'|'metric'|'imperial' = units.spd==='kt'?'nautical':units.spd==='mph'?'imperial':'metric'
+    try { ctl.setUnit(u) } catch {}
+  }, [units.spd])
   const [colorBy, setColorBy] = useState<'alt'|'spd'|'cat'|'mil'>(() => {
     if (typeof window === 'undefined') return 'alt'
     return (localStorage.getItem('ft-colorby-v1') as any) || 'alt'
@@ -447,6 +454,10 @@ export default function FlightMap() {
 
     map.addControl(new maplibregl.AttributionControl({ compact: true }))
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true, showCompass: true }), 'bottom-right')
+    const scaleUnit: 'nautical'|'metric'|'imperial' = units.spd==='kt'?'nautical':units.spd==='mph'?'imperial':'metric'
+    const scaleCtl = new maplibregl.ScaleControl({ maxWidth: 120, unit: scaleUnit })
+    map.addControl(scaleCtl, 'bottom-left')
+    ;(mapRef as any).__scaleCtl = scaleCtl
     map.dragRotate.enable()
     map.touchZoomRotate.enableRotation()
 
