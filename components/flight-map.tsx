@@ -62,6 +62,7 @@ import RecordsHall from './records-hall'
 import ShadowCaster from './shadow-caster'
 import DopplerScope from './doppler-scope'
 import ApproachSequencer from './approach-sequencer'
+import RoutePlanner from './route-planner'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -227,6 +228,7 @@ export default function FlightMap() {
   const [showSunGlare, setShowSunGlare] = useState<boolean>(() => lsGet('ft-sunglare', false))
   const [showGlide, setShowGlide] = useState<boolean>(() => lsGet('ft-glide', false))
   const [showCoffin, setShowCoffin] = useState<boolean>(() => lsGet('ft-coffin', false))
+  const [showRoute, setShowRoute] = useState<boolean>(() => lsGet('ft-route', false))
   const [showAnomaly, setShowAnomaly] = useState<boolean>(() => lsGet('ft-anomaly', false))
   const [showCompareStudio, setShowCompareStudio] = useState<boolean>(() => lsGet('ft-compare-studio', false))
   const [compareStudioIcaos, setCompareStudioIcaos] = useState<string[]>(() => lsGet<string[]>('ft-compare-studio-icaos', []))
@@ -320,7 +322,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity].filter(Boolean).length
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute].filter(Boolean).length
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2104,6 +2106,7 @@ export default function FlightMap() {
           { id: 'toggle-sunglare', group: 'View', label: showSunGlare ? 'Close sun glare predictor' : 'Sun glare predictor (cockpit clock + elevation)', run: () => { const nv = !showSunGlare; setShowSunGlare(nv); lsSet('ft-sunglare', nv) }, keywords: ['sun', 'glare', 'cockpit', 'clock', 'azimuth', 'elevation', 'blinding', 'visibility', 'solar'] },
           { id: 'toggle-glide', group: 'View', label: showGlide ? 'Close Glide Atlas' : 'Glide Atlas (engine-out reach + reachable airports)', run: () => { const nv = !showGlide; setShowGlide(nv); lsSet('ft-glide', nv) }, keywords: ['glide', 'engine out', 'emergency', 'reach', 'footprint', 'airport', 'safety', 'ditch', 'divert'] },
           { id: 'toggle-coffin', group: 'View', label: showCoffin ? 'Close Coffin Corner' : 'Coffin Corner (flight envelope: stall vs Mmo at altitude)', run: () => { const nv = !showCoffin; setShowCoffin(nv); lsSet('ft-coffin', nv) }, keywords: ['coffin', 'corner', 'envelope', 'stall', 'mmo', 'mach', 'buffet', 'high altitude', 'margin'] },
+          { id: 'toggle-route', group: 'View', label: showRoute ? 'Close Route Planner' : 'Route Planner (great-circle, ETP/PNR, live winds, alternates)', run: () => { const nv = !showRoute; setShowRoute(nv); lsSet('ft-route', nv) }, keywords: ['route', 'planner', 'great circle', 'etp', 'pnr', 'flight plan', 'wind', 'alternate', 'fuel'] },
           { id: 'toggle-anomaly', group: 'View', label: showAnomaly ? 'Close anomaly radar' : 'Anomaly radar (tick-to-tick state deltas)', run: () => { const nv = !showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }, keywords: ['anomaly', 'radar', 'jump', 'swerve', 'spike', 'squawk', 'flip', 'glitch', 'delta', 'detect', 'alert'] },
           { id: 'toggle-compare', group: 'View', label: showCompareStudio ? 'Close compare studio' : 'Compare studio (side-by-side spec + spider)', run: () => { const nv = !showCompareStudio; setShowCompareStudio(nv); lsSet('ft-compare-studio', nv); if (nv && selected && !compareStudioIcaos.includes(selected.icao)) { const next = [...compareStudioIcaos, selected.icao].slice(0, 4); setCompareStudioIcaos(next); lsSet('ft-compare-studio-icaos', next) } }, keywords: ['compare', 'comparison', 'side by side', 'spec', 'radar chart', 'spider', 'vs', 'diff', 'studio'] },
           { id: 'toggle-symphony', group: 'View', label: showSymphony ? 'Close Sky Symphony' : 'Sky Symphony (sonify live traffic)', run: () => { const nv = !showSymphony; setShowSymphony(nv); lsSet('ft-symphony', nv) }, keywords: ['symphony', 'synth', 'audio', 'sound', 'music', 'sonify', 'sonification', 'tone', 'ambient', 'sound design'] },
@@ -3504,6 +3507,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showRoute && (
+        <RoutePlanner
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, ground: f.ground, windDir: f.windDir, windKts: f.windKts }))}
+          onClose={() => { setShowRoute(false); lsSet('ft-route', false) }}
+          onFlyLatLng={(lat, lng, zoom) => flyToLatLng(lat, lng, zoom)}
+        />
+      )}
+
       {showAnomaly && (
         <AnomalyRadar
           map={mapRef.current}
@@ -3918,6 +3930,7 @@ export default function FlightMap() {
               ]},
               {group:'Routes & Flow', items:[
                 ['Overhead', showOverhead, ()=>{ const nv=!showOverhead; setShowOverhead(nv); lsSet('ft-overhead', nv) }],
+                ['Route planner', showRoute, ()=>{ const nv=!showRoute; setShowRoute(nv); lsSet('ft-route', nv) }],
                 ['Approach seq', showAprSeq, ()=>{ const nv=!showAprSeq; setShowAprSeq(nv); lsSet('ft-aprseq', nv) }],
                 ['Pass-by', showPass, ()=>{ const nv=!showPass; setShowPass(nv); lsSet('ft-pass', nv) }],
                 ['Flow', showFlow, ()=>{ const nv=!showFlow; setShowFlow(nv); lsSet('ft-flow', nv) }],
