@@ -18,6 +18,7 @@ import TrafficRadar from './traffic-radar'
 import EmissionsPanel from './emissions-panel'
 import ConflictPanel, { detectConflicts, type ConflictPair } from './conflict-panel'
 import OverheadPanel from './overhead-panel'
+import HoldingPanel, { detectHolding, type HoldingHit } from './holding-panel'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -158,6 +159,10 @@ export default function FlightMap() {
   const [showEmissions, setShowEmissions] = useState<boolean>(() => lsGet('ft-em', false))
   const [showConflict, setShowConflict] = useState<boolean>(() => lsGet('ft-cflx', false))
   const [showOverhead, setShowOverhead] = useState<boolean>(() => lsGet('ft-overhead', false))
+  const [showHolding, setShowHolding] = useState<boolean>(() => lsGet('ft-hold', false))
+  const [holdMinTurn, setHoldMinTurn] = useState<number>(() => lsGet('ft-hold-turn', 360))
+  const [holdMaxRadius, setHoldMaxRadius] = useState<number>(() => lsGet('ft-hold-rad', 10))
+  const [holdMinSpan, setHoldMinSpan] = useState<number>(() => lsGet('ft-hold-span', 120))
   const [conflictLat, setConflictLat] = useState<number>(() => lsGet('ft-cflx-lat', 5))
   const [conflictVert, setConflictVert] = useState<number>(() => lsGet('ft-cflx-vert', 1000))
   const [conflictGround, setConflictGround] = useState<boolean>(() => lsGet('ft-cflx-grd', false))
@@ -498,6 +503,7 @@ export default function FlightMap() {
       map.addSource('planes', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('alt-columns', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
       map.addSource('conflicts', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+      map.addSource('holding', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
 
       // Sky / atmosphere (only renders when pitched)
       try {
@@ -619,6 +625,42 @@ export default function FlightMap() {
           'circle-stroke-color': '#0b1220',
           'circle-stroke-width': 1.5,
           'circle-opacity': 0.85,
+        },
+      })
+
+      // Holding pattern footprints
+      map.addLayer({
+        id: 'holding-fill',
+        type: 'fill',
+        source: 'holding',
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: {
+          'fill-color': ['get', 'color'],
+          'fill-opacity': 0.10,
+        },
+      })
+      map.addLayer({
+        id: 'holding-outline',
+        type: 'line',
+        source: 'holding',
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 1.5,
+          'line-dasharray': [3, 2],
+          'line-opacity': 0.85,
+        },
+      })
+      map.addLayer({
+        id: 'holding-center',
+        type: 'circle',
+        source: 'holding',
+        filter: ['==', ['geometry-type'], 'Point'],
+        paint: {
+          'circle-radius': 4,
+          'circle-color': ['get', 'color'],
+          'circle-stroke-color': '#0b1220',
+          'circle-stroke-width': 1.5,
         },
       })
 
@@ -995,6 +1037,52 @@ export default function FlightMap() {
     }
     src.setData({ type: 'FeatureCollection', features: feats } as any)
   }, [conflicts, mapReady])
+
+  /* ---- Holding pattern detection ---- */
+  const holdingHits = useMemo<HoldingHit[]>(() => {
+    if (!showHolding) return []
+    return detectHolding(
+      filtered.map(f => ({
+        icao: f.icao, callsign: f.callsign, registration: f.registration,
+        type: f.type, operator: f.operator,
+        lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt,
+        track: f.track, velocityKts: f.velocityKts,
+      })),
+      trailsRef.current,
+      { minTurnDeg: holdMinTurn, maxRadiusNm: holdMaxRadius, minSpanSec: holdMinSpan },
+    )
+  }, [filtered, showHolding, holdMinTurn, holdMaxRadius, holdMinSpan, flights])
+
+  useEffect(() => {
+    const m = mapRef.current; if (!m || !mapReady) return
+    const src = m.getSource('holding') as maplibregl.GeoJSONSource | undefined
+    if (!src) return
+    const feats: any[] = []
+    for (const h of holdingHits) {
+      const color = h.loops >= 2 ? '#f59e0b' : h.loops >= 1.2 ? '#fbbf24' : '#fcd34d'
+      // approximate circle polygon
+      const N = 48
+      const coords: [number, number][] = []
+      const latRad = (h.centerLat * Math.PI) / 180
+      const dLat = h.radiusNm / 60
+      const dLng = h.radiusNm / (60 * Math.max(Math.cos(latRad), 0.0001))
+      for (let i = 0; i <= N; i++) {
+        const a = (i / N) * Math.PI * 2
+        coords.push([h.centerLng + dLng * Math.cos(a), h.centerLat + dLat * Math.sin(a)])
+      }
+      feats.push({
+        type: 'Feature',
+        properties: { color, icao: h.icao, callsign: h.callsign },
+        geometry: { type: 'Polygon', coordinates: [coords] },
+      })
+      feats.push({
+        type: 'Feature',
+        properties: { color, icao: h.icao, callsign: h.callsign },
+        geometry: { type: 'Point', coordinates: [h.centerLng, h.centerLat] },
+      })
+    }
+    src.setData({ type: 'FeatureCollection', features: feats } as any)
+  }, [holdingHits, mapReady])
 
   /* ---- Render planes (symbol layer) + 60fps dead-reckon interpolation ---- */
   // Snapshot of last-known authoritative positions per icao
@@ -1582,6 +1670,7 @@ export default function FlightMap() {
             <Toggle on={showEmissions} onClick={()=>{ const nv = !showEmissions; setShowEmissions(nv); lsSet('ft-em', nv) }} label="CO₂" />
             <Toggle on={showConflict} onClick={()=>{ const nv = !showConflict; setShowConflict(nv); lsSet('ft-cflx', nv) }} label="CFLX" />
             <Toggle on={showOverhead} onClick={()=>{ const nv = !showOverhead; setShowOverhead(nv); lsSet('ft-overhead', nv) }} label="OVHD" />
+            <Toggle on={showHolding} onClick={()=>{ const nv = !showHolding; setShowHolding(nv); lsSet('ft-hold', nv) }} label="HOLD" />
             <Toggle on={isFullscreen} onClick={toggleFullscreen} label={isFullscreen?'Exit FS':'Fullscreen'} hint="F" />
           </div>
           <div className="relative hidden sm:block">
@@ -2518,6 +2607,25 @@ export default function FlightMap() {
             const f = flights.find(ff => ff.icao === icao)
             if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 }) } catch {} }
           }}
+        />
+      )}
+
+      {showHolding && (
+        <HoldingPanel
+          hits={holdingHits}
+          minTurnDeg={holdMinTurn}
+          maxRadiusNm={holdMaxRadius}
+          minSpanSec={holdMinSpan}
+          onChangeTurn={(v) => { setHoldMinTurn(v); lsSet('ft-hold-turn', v) }}
+          onChangeRadius={(v) => { setHoldMaxRadius(v); lsSet('ft-hold-rad', v) }}
+          onChangeSpan={(v) => { setHoldMinSpan(v); lsSet('ft-hold-span', v) }}
+          onSelect={(icao) => {
+            const f = flights.find(ff => ff.icao === icao)
+            const hit = holdingHits.find(h => h.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null) }
+            if (hit) { try { mapRef.current?.flyTo({ center: [hit.centerLng, hit.centerLat], zoom: Math.max(mapRef.current.getZoom(), 9), duration: 700 }) } catch {} }
+          }}
+          onClose={() => { setShowHolding(false); lsSet('ft-hold', false) }}
         />
       )}
 
