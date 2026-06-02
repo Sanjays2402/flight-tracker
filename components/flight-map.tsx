@@ -68,6 +68,7 @@ import SuaMonitor from './sua-monitor'
 import ShearAtlas from './shear-atlas'
 import CosmicDose from './cosmic-dose'
 import HypoxiaMonitor from './hypoxia-monitor'
+import CostIndex from './cost-index'
 import StepClimb from './step-climb'
 import EtopsMonitor from './etops-monitor'
 import JetStreamFinder from './jetstream-finder'
@@ -258,6 +259,7 @@ export default function FlightMap() {
   const [showShear, setShowShear] = useState<boolean>(() => lsGet('ft-shear', false))
   const [showCosmic, setShowCosmic] = useState<boolean>(() => lsGet('ft-cosmic', false))
   const [showHypoxia, setShowHypoxia] = useState<boolean>(() => lsGet('ft-hypoxia', false))
+  const [showCostIdx, setShowCostIdx] = useState<boolean>(() => lsGet('ft-costidx', false))
   const [showStepClimb, setShowStepClimb] = useState<boolean>(() => lsGet('ft-stepclimb', false))
   const [showEtops, setShowEtops] = useState<boolean>(() => lsGet('ft-etops', false))
   const [showDepSeq, setShowDepSeq] = useState<boolean>(() => lsGet('ft-depseq', false))
@@ -372,7 +374,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg].filter(Boolean).length
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg].filter(Boolean).length + (showCostIdx?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2161,6 +2163,7 @@ export default function FlightMap() {
           { id: 'toggle-shear', group: 'View', label: showShear ? 'Close Shear Atlas' : 'Shear Atlas (vertical + horizontal wind shear hotspots / turbulence probability grid)', run: () => { const nv = !showShear; setShowShear(nv); lsSet('ft-shear', nv) }, keywords: ['shear', 'turbulence', 'wind', 'cat', 'bumps', 'gradient', 'hotspot'] },
           { id: 'toggle-cosmic', group: 'View', label: showCosmic ? 'Close Cosmic Dose' : 'Cosmic Dose Monitor (GCR radiation exposure uSv/h by altitude and geomagnetic latitude)', run: () => { const nv = !showCosmic; setShowCosmic(nv); lsSet('ft-cosmic', nv) }, keywords: ['cosmic', 'radiation', 'gcr', 'dose', 'usv', 'msv', 'crew', 'polar', 'rigidity', 'solar', 'shielding'] },
           { id: 'toggle-hypoxia', group: 'View', label: showHypoxia ? 'Close Hypoxia Monitor' : 'Hypoxia Monitor (decompression TUC + emergency descent survivability)', run: () => { const nv = !showHypoxia; setShowHypoxia(nv); lsSet('ft-hypoxia', nv) }, keywords: ['hypoxia', 'decompression', 'tuc', 'oxygen', 'cabin', 'descent', 'emergency', 'pressurization', 'rapid', 'fl100'] },
+          { id: 'toggle-costidx', group: 'View', label: showCostIdx ? 'Close Cost Index' : 'Cost Index (Mach vs LRC/MMO economic estimator)', run: () => { const nv = !showCostIdx; setShowCostIdx(nv); lsSet('ft-costidx', nv) }, keywords: ['cost index', 'ci', 'mach', 'lrc', 'mmo', 'fuel', 'economy', 'sfc', 'time value', 'block time'] },
           { id: 'toggle-stepclimb', group: 'View', label: showStepClimb ? 'Close Step Climb Advisor' : 'Step Climb Advisor (fuel-efficiency optimum FL recommender)', run: () => { const nv = !showStepClimb; setShowStepClimb(nv); lsSet('ft-stepclimb', nv) }, keywords: ['step', 'climb', 'sar', 'fuel', 'efficient', 'cruise', 'optimum', 'flight level', 'cost', 'tailwind', 'savings'] },
           { id: 'toggle-etops', group: 'View', label: showEtops ? 'Close ETOPS Monitor' : 'ETOPS Monitor (single-engine diversion alternates)', run: () => { const nv = !showEtops; setShowEtops(nv); lsSet('ft-etops', nv) }, keywords: ['etops', 'diversion', 'alternate', 'single', 'engine', 'oei', 'rating', 'twin', 'oceanic', 'overwater'] },
           { id: 'toggle-depseq', group: 'View', label: showDepSeq ? 'Close Departure Sequencer' : 'Departure Sequencer (initial-climb wake & order)', run: () => { const nv = !showDepSeq; setShowDepSeq(nv); lsSet('ft-depseq', nv) }, keywords: ['departure', 'depart', 'takeoff', 'climb', 'wake', 'sequence', 'sid', 'initial', 'sequencer'] },
@@ -3626,6 +3629,18 @@ export default function FlightMap() {
         />
       )}
 
+      {showCostIdx && (
+        <CostIndex
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, vertRate: f.vertRate, track: f.track, mach: f.mach, ground: f.ground }))}
+          onClose={() => { setShowCostIdx(false); lsSet('ft-costidx', false) }}
+          onFly={(icao) => {
+            const f = flights.find(x => x.icao === icao)
+            if (f) { setSelected(f); setSelectedAirport(null); try { mapRef.current?.flyTo({ center: [f.lng, f.lat], zoom: Math.max(mapRef.current.getZoom(), 6), duration: 700 }) } catch {} }
+          }}
+        />
+      )}
+
       {showStepClimb && (
         <StepClimb
           map={mapRef.current}
@@ -4277,6 +4292,7 @@ export default function FlightMap() {
                 ['Density', showDensity, ()=>{ const nv=!showDensity; setShowDensity(nv); lsSet('ft-dens', nv) }],
                 ['Voronoi', showVoronoi, ()=>{ const nv=!showVoronoi; setShowVoronoi(nv); lsSet('ft-voronoi', nv) }],
                 ['Records', showRecords, ()=>{ const nv=!showRecords; setShowRecords(nv); lsSet('ft-records', nv) }],
+                ['Cost index', showCostIdx, ()=>{ const nv=!showCostIdx; setShowCostIdx(nv); lsSet('ft-costidx', nv) }],
               ]},
               {group:'Routes & Flow', items:[
                 ['Overhead', showOverhead, ()=>{ const nv=!showOverhead; setShowOverhead(nv); lsSet('ft-overhead', nv) }],
