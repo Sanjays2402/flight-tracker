@@ -22,6 +22,7 @@ import HoldingPanel, { detectHolding, type HoldingHit } from './holding-panel'
 import AltitudeLadder from './altitude-ladder'
 import CockpitHUD from './cockpit-hud'
 import RulerTool from './ruler-tool'
+import PipMinimap from './pip-minimap'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -166,6 +167,8 @@ export default function FlightMap() {
   const [showLadder, setShowLadder] = useState<boolean>(() => lsGet('ft-ladder', false))
   const [showCockpit, setShowCockpit] = useState<boolean>(() => lsGet('ft-pfd', false))
   const [showRuler, setShowRuler] = useState<boolean>(false)
+  const [showPip, setShowPip] = useState<boolean>(() => { try { return localStorage.getItem('ft-pip') === '1' } catch { return false } })
+  const [pipRadius, setPipRadius] = useState<number>(() => { try { const n = Number(localStorage.getItem('ft-pip-r') || '80'); return Number.isFinite(n) && n > 5 ? n : 80 } catch { return 80 } })
   const [holdMinTurn, setHoldMinTurn] = useState<number>(() => lsGet('ft-hold-turn', 360))
   const [holdMaxRadius, setHoldMaxRadius] = useState<number>(() => lsGet('ft-hold-rad', 10))
   const [holdMinSpan, setHoldMinSpan] = useState<number>(() => lsGet('ft-hold-span', 120))
@@ -1604,6 +1607,7 @@ export default function FlightMap() {
           { id: 'toggle-list', group: 'View', label: showList ? 'Hide flight list' : 'Show flight list', hint: 'L', run: () => setShowList(v => !v) },
           { id: 'toggle-radar', group: 'View', label: showRadar ? 'Hide traffic radar' : 'Show traffic radar', run: () => { const nv = !showRadar; setShowRadar(nv); lsSet('ft-radar', nv) }, keywords: ['scope', 'tcas', 'ppi'] },
           { id: 'toggle-ruler', group: 'View', label: showRuler ? 'Close great-circle ruler' : 'Great-circle ruler (measure distance)', run: () => setShowRuler(v => !v), keywords: ['measure', 'distance', 'ruler', 'geodesic'] },
+          { id: 'toggle-pip', group: 'View', label: showPip ? 'Hide picture-in-picture mini-map' : 'Show picture-in-picture mini-map', run: () => { setShowPip(v => { const nv = !v; try { localStorage.setItem('ft-pip', nv ? '1' : '0') } catch {}; return nv }) }, keywords: ['pip', 'minimap', 'mini', 'inset', 'follow'] },
           { id: 'toggle-3d', group: 'Mode', label: show3D ? 'Exit 3D view' : 'Enter 3D view', run: () => setShow3D(v => !v) },
           { id: 'toggle-chase', group: 'Mode', label: chase ? 'Stop chase camera' : 'Start chase camera (select a plane first)', run: () => { if (!selected) return; setChase(v => { const nv = !v; chaseRef.current = nv; if (nv) setShow3D(true); return nv }) } },
           { id: 'toggle-follow', group: 'Mode', label: follow ? 'Stop follow' : 'Follow selected plane', hint: 'F', run: () => { if (selected) setFollow(v => !v) } },
@@ -2687,6 +2691,16 @@ export default function FlightMap() {
 
       {showRuler && (
         <RulerTool map={mapRef.current} onClose={() => setShowRuler(false)} />
+      )}
+
+      {showPip && (
+        <PipMinimap
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, lat: f.lat, lng: f.lng, track: f.track, altitudeFt: f.altitudeFt, ground: f.ground, emergency: f.emergency }))}
+          selected={selected ? { icao: selected.icao, callsign: selected.callsign, lat: selected.lat, lng: selected.lng, track: selected.track, altitudeFt: selected.altitudeFt, ground: selected.ground, emergency: selected.emergency } : null}
+          radiusNm={pipRadius}
+          onClose={() => { setShowPip(false); try { localStorage.setItem('ft-pip', '0') } catch {} }}
+          onZoom={() => { if (selected && mapRef.current) { try { mapRef.current.flyTo({ center: [selected.lng, selected.lat], zoom: Math.max(mapRef.current.getZoom(), 10), duration: 700 }) } catch {} } }}
+        />
       )}
 
       {/* About link in bottom-left, only when nothing selected */}
