@@ -127,6 +127,7 @@ import RedispatchMonitor from './redispatch-monitor'
 import OptAltCruise from './optalt-cruise'
 import MsawController from './msaw-controller'
 import PirepMonitor from './pirep-monitor'
+import TdwrLlwas from './tdwr-llwas'
 import SigmetAirmet from './sigmet-airmet'
 import TfmInitiatives from './tfm-initiatives'
 import LahsoMonitor from './lahso-monitor'
@@ -502,6 +503,7 @@ export default function FlightMap() {
   const [showOptAlt, setShowOptAlt] = useState<boolean>(() => lsGet('ft-optalt', false))
   const [showMsaw, setShowMsaw] = useState<boolean>(() => lsGet('ft-msaw', false))
   const [showPirep, setShowPirep] = useState<boolean>(() => lsGet('ft-pirep', false))
+  const [showTdwr, setShowTdwr] = useState<boolean>(() => lsGet('ft-tdwr', false))
   const [showSigmet, setShowSigmet] = useState<boolean>(() => lsGet('ft-sigmet', false))
   const [showLahso, setShowLahso] = useState<boolean>(() => lsGet('ft-lahso', false))
   const [showMora, setShowMora] = useState<boolean>(() => lsGet('ft-mora', false))
@@ -640,6 +642,7 @@ export default function FlightMap() {
   + (showPrm?1:0)
   + (showO2dur?1:0)
   + (showDatis?1:0)
+  + (showTdwr?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -5031,6 +5034,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showTdwr && (
+        <TdwrLlwas
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowTdwr(false); lsSet('ft-tdwr', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 9) } }}
+        />
+      )}
+
       {showSigmet && (
         <SigmetAirmet
           map={mapRef.current}
@@ -5949,6 +5961,7 @@ export default function FlightMap() {
                 ['Re-dispatch · RDP fuel reserve (FAR 121.631(c) / RCF)', showRedispatch, ()=>{ const nv=!showRedispatch; setShowRedispatch(nv); lsSet('ft-redispatch', nv) }],
                 ['Optimum-Altitude · SAR / tropopause / step-climb (AC 120-103A)', showOptAlt, ()=>{ const nv=!showOptAlt; setShowOptAlt(nv); lsSet('ft-optalt', nv) }],
                 ['MSAW · APW controller-side low-altitude warning (JO 7110.65 §5-15)', showMsaw, ()=>{ const nv=!showMsaw; setShowMsaw(nv); lsSet('ft-msaw', nv) }],
+                ['TDWR / LLWAS-NE · terminal wind-shear / microburst (JO 7110.65 §3-1-8 / AC 00-54 / ICAO Doc 9817)', showTdwr, ()=>{ const nv=!showTdwr; setShowTdwr(nv); lsSet('ft-tdwr', nv) }],
                 ['RNP / PBN', showRnp, ()=>{ const nv=!showRnp; setShowRnp(nv); lsSet('ft-rnp', nv) }],
                 ['SATCOM/HF', showSatcom, ()=>{ const nv=!showSatcom; setShowSatcom(nv); lsSet('ft-satcom', nv) }],
                 ['RTA / 4D', showRta, ()=>{ const nv=!showRta; setShowRta(nv); lsSet('ft-rta', nv) }],
