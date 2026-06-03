@@ -122,6 +122,7 @@ import BleedFume from './bleed-fume'
 import DeiceHot from './deice-hot'
 import PStaticMonitor from './pstatic-monitor'
 import RelightEnvelope from './relight-envelope'
+import HotSectionLcf from './hotsection-lcf'
 import RecatWake from './recat-wake'
 import EaiPenalty from './eai-penalty'
 import SpaceWeatherMonitor from './space-weather'
@@ -375,6 +376,7 @@ export default function FlightMap() {
   const [showTailStrike, setShowTailStrike] = useState<boolean>(() => lsGet('ft-tailstrike', false))
   const [showRera, setShowRera] = useState<boolean>(() => lsGet('ft-rera', false))
   const [showRelight, setShowRelight] = useState<boolean>(() => lsGet('ft-relight', false))
+  const [showHotsec, setShowHotsec] = useState<boolean>(() => lsGet('ft-hotsec', false))
   const [showTaws, setShowTaws] = useState<boolean>(() => lsGet('ft-taws', false))
   const [showCtot, setShowCtot] = useState<boolean>(() => lsGet('ft-ctot', false))
   const [showRecat, setShowRecat] = useState<boolean>(() => lsGet('ft-recat', false))
@@ -489,7 +491,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0) + (showSpwx?1:0) + (showFoqa?1:0) + (showEgt?1:0) + (showPolar?1:0) + (showLibat?1:0) + (showRexhyd?1:0) + (showCgTrim?1:0) + (showOwl?1:0) + (showNadp?1:0) + (showRecat?1:0) + (showUas?1:0) + (showBleed?1:0) + (showDeice?1:0) + (showPstatic?1:0) + (showFlutter?1:0) + (showStall?1:0) + (showTailStrike?1:0) + (showTaws?1:0) + (showCtot?1:0) + (showRera?1:0) + (showEai?1:0) + (showTold?1:0) + (showRelight?1:0)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0) + (showSpwx?1:0) + (showFoqa?1:0) + (showEgt?1:0) + (showPolar?1:0) + (showLibat?1:0) + (showRexhyd?1:0) + (showCgTrim?1:0) + (showOwl?1:0) + (showNadp?1:0) + (showRecat?1:0) + (showUas?1:0) + (showBleed?1:0) + (showDeice?1:0) + (showPstatic?1:0) + (showFlutter?1:0) + (showStall?1:0) + (showTailStrike?1:0) + (showTaws?1:0) + (showCtot?1:0) + (showRera?1:0) + (showEai?1:0) + (showTold?1:0) + (showRelight?1:0) + (showHotsec?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2336,6 +2338,7 @@ export default function FlightMap() {
           { id: 'toggle-tailstrike', group: 'View', label: showTailStrike ? 'Close Tail Strike / Rotation Geometry Monitor' : 'Tail Strike / Rotation Geometry Risk Monitor (FCTM 3.20 / AC 25-7C / long-body pitch clearance)', run: () => { const nv = !showTailStrike; setShowTailStrike(nv); lsSet('ft-tailstrike', nv) }, keywords: ['tail strike', 'tailstrike', 'tail-strike', 'rotation', 'pitch attitude', 'long body', 'long-body', 'b777-300', 'a330-300', 'a340-600', 'a350-1000', 'b737-900', 'b737 max 10', 'fctm 3.20', 'fctm', 'pitch clearance', 'liftoff', 'rotation rate', 'over-rotation', 'over rotation', 'sq286', 'singapore airlines tail strike', 'derate', 'flare'] },
           { id: 'toggle-rera', group: 'View', label: showRera ? 'Close Runway Excursion Risk Monitor' : 'Runway Excursion Risk Monitor (TALPA RCAM / LDA margin / contamination / xwind)', run: () => { const nv = !showRera; setShowRera(nv); lsSet('ft-rera', nv) }, keywords: ['runway excursion', 'rera', 'overrun', 'talpa', 'rcam', 'landing distance', 'lda', 'ldr', 'contamination', 'crosswind', 'tailwind', 'wet runway', 'snow runway', 'go-around', 'go around', 'ac 25-32', 'ac 91-79b', 'unstable approach', 'aquaplaning', 'hydroplane', 'short runway', 'lcy', 'mdw', 'burbank', 'teterboro', 'lga', 'dca'] },
           { id: 'toggle-relight', group: 'View', label: showRelight ? 'Close Engine Relight / Windmill Restart Envelope Monitor' : 'Engine Relight Envelope · Windmill / Starter-Assist · TTR / APU / Fuel-Temp / ITT (FCOM 5.30 / PRO-ABN-70 / AC 25-22)', run: () => { const nv = !showRelight; setShowRelight(nv); lsSet('ft-relight', nv) }, keywords: ['relight', 'restart', 'windmill', 'ifsd', 'in-flight shutdown', 'engine out', 'starter', 'apu', 'fcom 5.30', 'pro-abn-70', 'ac 25-22', 'cs-25.903', 'ttr', 'time to relight', 'fuel temp', 'cold soak', 'itt', 'hot start', 'jet-a freeze', 'driftdown', 'envelope'] },
+          { id: 'toggle-hotsec', group: 'View', label: showHotsec ? 'Close Hot-Section LCF / Engine Shop-Visit Predictor' : 'Hot-Section LCF · EGT Margin Erosion · LCF Cycles · Shop-Visit Predictor (14 CFR 33.70 / AC 33.70-1 / CS-E 515)', run: () => { const nv = !showHotsec; setShowHotsec(nv); lsSet('ft-hotsec', nv) }, keywords: ['hot section', 'lcf', 'low cycle fatigue', 'ellp', 'shop visit', 'tbsv', 'egt margin', 'engine life', 'derate', 'severity', 'genx', 'cfm56', 'leap', 'trent', 'cf6', 'pw1100g', 'borescope', '33.70', 'ac 33.70-1', 'cs-e 515', 'msg-3', 'arp 5757'] },
           { id: 'toggle-taws', group: 'View', label: showTaws ? 'Close EGPWS / TAWS Mode 1-7 Predictor' : 'EGPWS / TAWS Mode 1-7 Alert Predictor (DO-161A / DO-367 / TSO-C151d / Honeywell MK-V/VII/VIII)', run: () => { const nv = !showTaws; setShowTaws(nv); lsSet('ft-taws', nv) }, keywords: ['taws', 'egpws', 'gpws', 'terrain', 'pull up', 'pullup', 'sink rate', 'mode 1', 'mode 2', 'mode 3', 'mode 4', 'mode 5', 'mode 6', 'mode 7', 'windshear', 'glideslope', 'too low terrain', 'too low gear', 'too low flaps', "don't sink", 'dont sink', 'bank angle', 'minimums', 'rad alt', 'radalt', 'cfit', 'controlled flight into terrain', 'honeywell', 'mk-v', 'mk-vii', 'mk-viii', 'do-161a', 'do-367', 'tso-c151', 'tcf', 'terrain clearance floor', 'look-ahead', 'forward looking windshear'] },
           { id: 'toggle-ctot', group: 'View', label: showCtot ? 'Close CTOT / ATFM Slot Monitor' : 'CTOT / ATFM Slot Compliance (EUROCONTROL CFMU / FAA EDCT / slot adherence)', run: () => { const nv = !showCtot; setShowCtot(nv); lsSet('ft-ctot', nv) }, keywords: ['ctot', 'atfm', 'cfmu', 'eurocontrol', 'edct', 'slot', 'departure slot', 'flow management', 'regulation', 'ground stop', 'expect departure clearance', 'sip slot', 'atfcm', 'network manager', 'nm', 'slot adherence'] },
           { id: 'toggle-recat', group: 'View', label: showRecat ? 'Close RECAT-EU Wake Separation Monitor' : 'RECAT-EU Pairwise Wake Vortex Separation Monitor (ICAO Doc 9426 / EUROCONTROL RECAT 6-cat matrix)', run: () => { const nv = !showRecat; setShowRecat(nv); lsSet('ft-recat', nv) }, keywords: ['recat', 'wake', 'vortex', 'separation', 'eurocontrol', 'icao doc 9426', 'faa jo 7110.659', 'pairwise', 'leader follower', 'cat-a', 'cat-b', 'cat-c', 'cat-d', 'cat-e', 'cat-f', 'super heavy', 'a380', 'b777'] },
@@ -4383,6 +4386,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showHotsec && (
+        <HotSectionLcf
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowHotsec(false); lsSet('ft-hotsec', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
+
       {showRecat && (
         <RecatWake
           map={mapRef.current}
@@ -5030,6 +5042,7 @@ export default function FlightMap() {
                 ['Workload TLX', showWkld, ()=>{ const nv=!showWkld; setShowWkld(nv); lsSet('ft-wkld', nv) }],
                 ['FOQA exceedance', showFoqa, ()=>{ const nv=!showFoqa; setShowFoqa(nv); lsSet('ft-foqa', nv) }],
                 ['EGT margin', showEgt, ()=>{ const nv=!showEgt; setShowEgt(nv); lsSet('ft-egt', nv) }],
+                ['Hot-section LCF', showHotsec, ()=>{ const nv=!showHotsec; setShowHotsec(nv); lsSet('ft-hotsec', nv) }],
                 ['Mmo/Vmo flutter', showFlutter, ()=>{ const nv=!showFlutter; setShowFlutter(nv); lsSet('ft-flutter', nv) }],
                 ['Stall margin / α-floor', showStall, ()=>{ const nv=!showStall; setShowStall(nv); lsSet('ft-stall', nv) }],
                 ['Tail strike rotation', showTailStrike, ()=>{ const nv=!showTailStrike; setShowTailStrike(nv); lsSet('ft-tailstrike', nv) }],
