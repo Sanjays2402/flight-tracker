@@ -113,6 +113,7 @@ import OwlJettison from './owl-jettison'
 import UasPitot from './uas-pitot'
 import FlutterMargin from './flutter-margin'
 import StallMargin from './stall-margin'
+import TailStrike from './tail-strike'
 import BleedFume from './bleed-fume'
 import DeiceHot from './deice-hot'
 import PStaticMonitor from './pstatic-monitor'
@@ -364,6 +365,7 @@ export default function FlightMap() {
   const [showPstatic, setShowPstatic] = useState<boolean>(() => lsGet('ft-pstatic', false))
   const [showFlutter, setShowFlutter] = useState<boolean>(() => lsGet('ft-flutter', false))
   const [showStall, setShowStall] = useState<boolean>(() => lsGet('ft-stall', false))
+  const [showTailStrike, setShowTailStrike] = useState<boolean>(() => lsGet('ft-tailstrike', false))
   const [showRecat, setShowRecat] = useState<boolean>(() => lsGet('ft-recat', false))
   const [showSidc, setShowSidc] = useState<boolean>(() => lsGet('ft-sidc', false))
   const [showRvsm, setShowRvsm] = useState<boolean>(() => lsGet('ft-rvsm', false))
@@ -475,7 +477,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0) + (showSpwx?1:0) + (showFoqa?1:0) + (showEgt?1:0) + (showPolar?1:0) + (showLibat?1:0) + (showRexhyd?1:0) + (showCgTrim?1:0) + (showOwl?1:0) + (showNadp?1:0) + (showRecat?1:0) + (showUas?1:0) + (showBleed?1:0) + (showDeice?1:0) + (showPstatic?1:0) + (showFlutter?1:0) + (showStall?1:0)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0) + (showSpwx?1:0) + (showFoqa?1:0) + (showEgt?1:0) + (showPolar?1:0) + (showLibat?1:0) + (showRexhyd?1:0) + (showCgTrim?1:0) + (showOwl?1:0) + (showNadp?1:0) + (showRecat?1:0) + (showUas?1:0) + (showBleed?1:0) + (showDeice?1:0) + (showPstatic?1:0) + (showFlutter?1:0) + (showStall?1:0) + (showTailStrike?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2318,6 +2320,7 @@ export default function FlightMap() {
           { id: 'toggle-pstatic', group: 'View', label: showPstatic ? 'Close P-Static / Comm-Link Degradation Monitor' : 'P-Static / Precipitation-Static Comms-Degradation Monitor (DO-160G / AC 25.1316-1A / ARP 5577)', run: () => { const nv = !showPstatic; setShowPstatic(nv); lsSet('ft-pstatic', nv) }, keywords: ['p-static', 'pstatic', 'precipitation static', 'static discharger', 'sda', 'wick', 'corona', 'st elmo', 'st elmos fire', 'do-160', 'do-160g', 'ac 25.1316', 'arp 5577', 'vhf dropout', 'adf wander', 'comm loss', 'tribelectric', 'triboelectric', 'cirrus', 'ice crystal', 'bonding', 'esd', 'hirf', 'satcom', 'hf'] },
           { id: 'toggle-flutter', group: 'View', label: showFlutter ? 'Close Mmo/Vmo Flutter Margin Monitor' : 'Mmo/Vmo Barber-Pole & Aeroelastic Flutter Margin Monitor (FAR 25.335 / 25.629 / CS-25.629)', run: () => { const nv = !showFlutter; setShowFlutter(nv); lsSet('ft-flutter', nv) }, keywords: ['flutter', 'mmo', 'vmo', 'barber pole', 'barber-pole', 'mach tuck', 'mach-tuck', 'overspeed', 'aeroelastic', 'far 25.335', 'far 25.629', 'cs-25.629', 'flutter margin', 'casb', 'high speed warning', 'china airlines 006', 'damper', 'free play', 'control surface'] },
           { id: 'toggle-stall', group: 'View', label: showStall ? 'Close Stall Margin / Alpha-Floor Monitor' : 'Stall Margin / Alpha-Floor / Stick-Shaker Monitor (FAR 25.103 / 25.207 / FCOM 5.25 / alpha-prot)', run: () => { const nv = !showStall; setShowStall(nv); lsSet('ft-stall', nv) }, keywords: ['stall', 'vs1g', 'alpha', 'alpha floor', 'alpha-floor', 'alpha prot', 'alpha-prot', 'stick shaker', 'stick-shaker', 'stick pusher', 'far 25.103', 'far 25.207', 'cs-25.103', 'cs-25.207', 'buffet', 'coffin corner', 'colgan 3407', 'af447', 'icing stall', 'upset recovery', 'fcom 5.25'] },
+          { id: 'toggle-tailstrike', group: 'View', label: showTailStrike ? 'Close Tail Strike / Rotation Geometry Monitor' : 'Tail Strike / Rotation Geometry Risk Monitor (FCTM 3.20 / AC 25-7C / long-body pitch clearance)', run: () => { const nv = !showTailStrike; setShowTailStrike(nv); lsSet('ft-tailstrike', nv) }, keywords: ['tail strike', 'tailstrike', 'tail-strike', 'rotation', 'pitch attitude', 'long body', 'long-body', 'b777-300', 'a330-300', 'a340-600', 'a350-1000', 'b737-900', 'b737 max 10', 'fctm 3.20', 'fctm', 'pitch clearance', 'liftoff', 'rotation rate', 'over-rotation', 'over rotation', 'sq286', 'singapore airlines tail strike', 'derate', 'flare'] },
           { id: 'toggle-recat', group: 'View', label: showRecat ? 'Close RECAT-EU Wake Separation Monitor' : 'RECAT-EU Pairwise Wake Vortex Separation Monitor (ICAO Doc 9426 / EUROCONTROL RECAT 6-cat matrix)', run: () => { const nv = !showRecat; setShowRecat(nv); lsSet('ft-recat', nv) }, keywords: ['recat', 'wake', 'vortex', 'separation', 'eurocontrol', 'icao doc 9426', 'faa jo 7110.659', 'pairwise', 'leader follower', 'cat-a', 'cat-b', 'cat-c', 'cat-d', 'cat-e', 'cat-f', 'super heavy', 'a380', 'b777'] },
           { id: 'toggle-sidc', group: 'View', label: showSidc ? 'Close SID Climb Gradient Monitor' : 'SID Climb Gradient Monitor (departure PDG compliance)', run: () => { const nv = !showSidc; setShowSidc(nv); lsSet('ft-sidc', nv) }, keywords: ['sid', 'pdg', 'climb gradient', 'departure', 'obstacle clearance', 'pans-ops', 'terps', '8260.3', '8168', 'innsbruck', 'aspen', 'der'] },
           { id: 'toggle-rvsm', group: 'View', label: showRvsm ? 'Close RVSM Compliance Monitor' : 'RVSM Compliance Monitor (altitude-keeping / TVE / prox)', run: () => { const nv = !showRvsm; setShowRvsm(nv); lsSet('ft-rvsm', nv) }, keywords: ['rvsm', 'reduced vertical separation', 'altitude keeping', 'tve', 'total vertical error', 'ase', 'altimetry', 'icao 9574', 'ac 91-85', 'amc 20-13', 'aad', 'assigned altitude deviation', 'altitude bust', 'separation loss'] },
@@ -4281,6 +4284,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showTailStrike && (
+        <TailStrike
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowTailStrike(false); lsSet('ft-tailstrike', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
+
       {showBleed && (
         <BleedFume
           map={mapRef.current}
@@ -4946,6 +4958,7 @@ export default function FlightMap() {
                 ['EGT margin', showEgt, ()=>{ const nv=!showEgt; setShowEgt(nv); lsSet('ft-egt', nv) }],
                 ['Mmo/Vmo flutter', showFlutter, ()=>{ const nv=!showFlutter; setShowFlutter(nv); lsSet('ft-flutter', nv) }],
                 ['Stall margin / α-floor', showStall, ()=>{ const nv=!showStall; setShowStall(nv); lsSet('ft-stall', nv) }],
+                ['Tail strike rotation', showTailStrike, ()=>{ const nv=!showTailStrike; setShowTailStrike(nv); lsSet('ft-tailstrike', nv) }],
               ]},
               {group:'Routes & Flow', items:[
                 ['Overhead', showOverhead, ()=>{ const nv=!showOverhead; setShowOverhead(nv); lsSet('ft-overhead', nv) }],
