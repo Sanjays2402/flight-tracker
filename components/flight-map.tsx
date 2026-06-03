@@ -103,6 +103,7 @@ import CdaCompliance from './cda-compliance'
 import BrakeEnergy from './brake-energy'
 import MissedApproach from './missed-approach'
 import VhfCongestion from './vhf-congestion'
+import SpaceWeatherMonitor from './space-weather'
 import RvsmMonitor from './rvsm-monitor'
 import SpeedLimit from './speed-limit'
 import SonicBoom from './sonic-boom'
@@ -334,6 +335,7 @@ export default function FlightMap() {
   const [showBrake, setShowBrake] = useState<boolean>(() => lsGet('ft-brake', false))
   const [showMapp, setShowMapp] = useState<boolean>(() => lsGet('ft-mapp', false))
   const [showVhf, setShowVhf] = useState<boolean>(() => lsGet('ft-vhf', false))
+  const [showSpwx, setShowSpwx] = useState<boolean>(() => lsGet('ft-spwx', false))
   const [showSidc, setShowSidc] = useState<boolean>(() => lsGet('ft-sidc', false))
   const [showRvsm, setShowRvsm] = useState<boolean>(() => lsGet('ft-rvsm', false))
   const [showSpdLim, setShowSpdLim] = useState<boolean>(() => lsGet('ft-spdlim', false))
@@ -443,7 +445,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0) + (showSpwx?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2272,6 +2274,7 @@ export default function FlightMap() {
           { id: 'toggle-brake', group: 'View', label: showBrake ? 'Close Brake Energy Monitor' : 'Brake Energy & Tire-Speed Landing Monitor (AC 25-32 / CS-25)', run: () => { const nv = !showBrake; setShowBrake(nv); lsSet('ft-brake', nv) }, keywords: ['brake', 'energy', 'tire', 'lsr', 'fuse plug', 'rto', 'landing weight', 'vapp', 'vref', 'cool down', 'turnaround', 'ac 25-32', 'cs-25'] },
           { id: 'toggle-mapp', group: 'View', label: showMapp ? 'Close OEI Missed-Approach Monitor' : 'OEI Missed-Approach Climb-Gradient Monitor (PANS-OPS 2.5%)', run: () => { const nv = !showMapp; setShowMapp(nv); lsSet('ft-mapp', nv) }, keywords: ['missed approach', 'oei', 'one engine inoperative', 'climb gradient', 'pans-ops', 'go around', 'density altitude', 'koch chart', 'hot and high', 'mountain airport', 'cs-25.121'] },
           { id: 'toggle-vhf', group: 'View', label: showVhf ? 'Close VHF Voice Congestion Monitor' : 'VHF Voice Channel Congestion Monitor (Erlang-B per ACC)', run: () => { const nv = !showVhf; setShowVhf(nv); lsSet('ft-vhf', nv) }, keywords: ['vhf', 'voice', 'frequency', 'channel', 'congestion', 'erlang', 'blocking', 'ptt', 'cpdlc', 'datalink', 'acc', 'sector', 'comms', 'icao annex 10', 'doc 9863', 'controller workload'] },
+          { id: 'toggle-spwx', group: 'View', label: showSpwx ? 'Close Space Weather Impact Monitor' : 'Space Weather Impact Monitor (Kp / SEP / dose, polar HF + GNSS scintillation)', run: () => { const nv = !showSpwx; setShowSpwx(nv); lsSet('ft-spwx', nv) }, keywords: ['space', 'weather', 'kp', 'geomagnetic', 'storm', 'g-scale', 'sep', 'solar', 'particle', 'aurora', 'polar', 'hf', 'blackout', 'gnss', 'scintillation', 'cosmic', 'radiation', 'dose', 'cari', 'icao annex 3', 'noaa swpc'] },
           { id: 'toggle-sidc', group: 'View', label: showSidc ? 'Close SID Climb Gradient Monitor' : 'SID Climb Gradient Monitor (departure PDG compliance)', run: () => { const nv = !showSidc; setShowSidc(nv); lsSet('ft-sidc', nv) }, keywords: ['sid', 'pdg', 'climb gradient', 'departure', 'obstacle clearance', 'pans-ops', 'terps', '8260.3', '8168', 'innsbruck', 'aspen', 'der'] },
           { id: 'toggle-rvsm', group: 'View', label: showRvsm ? 'Close RVSM Compliance Monitor' : 'RVSM Compliance Monitor (altitude-keeping / TVE / prox)', run: () => { const nv = !showRvsm; setShowRvsm(nv); lsSet('ft-rvsm', nv) }, keywords: ['rvsm', 'reduced vertical separation', 'altitude keeping', 'tve', 'total vertical error', 'ase', 'altimetry', 'icao 9574', 'ac 91-85', 'amc 20-13', 'aad', 'assigned altitude deviation', 'altitude bust', 'separation loss'] },
           { id: 'toggle-spdlim', group: 'View', label: showSpdLim ? 'Close Speed Limit Compliance' : 'Speed Limit Compliance (FAR 91.117 / Vmo / MMO)', run: () => { const nv = !showSpdLim; setShowSpdLim(nv); lsSet('ft-spdlim', nv) }, keywords: ['speed', 'limit', 'compliance', 'far 91.117', '250 knots', '200 knots', 'vmo', 'mmo', 'kias', 'mach', 'overspeed', 'speed bust', 'cruise ceiling', 'icao annex 2', 'restriction'] },
@@ -4134,6 +4137,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showSpwx && (
+        <SpaceWeatherMonitor
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowSpwx(false); lsSet('ft-spwx', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
+
       {showSidc && (
         <SidClimb
           map={mapRef.current}
@@ -4723,6 +4735,7 @@ export default function FlightMap() {
                 ['TAF forecast', showTaf, ()=>{ const nv=!showTaf; setShowTaf(nv); lsSet('ft-taf', nv) }],
                 ['Fuel temp', showFuelTemp, ()=>{ const nv=!showFuelTemp; setShowFuelTemp(nv); lsSet('ft-fueltemp', nv) }],
                 ['Cabin ozone', showOzone, ()=>{ const nv=!showOzone; setShowOzone(nv); lsSet('ft-ozone', nv) }],
+                ['Space weather', showSpwx, ()=>{ const nv=!showSpwx; setShowSpwx(nv); lsSet('ft-spwx', nv) }],
                 ['Mag variation', showMagVar, ()=>{ const nv=!showMagVar; setShowMagVar(nv); lsSet('ft-magvar', nv) }],
               ]},
               {group:'Analysis', items:[
