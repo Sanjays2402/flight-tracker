@@ -108,6 +108,7 @@ import WorkloadIndex from './workload-index'
 import GnssIntegrity from './gnss-integrity'
 import CpdlcMonitor from './cpdlc-monitor'
 import LevelBustPredictor from './level-bust'
+import AdsbQualityMonitor from './adsb-quality'
 import OzoneMonitor from './ozone-monitor'
 import CrewDuty from './crew-duty'
 import ApproachMinimums from './approach-minimums'
@@ -332,6 +333,7 @@ export default function FlightMap() {
   const [showGnss, setShowGnss] = useState<boolean>(() => lsGet('ft-gnss', false))
   const [showCpdlc, setShowCpdlc] = useState<boolean>(() => lsGet('ft-cpdlc', false))
   const [showLbust, setShowLbust] = useState<boolean>(() => lsGet('ft-lbust', false))
+  const [showAdsbq, setShowAdsbq] = useState<boolean>(() => lsGet('ft-adsbq', false))
   const [showOzone, setShowOzone] = useState<boolean>(() => lsGet('ft-ozone', false))
   const [showCrew, setShowCrew] = useState<boolean>(() => lsGet('ft-crewduty', false))
   const [showAnomaly, setShowAnomaly] = useState<boolean>(() => lsGet('ft-anomaly', false))
@@ -428,7 +430,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2263,6 +2265,7 @@ export default function FlightMap() {
           { id: 'toggle-gnss', group: 'View', label: showGnss ? 'Close GNSS Integrity Monitor' : 'GNSS Integrity Monitor (GPS jamming / spoofing hotspots, RAIM HPL, IRS drift)', run: () => { const nv = !showGnss; setShowGnss(nv); lsSet('ft-gnss', nv) }, keywords: ['gnss', 'gps', 'jam', 'jamming', 'spoof', 'spoofing', 'raim', 'hpl', 'irs', 'ins drift', 'opsgroup', 'easa sib', 'integrity', 'interference', 'rfi'] },
           { id: 'toggle-cpdlc', group: 'View', label: showCpdlc ? 'Close CPDLC / Datalink Mandate Monitor' : 'CPDLC / Datalink Mandate Monitor (FANS-1/A + ATN B1 oceanic equipage & logon)', run: () => { const nv = !showCpdlc; setShowCpdlc(nv); lsSet('ft-cpdlc', nv) }, keywords: ['cpdlc', 'datalink', 'dls', 'fans', 'atn', 'ads-c', 'oceanic', 'nat', 'shanwick', 'gander', 'reykjavik', 'pacific', 'link 2000', 'mandate', 'icao doc 4444', 'ac 90-117', 'amc 20-25'] },
           { id: 'toggle-lbust', group: 'View', label: showLbust ? 'Close Level Bust Predictor' : 'Level Bust Predictor (ALoFT envelope / EUROCONTROL LBAP overshoot watch)', run: () => { const nv = !showLbust; setShowLbust(nv); lsSet('ft-lbust', nv) }, keywords: ['level bust', 'aloft', 'lbap', 'cleared flight level', 'cfl', 'altitude', 'capture', 'overshoot', 'vertical rate', 'ac 91-79a', 'eurocontrol', 'rvsm bust', 'altitude deviation'] },
+          { id: 'toggle-adsbq', group: 'View', label: showAdsbq ? 'Close ADS-B Quality Monitor' : 'ADS-B Quality Monitor (DO-260B NIC/NACp/SIL / 14 CFR 91.227 compliance)', run: () => { const nv = !showAdsbq; setShowAdsbq(nv); lsSet('ft-adsbq', nv) }, keywords: ['adsb', 'ads-b', 'do-260b', 'nic', 'nacp', 'sil', 'sda', '91.227', 'gps integrity', 'epu', 'containment', 'mode s', 'transponder', 'easa amc 20-24'] },
           { id: 'toggle-ozone', group: 'View', label: showOzone ? 'Close Cabin Ozone Monitor' : 'Cabin Ozone Monitor (FAR 121.578 / CS-25.832 peak 0.25 / 3h-avg 0.10 ppmv)', run: () => { const nv = !showOzone; setShowOzone(nv); lsSet('ft-ozone', nv) }, keywords: ['ozone', 'o3', 'cabin', 'far 121.578', 'cs-25.832', 'ppmv', 'converter', 'catalytic', 'tropopause', 'polar spring', 'mls', 'climatology', 'irritation'] },
           { id: 'toggle-crewduty', group: 'View', label: showCrew ? 'Close Crew Duty Monitor' : 'Crew Duty Monitor (FAR 117 FDP / Samn-Perelli fatigue)', run: () => { const nv = !showCrew; setShowCrew(nv); lsSet('ft-crewduty', nv) }, keywords: ['crew', 'duty', 'fdp', 'far 117', 'fatigue', 'samn perelli', 'wocl', 'circadian', 'augment', 'rest'] },
           { id: 'toggle-anomaly', group: 'View', label: showAnomaly ? 'Close anomaly radar' : 'Anomaly radar (tick-to-tick state deltas)', run: () => { const nv = !showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }, keywords: ['anomaly', 'radar', 'jump', 'swerve', 'spike', 'squawk', 'flip', 'glitch', 'delta', 'detect', 'alert'] },
@@ -4166,6 +4169,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showAdsbq && (
+        <AdsbQualityMonitor
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowAdsbq(false); lsSet('ft-adsbq', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
+
       {showOzone && (
         <OzoneMonitor
           map={mapRef.current}
@@ -4596,6 +4608,7 @@ export default function FlightMap() {
                 ['GNSS integrity', showGnss, ()=>{ const nv=!showGnss; setShowGnss(nv); lsSet('ft-gnss', nv) }],
                 ['CPDLC datalink', showCpdlc, ()=>{ const nv=!showCpdlc; setShowCpdlc(nv); lsSet('ft-cpdlc', nv) }],
                 ['Level bust', showLbust, ()=>{ const nv=!showLbust; setShowLbust(nv); lsSet('ft-lbust', nv) }],
+                ['ADS-B quality', showAdsbq, ()=>{ const nv=!showAdsbq; setShowAdsbq(nv); lsSet('ft-adsbq', nv) }],
                 ['Navaid coverage', showNavaid, ()=>{ const nv=!showNavaid; setShowNavaid(nv); lsSet('ft-navaid', nv) }],
                 ['Drift-down OEI', showDrift, ()=>{ const nv=!showDrift; setShowDrift(nv); lsSet('ft-drift', nv) }],
                 ['Reserve fuel', showReserve, ()=>{ const nv=!showReserve; setShowReserve(nv); lsSet('ft-reserve', nv) }],
