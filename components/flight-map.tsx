@@ -151,6 +151,7 @@ import TReverserMonitor from './treverser-monitor'
 import VorMonReversion from './vor-mon'
 import PaxOxygenMonitor from './pax-oxygen'
 import StartEnvelope from './start-envelope'
+import DAtisMonitor from './datis-monitor'
 import UlbPingerMonitor from './ulb-pinger'
 import SelcalMonitor from './selcal-monitor'
 import AdscFans from './adsc-fans'
@@ -473,6 +474,7 @@ export default function FlightMap() {
   const [showItp, setShowItp] = useState<boolean>(() => lsGet('ft-itp', false))
   const [showPsrSsr, setShowPsrSsr] = useState<boolean>(() => lsGet('ft-psrssr', false))
   const [showFireLoop, setShowFireLoop] = useState<boolean>(() => lsGet('ft-fireloop', false))
+  const [showDatis, setShowDatis] = useState<boolean>(() => lsGet('ft-datis', false))
   const [showVolmet, setShowVolmet] = useState<boolean>(() => lsGet('ft-volmet', false))
   const [showStart, setShowStart] = useState<boolean>(() => lsGet('ft-start', false))
   const [showO2dur, setShowO2dur] = useState<boolean>(() => lsGet('ft-o2dur', false))
@@ -602,6 +604,7 @@ export default function FlightMap() {
   + (showEhs?1:0)
   + (showPrm?1:0)
   + (showO2dur?1:0)
+  + (showDatis?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -4903,6 +4906,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showDatis && (
+        <DAtisMonitor
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowDatis(false); lsSet('ft-datis', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 7) } }}
+        />
+      )}
+
       {showVolmet && (
         <VolmetMonitor
           map={mapRef.current}
@@ -5776,6 +5788,7 @@ export default function FlightMap() {
                 ['Atlas', showAtlas, ()=>{ const nv=!showAtlas; setShowAtlas(nv); lsSet('ft-atlas', nv) }],
                 ['VIP', showVip, ()=>{ const nv=!showVip; setShowVip(nv); lsSet('ft-vip', nv) }],
                 ['Time of day', showTod, ()=>{ const nv=!showTod; setShowTod(nv); lsSet('ft-tod', nv) }],
+                ['D-ATIS · letter cycle', showDatis, ()=>{ const nv=!showDatis; setShowDatis(nv); lsSet('ft-datis', nv) }],
               ]},
             ].map(section => (
               <div key={section.group} className="px-4 py-3 border-b border-slate-900 last:border-0">
