@@ -105,6 +105,7 @@ import SpeedLimit from './speed-limit'
 import SonicBoom from './sonic-boom'
 import RnpMonitor from './rnp-monitor'
 import RtaConformance from './rta-conformance'
+import SatcomCoverage from './satcom-coverage'
 import FuelTankering from './fuel-tankering'
 import WorkloadIndex from './workload-index'
 import GnssIntegrity from './gnss-integrity'
@@ -332,7 +333,7 @@ export default function FlightMap() {
   const [showSpdLim, setShowSpdLim] = useState<boolean>(() => lsGet('ft-spdlim', false))
   const [showBoom, setShowBoom] = useState<boolean>(() => lsGet('ft-boom', false))
   const [showRnp, setShowRnp] = useState<boolean>(() => lsGet('ft-rnp', false))
-  const [showRta, setShowRta] = useState<boolean>(() => lsGet('ft-rta', false))
+  const [showSatcom, setShowSatcom] = useState<boolean>(() => lsGet('ft-satcom', false))
   const [showTank, setShowTank] = useState<boolean>(() => lsGet('ft-tank', false))
   const [showWkld, setShowWkld] = useState<boolean>(() => lsGet('ft-wkld', false))
   const [showGnss, setShowGnss] = useState<boolean>(() => lsGet('ft-gnss', false))
@@ -436,7 +437,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2268,6 +2269,7 @@ export default function FlightMap() {
           { id: 'toggle-boom', group: 'View', label: showBoom ? 'Close Sonic Boom Footprint' : 'Sonic Boom Footprint Predictor (Mach cone / N-wave)', run: () => { const nv = !showBoom; setShowBoom(nv); lsSet('ft-boom', nv) }, keywords: ['sonic', 'boom', 'supersonic', 'mach', 'cone', 'n-wave', 'overpressure', 'carpet', 'whitham', 'carlson', 'concorde', 'boom supersonic', 'shockwave', 'primary boom', 'secondary boom'] },
           { id: 'toggle-rnp', group: 'View', label: showRnp ? 'Close RNP / PBN Lateral Monitor' : 'RNP / PBN Lateral Performance Monitor (cross-track error vs RNP band)', run: () => { const nv = !showRnp; setShowRnp(nv); lsSet('ft-rnp', nv) }, keywords: ['rnp', 'pbn', 'lateral', 'cross-track', 'xte', 'navigation performance', 'tse', 'fte', 'nse', 'containment', 'lnav', 'lpv', 'rnav', 'icao doc 9613', 'ac 90-105', 'great circle', 'leg deviation'] },
           { id: 'toggle-rta', group: 'View', label: showRta ? 'Close RTA / 4D Trajectory Conformance' : 'RTA / 4D Trajectory Conformance (CTA tolerance + required Mach/IAS)', run: () => { const nv = !showRta; setShowRta(nv); lsSet('ft-rta', nv) }, keywords: ['rta', 'cta', '4d', 'trajectory', 'tbo', 'sesar', 'pcp', 'time conformance', 'meter fix', 'eta', 'metering', 'arrival slot', 'mach number', 'speed adjust', 'absorb', 'eurocontrol'] },
+          { id: 'toggle-satcom', group: 'View', label: showSatcom ? 'Close SATCOM / HF Coverage' : 'SATCOM / HF Voice Coverage Monitor (VHF horizon, Inmarsat, Iridium, HF SSB redundancy)', run: () => { const nv = !showSatcom; setShowSatcom(nv); lsSet('ft-satcom', nv) }, keywords: ['satcom', 'hf', 'vhf', 'inmarsat', 'iridium', 'coverage', 'comm', 'voice', 'link', 'redundancy', 'ssb', 'selcal', 'polar', 'nordo', 'lost comms', 'horizon', 'icao annex 10', 'arinc 741'] },
           { id: 'toggle-tank', group: 'View', label: showTank ? 'Close Fuel Tankering Advisor' : 'Fuel Tankering Advisor (Jet-A price arbitrage vs cost-of-weight burn penalty)', run: () => { const nv = !showTank; setShowTank(nv); lsSet('ft-tank', nv) }, keywords: ['tanker', 'tankering', 'fuel', 'jet-a', 'price', 'arbitrage', 'cost of weight', 'cow', 'uplift', 'iata', 'eurocontrol', 'savings', 'burn penalty', 'co2', 'refuel', 'usg', 'kerosene'] },
           { id: 'toggle-wkld', group: 'View', label: showWkld ? 'Close Pilot Workload Index Monitor' : 'Pilot Workload Index Monitor (NASA TLX composite cockpit workload score)', run: () => { const nv = !showWkld; setShowWkld(nv); lsSet('ft-wkld', nv) }, keywords: ['workload', 'pilot', 'tlx', 'nasa tlx', 'fatigue', 'wocl', 'circadian', 'saturation', 'cognitive', 'hf', 'human factors', 'phase', 'traffic', 'demand'] },
           { id: 'toggle-gnss', group: 'View', label: showGnss ? 'Close GNSS Integrity Monitor' : 'GNSS Integrity Monitor (GPS jamming / spoofing hotspots, RAIM HPL, IRS drift)', run: () => { const nv = !showGnss; setShowGnss(nv); lsSet('ft-gnss', nv) }, keywords: ['gnss', 'gps', 'jam', 'jamming', 'spoof', 'spoofing', 'raim', 'hpl', 'irs', 'ins drift', 'opsgroup', 'easa sib', 'integrity', 'interference', 'rfi'] },
@@ -4150,6 +4152,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showSatcom && (
+        <SatcomCoverage
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowSatcom(false); lsSet('ft-satcom', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
+
       {showTank && (
         <FuelTankering
           map={mapRef.current}
@@ -4711,6 +4722,7 @@ export default function FlightMap() {
                 ['SID climb', showSidc, ()=>{ const nv=!showSidc; setShowSidc(nv); lsSet('ft-sidc', nv) }],
                 ['ETP / CP', showEtp, ()=>{ const nv=!showEtp; setShowEtp(nv); lsSet('ft-etp', nv) }],
                 ['RNP / PBN', showRnp, ()=>{ const nv=!showRnp; setShowRnp(nv); lsSet('ft-rnp', nv) }],
+                ['SATCOM/HF', showSatcom, ()=>{ const nv=!showSatcom; setShowSatcom(nv); lsSet('ft-satcom', nv) }],
                 ['RTA / 4D', showRta, ()=>{ const nv=!showRta; setShowRta(nv); lsSet('ft-rta', nv) }],
                 ['Fuel tankering', showTank, ()=>{ const nv=!showTank; setShowTank(nv); lsSet('ft-tank', nv) }],
                 ['FIR crossings', showFirX, ()=>{ const nv=!showFirX; setShowFirX(nv); lsSet('ft-firx', nv) }],
