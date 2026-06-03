@@ -155,6 +155,7 @@ import UlbPingerMonitor from './ulb-pinger'
 import SelcalMonitor from './selcal-monitor'
 import AdscFans from './adsc-fans'
 import AiracNavDb from './airac-nav-db'
+import OxygenDuration from './oxygen-duration'
 import NgsInerting from './ngs-inerting'
 import GadssEltDt from './gadss-eltdt'
 import EfvsHud from './efvs-hud'
@@ -462,6 +463,7 @@ export default function FlightMap() {
   const [showAdsc, setShowAdsc] = useState<boolean>(() => lsGet('ft-adsc', false))
   const [showAirac, setShowAirac] = useState<boolean>(() => lsGet('ft-airac', false))
   const [showStart, setShowStart] = useState<boolean>(() => lsGet('ft-start', false))
+  const [showO2dur, setShowO2dur] = useState<boolean>(() => lsGet('ft-o2dur', false))
   const [showElec, setShowElec] = useState<boolean>(() => lsGet('ft-elec', false))
   const [showNgs, setShowNgs] = useState<boolean>(() => lsGet('ft-ngs', false))
   const [showGadss, setShowGadss] = useState<boolean>(() => lsGet('ft-gadss', false))
@@ -587,6 +589,7 @@ export default function FlightMap() {
   + (showVmon?1:0)
   + (showEhs?1:0)
   + (showPrm?1:0)
+  + (showO2dur?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -4849,6 +4852,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showO2dur && (
+        <OxygenDuration
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowO2dur(false); lsSet('ft-o2dur', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 10) } }}
+        />
+      )}
+
       {showElec && (
         <ElectricalBus
           map={mapRef.current}
@@ -5572,6 +5584,7 @@ export default function FlightMap() {
                 ['ADS-C / FANS-1A contract', showAdsc, ()=>{ const nv=!showAdsc; setShowAdsc(nv); lsSet('ft-adsc', nv) }],
                 ['AIRAC · FMS nav-DB currency', showAirac, ()=>{ const nv=!showAirac; setShowAirac(nv); lsSet('ft-airac', nv) }],
                 ['Engine start envelope', showStart, ()=>{ const nv=!showStart; setShowStart(nv); lsSet('ft-start', nv) }],
+                ['O₂ supply duration', showO2dur, ()=>{ const nv=!showO2dur; setShowO2dur(nv); lsSet('ft-o2dur', nv) }],
                 ['Electrical / IDG / Bus-tie / RAT', showElec, ()=>{ const nv=!showElec; setShowElec(nv); lsSet('ft-elec', nv) }],
                 ['NGS / OBIGGS inerting', showNgs, ()=>{ const nv=!showNgs; setShowNgs(nv); lsSet('ft-ngs', nv) }],
                 ['Autoland / LVO', showAutoland, ()=>{ const nv=!showAutoland; setShowAutoland(nv); lsSet('ft-autoland', nv) }],
