@@ -110,6 +110,7 @@ import LiBattery from './li-battery'
 import RexHyd from './rex-hyd'
 import CgTrim from './cg-trim'
 import OwlJettison from './owl-jettison'
+import UasPitot from './uas-pitot'
 import SpaceWeatherMonitor from './space-weather'
 import RvsmMonitor from './rvsm-monitor'
 import SpeedLimit from './speed-limit'
@@ -350,6 +351,7 @@ export default function FlightMap() {
   const [showRexhyd, setShowRexhyd] = useState<boolean>(() => lsGet('ft-rexhyd', false))
   const [showCgTrim, setShowCgTrim] = useState<boolean>(() => lsGet('ft-cgtrim', false))
   const [showOwl, setShowOwl] = useState<boolean>(() => lsGet('ft-owl', false))
+  const [showUas, setShowUas] = useState<boolean>(() => lsGet('ft-uas', false))
   const [showSidc, setShowSidc] = useState<boolean>(() => lsGet('ft-sidc', false))
   const [showRvsm, setShowRvsm] = useState<boolean>(() => lsGet('ft-rvsm', false))
   const [showSpdLim, setShowSpdLim] = useState<boolean>(() => lsGet('ft-spdlim', false))
@@ -459,7 +461,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0) + (showSpwx?1:0) + (showFoqa?1:0) + (showEgt?1:0) + (showPolar?1:0) + (showLibat?1:0) + (showRexhyd?1:0) + (showCgTrim?1:0) + (showOwl?1:0)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0) + (showSpwx?1:0) + (showFoqa?1:0) + (showEgt?1:0) + (showPolar?1:0) + (showLibat?1:0) + (showRexhyd?1:0) + (showCgTrim?1:0) + (showOwl?1:0) + (showUas?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2296,6 +2298,7 @@ export default function FlightMap() {
           { id: 'toggle-rexhyd', group: 'View', label: showRexhyd ? 'Close Runway Excursion / Hydroplaning Monitor' : 'Runway Excursion / Hydroplaning Monitor (NASA Vp=9√P / TALPA RCAM / LDR vs LDA)', run: () => { const nv = !showRexhyd; setShowRexhyd(nv); lsSet('ft-rexhyd', nv) }, keywords: ['runway', 'excursion', 'overrun', 'hydroplane', 'hydroplaning', 'horne', 'nasa td-2056', 'vp', 'tire pressure', 'talpa', 'rcam', 'wet runway', 'contaminated', 'ldr', 'lda', 'landing distance', 'crosswind', 'tailwind', 'reverted rubber', 'ac 91-79b', 'doc 9981', 'rex-hyd'] },
           { id: 'toggle-cgtrim', group: 'View', label: showCgTrim ? 'Close CG / Stab Trim Envelope Monitor' : 'CG / Stab Trim Envelope Monitor (W&B %MAC / stab-trim units / fuel-burn shift)', run: () => { const nv = !showCgTrim; setShowCgTrim(nv); lsSet('ft-cgtrim', nv) }, keywords: ['cg', 'center of gravity', 'centre of gravity', 'mac', 'stab trim', 'stabilizer', 'stabiliser', 'trim', 'weight and balance', 'wandb', 'w&b', 'envelope', 'fwd limit', 'aft limit', 'loadsheet', 'ac 120-27', 'oro.mlr.110', '14 cfr 25.27', 'fcom', 'aom-1.27', 'anu'] },
           { id: 'toggle-owl', group: 'View', label: showOwl ? 'Close Overweight Landing / Fuel Jettison Monitor' : 'Overweight Landing / Fuel Jettison Decision Monitor (GW vs MLW / dump rate / burn-down time)', run: () => { const nv = !showOwl; setShowOwl(nv); lsSet('ft-owl', nv) }, keywords: ['overweight', 'overweight landing', 'owl', 'fuel jettison', 'fuel dump', 'jettison', 'mlw', 'mtow', 'mzfw', 'gross weight', 'landing weight', 'qrh', 'burn down', 'hold', 'ac 25-7c', '14 cfr 25.1001', 'doc 9376', 'cs-25.473', 'pro-abn-misc'] },
+          { id: 'toggle-uas', group: 'View', label: showUas ? 'Close UAS / Pitot-Icing Risk Monitor' : 'Unreliable Airspeed / Pitot-Icing Risk Monitor (TAT freeze / HIWC corridor / probe wear / AoA fault / redundancy gap)', run: () => { const nv = !showUas; setShowUas(nv); lsSet('ft-uas', nv) }, keywords: ['uas', 'unreliable airspeed', 'pitot', 'pitot icing', 'pitot-icing', 'tat', 'total air temp', 'hiwc', 'high ice water content', 'af447', 'safo 11003', 'ac 25-11b', 'probe heater', 'aoa', 'angle of attack', 'thales', 'goodrich', 'do-160', 'cs-25.1323', 'in-flight icing', 'ice crystal'] },
           { id: 'toggle-sidc', group: 'View', label: showSidc ? 'Close SID Climb Gradient Monitor' : 'SID Climb Gradient Monitor (departure PDG compliance)', run: () => { const nv = !showSidc; setShowSidc(nv); lsSet('ft-sidc', nv) }, keywords: ['sid', 'pdg', 'climb gradient', 'departure', 'obstacle clearance', 'pans-ops', 'terps', '8260.3', '8168', 'innsbruck', 'aspen', 'der'] },
           { id: 'toggle-rvsm', group: 'View', label: showRvsm ? 'Close RVSM Compliance Monitor' : 'RVSM Compliance Monitor (altitude-keeping / TVE / prox)', run: () => { const nv = !showRvsm; setShowRvsm(nv); lsSet('ft-rvsm', nv) }, keywords: ['rvsm', 'reduced vertical separation', 'altitude keeping', 'tve', 'total vertical error', 'ase', 'altimetry', 'icao 9574', 'ac 91-85', 'amc 20-13', 'aad', 'assigned altitude deviation', 'altitude bust', 'separation loss'] },
           { id: 'toggle-spdlim', group: 'View', label: showSpdLim ? 'Close Speed Limit Compliance' : 'Speed Limit Compliance (FAR 91.117 / Vmo / MMO)', run: () => { const nv = !showSpdLim; setShowSpdLim(nv); lsSet('ft-spdlim', nv) }, keywords: ['speed', 'limit', 'compliance', 'far 91.117', '250 knots', '200 knots', 'vmo', 'mmo', 'kias', 'mach', 'overspeed', 'speed bust', 'cruise ceiling', 'icao annex 2', 'restriction'] },
@@ -4230,6 +4233,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showUas && (
+        <UasPitot
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowUas(false); lsSet('ft-uas', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
+
       {showSidc && (
         <SidClimb
           map={mapRef.current}
@@ -4802,6 +4814,7 @@ export default function FlightMap() {
                 ['Li-battery cargo', showLibat, ()=>{ const nv=!showLibat; setShowLibat(nv); lsSet('ft-libat', nv) }],
                 ['CG / stab trim', showCgTrim, ()=>{ const nv=!showCgTrim; setShowCgTrim(nv); lsSet('ft-cgtrim', nv) }],
                 ['Overweight ldg / jettison', showOwl, ()=>{ const nv=!showOwl; setShowOwl(nv); lsSet('ft-owl', nv) }],
+                ['UAS / pitot-icing', showUas, ()=>{ const nv=!showUas; setShowUas(nv); lsSet('ft-uas', nv) }],
               ]},
               {group:'Environment', items:[
                 ['Wake', showWake, ()=>{ const nv=!showWake; setShowWake(nv); lsSet('ft-wake', nv) }],
