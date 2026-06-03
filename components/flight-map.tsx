@@ -102,6 +102,7 @@ import CdaCompliance from './cda-compliance'
 import RvsmMonitor from './rvsm-monitor'
 import SpeedLimit from './speed-limit'
 import SonicBoom from './sonic-boom'
+import RnpMonitor from './rnp-monitor'
 import CrewDuty from './crew-duty'
 import ApproachMinimums from './approach-minimums'
 import ConvectiveCells from './convective-cells'
@@ -319,6 +320,7 @@ export default function FlightMap() {
   const [showRvsm, setShowRvsm] = useState<boolean>(() => lsGet('ft-rvsm', false))
   const [showSpdLim, setShowSpdLim] = useState<boolean>(() => lsGet('ft-spdlim', false))
   const [showBoom, setShowBoom] = useState<boolean>(() => lsGet('ft-boom', false))
+  const [showRnp, setShowRnp] = useState<boolean>(() => lsGet('ft-rnp', false))
   const [showCrew, setShowCrew] = useState<boolean>(() => lsGet('ft-crewduty', false))
   const [showAnomaly, setShowAnomaly] = useState<boolean>(() => lsGet('ft-anomaly', false))
   const [showCompareStudio, setShowCompareStudio] = useState<boolean>(() => lsGet('ft-compare-studio', false))
@@ -414,7 +416,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2243,6 +2245,7 @@ export default function FlightMap() {
           { id: 'toggle-rvsm', group: 'View', label: showRvsm ? 'Close RVSM Compliance Monitor' : 'RVSM Compliance Monitor (altitude-keeping / TVE / prox)', run: () => { const nv = !showRvsm; setShowRvsm(nv); lsSet('ft-rvsm', nv) }, keywords: ['rvsm', 'reduced vertical separation', 'altitude keeping', 'tve', 'total vertical error', 'ase', 'altimetry', 'icao 9574', 'ac 91-85', 'amc 20-13', 'aad', 'assigned altitude deviation', 'altitude bust', 'separation loss'] },
           { id: 'toggle-spdlim', group: 'View', label: showSpdLim ? 'Close Speed Limit Compliance' : 'Speed Limit Compliance (FAR 91.117 / Vmo / MMO)', run: () => { const nv = !showSpdLim; setShowSpdLim(nv); lsSet('ft-spdlim', nv) }, keywords: ['speed', 'limit', 'compliance', 'far 91.117', '250 knots', '200 knots', 'vmo', 'mmo', 'kias', 'mach', 'overspeed', 'speed bust', 'cruise ceiling', 'icao annex 2', 'restriction'] },
           { id: 'toggle-boom', group: 'View', label: showBoom ? 'Close Sonic Boom Footprint' : 'Sonic Boom Footprint Predictor (Mach cone / N-wave)', run: () => { const nv = !showBoom; setShowBoom(nv); lsSet('ft-boom', nv) }, keywords: ['sonic', 'boom', 'supersonic', 'mach', 'cone', 'n-wave', 'overpressure', 'carpet', 'whitham', 'carlson', 'concorde', 'boom supersonic', 'shockwave', 'primary boom', 'secondary boom'] },
+          { id: 'toggle-rnp', group: 'View', label: showRnp ? 'Close RNP / PBN Lateral Monitor' : 'RNP / PBN Lateral Performance Monitor (cross-track error vs RNP band)', run: () => { const nv = !showRnp; setShowRnp(nv); lsSet('ft-rnp', nv) }, keywords: ['rnp', 'pbn', 'lateral', 'cross-track', 'xte', 'navigation performance', 'tse', 'fte', 'nse', 'containment', 'lnav', 'lpv', 'rnav', 'icao doc 9613', 'ac 90-105', 'great circle', 'leg deviation'] },
           { id: 'toggle-crewduty', group: 'View', label: showCrew ? 'Close Crew Duty Monitor' : 'Crew Duty Monitor (FAR 117 FDP / Samn-Perelli fatigue)', run: () => { const nv = !showCrew; setShowCrew(nv); lsSet('ft-crewduty', nv) }, keywords: ['crew', 'duty', 'fdp', 'far 117', 'fatigue', 'samn perelli', 'wocl', 'circadian', 'augment', 'rest'] },
           { id: 'toggle-anomaly', group: 'View', label: showAnomaly ? 'Close anomaly radar' : 'Anomaly radar (tick-to-tick state deltas)', run: () => { const nv = !showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }, keywords: ['anomaly', 'radar', 'jump', 'swerve', 'spike', 'squawk', 'flip', 'glitch', 'delta', 'detect', 'alert'] },
           { id: 'toggle-compare', group: 'View', label: showCompareStudio ? 'Close compare studio' : 'Compare studio (side-by-side spec + spider)', run: () => { const nv = !showCompareStudio; setShowCompareStudio(nv); lsSet('ft-compare-studio', nv); if (nv && selected && !compareStudioIcaos.includes(selected.icao)) { const next = [...compareStudioIcaos, selected.icao].slice(0, 4); setCompareStudioIcaos(next); lsSet('ft-compare-studio-icaos', next) } }, keywords: ['compare', 'comparison', 'side by side', 'spec', 'radar chart', 'spider', 'vs', 'diff', 'studio'] },
@@ -4091,6 +4094,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showRnp && (
+        <RnpMonitor
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowRnp(false); lsSet('ft-rnp', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
+
       {showCrew && (
         <CrewDuty
           map={mapRef.current}
@@ -4572,6 +4584,7 @@ export default function FlightMap() {
                 ['Approach mins', showApMin, ()=>{ const nv=!showApMin; setShowApMin(nv); lsSet('ft-apmin', nv) }],
                 ['CDA compliance', showCda, ()=>{ const nv=!showCda; setShowCda(nv); lsSet('ft-cda', nv) }],
                 ['SID climb', showSidc, ()=>{ const nv=!showSidc; setShowSidc(nv); lsSet('ft-sidc', nv) }],
+                ['RNP / PBN', showRnp, ()=>{ const nv=!showRnp; setShowRnp(nv); lsSet('ft-rnp', nv) }],
                 ['FIR crossings', showFirX, ()=>{ const nv=!showFirX; setShowFirX(nv); lsSet('ft-firx', nv) }],
                 ['Runway config', showRwyCfg, ()=>{ const nv=!showRwyCfg; setShowRwyCfg(nv); lsSet('ft-rwycfg', nv) }],
                 ['Pass-by', showPass, ()=>{ const nv=!showPass; setShowPass(nv); lsSet('ft-pass', nv) }],
