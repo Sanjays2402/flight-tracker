@@ -148,6 +148,7 @@ import ElectricalBus from './electrical-bus'
 import TrimAuthority from './trim-authority'
 import DmeDmeFom from './dme-dme-fom'
 import TReverserMonitor from './treverser-monitor'
+import StartEnvelope from './start-envelope'
 import NgsInerting from './ngs-inerting'
 import GadssEltDt from './gadss-eltdt'
 import EfvsHud from './efvs-hud'
@@ -448,6 +449,7 @@ export default function FlightMap() {
   const [showTrim, setShowTrim] = useState<boolean>(() => lsGet('ft-trim', false))
   const [showDme, setShowDme] = useState<boolean>(() => lsGet('ft-dme', false))
   const [showTRev, setShowTRev] = useState<boolean>(() => lsGet('ft-trev', false))
+  const [showStart, setShowStart] = useState<boolean>(() => lsGet('ft-start', false))
   const [showElec, setShowElec] = useState<boolean>(() => lsGet('ft-elec', false))
   const [showNgs, setShowNgs] = useState<boolean>(() => lsGet('ft-ngs', false))
   const [showGadss, setShowGadss] = useState<boolean>(() => lsGet('ft-gadss', false))
@@ -568,6 +570,7 @@ export default function FlightMap() {
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
   const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0) + (showSpwx?1:0) + (showFoqa?1:0) + (showEgt?1:0) + (showPolar?1:0) + (showLibat?1:0) + (showRexhyd?1:0) + (showCgTrim?1:0) + (showOwl?1:0) + (showNadp?1:0) + (showRecat?1:0) + (showUas?1:0) + (showBleed?1:0) + (showDeice?1:0) + (showPstatic?1:0) + (showFlutter?1:0) + (showStall?1:0) + (showTailStrike?1:0) + (showTaws?1:0) + (showCtot?1:0) + (showRera?1:0) + (showEai?1:0) + (showTold?1:0) + (showRelight?1:0) + (showHotsec?1:0) + (showLhirf?1:0) + (showAdiz?1:0) + (showEgress?1:0) + (showNotam?1:0) + (showRadalt5g?1:0) + (showCtAlt?1:0) + (showHyd?1:0) + (showApu?1:0) + (showPcn?1:0) + (showFuelImb?1:0) + (showCsff?1:0) + (showCargoFs?1:0) + (showFbw?1:0) + (showMel?1:0) + (showOil?1:0) + (showVib?1:0) + (showNgs?1:0) + (showAutoland?1:0) + (showGadss?1:0) + (showEfvs?1:0) + (showIrs?1:0) + (showRcam?1:0) + (showMlat?1:0) + (showPbcs?1:0) + (showTanker?1:0) + (showVapp?1:0) + (showGls?1:0) + (showSaf?1:0) + (showHfdl?1:0) + (showArff?1:0) + (showIlsCs?1:0) + (showTrim?1:0) + (showDme?1:0) + (showTRev?1:0)
+ + (showStart?1:0)
   + (showSbas?1:0)
   + (showElec?1:0)
   + (showEhs?1:0)
@@ -2459,6 +2462,7 @@ export default function FlightMap() {
           { id: 'toggle-trim', group: 'View', label: showTrim ? 'Close Pitch-Trim Authority Monitor' : 'Pitch-Trim Authority & Runaway / MCAS-STS Margin Monitor (ATA-27-40)', run: () => { const nv = !showTrim; setShowTrim(nv); lsSet('ft-trim', nv) }, keywords: ['trim', 'pitch', 'stab', 'stabilizer', 'mcas', 'sts', 'ansu', 'prim', 'elac', 'runaway', 'jackscrew', 'ata-27', 'cg', 'authority'] },
           { id: 'toggle-dme', group: 'View', label: showDme ? 'Close DME/DME RNAV FOM Monitor' : 'DME/DME RNAV Position Accuracy & Pair-Geometry FOM (ATA-34-55)', run: () => { const nv = !showDme; setShowDme(nv); lsSet('ft-dme', nv) }, keywords: ['dme', 'rnav', 'pbn', 'navaid', 'fom', 'nuc', 'epu', 'positioning', 'ata-34', 'doc 9613', 'ac 90-100a', '8260.58', 'pair geometry'] },
           { id: 'toggle-trev', group: 'View', label: showTRev ? 'Close Thrust Reverser Inhibit Monitor' : 'Thrust Reverser Deploy / In-Flight Inhibit / Asymmetric Reverse Monitor (ATA-78-30) · per-engine sleeve-position / HCU psi / interlock chain WoW+RA+TLA / sleeve-lock indicator / asymmetric rollout (Lauda Air AAR-93-07 / 14 CFR 25.933 / AC 25.933-1 / Boeing FCOM 7.10 / Airbus PRO-NOR-SOP-70)', run: () => { const nv = !showTRev; setShowTRev(nv); lsSet('ft-trev', nv) }, keywords: ['thrust reverser', 'reverser', 't/r', 'tr', 'reverse thrust', 'lauda', 'lauda air 004', 'in-flight deploy', 'asymmetric reverse', 'sleeve', 'blocker door', 'cascade', 'target', 'pivot door', 'beta range', 'hcu', 'sync lock', 'interlock', 'unlock', 'wow', 'radio altimeter ra', 'tla', 'throttle resolver', 'ata-78', '25.933', 'ac 25.933-1', 'aar-93-07', 'aar-09-03', 'pw4000', 'ge90', 'trent 1000', 'mmel 78', 'fcom 7.10', 'pro-nor-sop-70'] },
+          { id: 'toggle-start', group: 'View', label: showStart ? 'Close Engine Start Envelope Monitor' : 'Engine Start Envelope · Hot-Start / Hung-Start / Wet-Start Cold-Soak Monitor (ATA-80) · per-engine starter-air psi vs FCOM min / N2 motoring rpm/s / fuel-on cut-in N2% / peak EGT vs redline / light-off timing / TAT cold-soak / APU vs cross-bleed vs GPU source · 14 CFR 33.89 · AC 33.89-1 · CS-E 740 · SAE ARP 5316 · Boeing FCOM 7.20 · Airbus PRO-NOR-SOP-70 · NTSB DCA08IA049 PW-150 / DCA14IA063 V2500 · AD 2018-08-09 CFM56-7B SAV · AD 2021-12-09 LEAP-1B SAV · EASA AD 2020-0186 Trent XWB SCV', run: () => { const nv = !showStart; setShowStart(nv); lsSet('ft-start', nv) }, keywords: ['start', 'engine start', 'hot start', 'hung start', 'wet start', 'light off', 'lightoff', 'egt', 'starter', 'sav', 'starter air valve', 'apu bleed', 'cross bleed', 'cross-bleed', 'gpu', 'air cart', 'motoring', 'n2', 'cut-in', 'cold soak', 'tat', 'ata-80', 'ata 80', '33.89', 'cs-e 740', 'arp 5316', 'pw-150', 'v2500', 'cfm56', 'leap', 'trent xwb', 'fcom 7.20', 'pro-nor-sop-70', 'borescope', 'eec', 'fadec'] },
           { id: 'toggle-elec', group: 'View', label: showElec ? 'Close Electrical / IDG / Bus-Tie / RAT Monitor' : 'Electrical Load / IDG · Generator Bus-Tie & RAT Deployment Monitor (ATA-24) · per-airframe per-generator electrical load % vs rated kVA · IDG oil-in temp vs disconnect limit · GCU fault flag · bus-tie / cross-tie configuration (SYM / SPLIT / ISO / LOST) · TRU output amps · battery state-of-charge % · Ram Air Turbine arm / deploy criteria · ETOPS electrical-source-isolation compliance per 14 CFR 25.1351 / 25.1353 / 25.1357 / 25 App K / 14 CFR 121.374 · AC 25-22 · AC 120-42B App 2 electrical · ARINC 624 OMS · Boeing 777/787 FCOM 6.10 IDG / VFSG / TRU bus · Airbus FCOM PRO-NOR-SOP-25 elec / DSC-24 · CFM56-7B SB 24-1015 IDG · Trent 1000 SB 24-AJ-001 VFSG · NTSB DCA15IA014 A380 IDG disc · FAA AD 2017-13-09 787 GCU · EASA AD 2018-0233 A350 ELMS · SAE ARP 1199 electrical-load analysis', run: () => { const nv = !showElec; setShowElec(nv); lsSet('ft-elec', nv) }, keywords: ['electrical', 'elec', 'idg', 'integrated drive generator', 'vfsg', 'gcu', 'generator control unit', 'bus', 'bus tie', 'cross tie', 'tru', 'transformer rectifier', 'battery', 'soc', 'rat', 'ram air turbine', 'ata-24', 'ata 24', 'elms', 'pepdc', 'apu start', 'cross-feed', 'ac bus', 'dc bus', 'kva', '25.1351', '25.1357', '25 app k', 'app k', 'ac 25-22', 'ac 120-42b', 'arinc 624', 'fcom 6.10', 'pro-nor-sop-25', 'dsc-24', 'overload', 'load shed', 'qantas qf32', 'a380', 'gen fail', 'all ac off', 'etops electrical'] },
           { id: 'toggle-sidc', group: 'View', label: showSidc ? 'Close SID Climb Gradient Monitor' : 'SID Climb Gradient Monitor (departure PDG compliance)', run: () => { const nv = !showSidc; setShowSidc(nv); lsSet('ft-sidc', nv) }, keywords: ['sid', 'pdg', 'climb gradient', 'departure', 'obstacle clearance', 'pans-ops', 'terps', '8260.3', '8168', 'innsbruck', 'aspen', 'der'] },
           { id: 'toggle-rvsm', group: 'View', label: showRvsm ? 'Close RVSM Compliance Monitor' : 'RVSM Compliance Monitor (altitude-keeping / TVE / prox)', run: () => { const nv = !showRvsm; setShowRvsm(nv); lsSet('ft-rvsm', nv) }, keywords: ['rvsm', 'reduced vertical separation', 'altitude keeping', 'tve', 'total vertical error', 'ase', 'altimetry', 'icao 9574', 'ac 91-85', 'amc 20-13', 'aad', 'assigned altitude deviation', 'altitude bust', 'separation loss'] },
@@ -4764,6 +4768,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showStart && (
+        <StartEnvelope
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowStart(false); lsSet('ft-start', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 10) } }}
+        />
+      )}
+
       {showElec && (
         <ElectricalBus
           map={mapRef.current}
@@ -5480,6 +5493,7 @@ export default function FlightMap() {
                 ['Pitch-trim authority / MCAS-STS', showTrim, ()=>{ const nv=!showTrim; setShowTrim(nv); lsSet('ft-trim', nv) }],
                 ['DME/DME RNAV FOM', showDme, ()=>{ const nv=!showDme; setShowDme(nv); lsSet('ft-dme', nv) }],
                 ['Thrust reverser inhibit', showTRev, ()=>{ const nv=!showTRev; setShowTRev(nv); lsSet('ft-trev', nv) }],
+                ['Engine start envelope', showStart, ()=>{ const nv=!showStart; setShowStart(nv); lsSet('ft-start', nv) }],
                 ['Electrical / IDG / Bus-tie / RAT', showElec, ()=>{ const nv=!showElec; setShowElec(nv); lsSet('ft-elec', nv) }],
                 ['NGS / OBIGGS inerting', showNgs, ()=>{ const nv=!showNgs; setShowNgs(nv); lsSet('ft-ngs', nv) }],
                 ['Autoland / LVO', showAutoland, ()=>{ const nv=!showAutoland; setShowAutoland(nv); lsSet('ft-autoland', nv) }],
