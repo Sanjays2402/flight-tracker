@@ -127,6 +127,7 @@ import Egress90Sec from './egress-90sec'
 import NotamTfr from './notam-tfr'
 import Radalt5g from './radalt-5g'
 import CtAltMonitor from './ctalt-monitor'
+import ApuMonitor from './apu-monitor'
 import HotSectionLcf from './hotsection-lcf'
 import LightningHirf from './lightning-hirf'
 import RecatWake from './recat-wake'
@@ -395,6 +396,7 @@ export default function FlightMap() {
   const [showRecat, setShowRecat] = useState<boolean>(() => lsGet('ft-recat', false))
   const [showEai, setShowEai] = useState<boolean>(() => lsGet('ft-eai', false))
   const [showAdiz, setShowAdiz] = useState<boolean>(() => lsGet('ft-adiz', false))
+  const [showApu, setShowApu] = useState<boolean>(() => lsGet('ft-apu', false))
   const [showSidc, setShowSidc] = useState<boolean>(() => lsGet('ft-sidc', false))
   const [showRvsm, setShowRvsm] = useState<boolean>(() => lsGet('ft-rvsm', false))
   const [showSpdLim, setShowSpdLim] = useState<boolean>(() => lsGet('ft-spdlim', false))
@@ -505,7 +507,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0) + (showSpwx?1:0) + (showFoqa?1:0) + (showEgt?1:0) + (showPolar?1:0) + (showLibat?1:0) + (showRexhyd?1:0) + (showCgTrim?1:0) + (showOwl?1:0) + (showNadp?1:0) + (showRecat?1:0) + (showUas?1:0) + (showBleed?1:0) + (showDeice?1:0) + (showPstatic?1:0) + (showFlutter?1:0) + (showStall?1:0) + (showTailStrike?1:0) + (showTaws?1:0) + (showCtot?1:0) + (showRera?1:0) + (showEai?1:0) + (showTold?1:0) + (showRelight?1:0) + (showHotsec?1:0) + (showLhirf?1:0) + (showAdiz?1:0) + (showEgress?1:0) + (showNotam?1:0) + (showRadalt5g?1:0) + (showCtAlt?1:0) + (showHyd?1:0)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0) + (showSpwx?1:0) + (showFoqa?1:0) + (showEgt?1:0) + (showPolar?1:0) + (showLibat?1:0) + (showRexhyd?1:0) + (showCgTrim?1:0) + (showOwl?1:0) + (showNadp?1:0) + (showRecat?1:0) + (showUas?1:0) + (showBleed?1:0) + (showDeice?1:0) + (showPstatic?1:0) + (showFlutter?1:0) + (showStall?1:0) + (showTailStrike?1:0) + (showTaws?1:0) + (showCtot?1:0) + (showRera?1:0) + (showEai?1:0) + (showTold?1:0) + (showRelight?1:0) + (showHotsec?1:0) + (showLhirf?1:0) + (showAdiz?1:0) + (showEgress?1:0) + (showNotam?1:0) + (showRadalt5g?1:0) + (showCtAlt?1:0) + (showHyd?1:0) + (showApu?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2364,6 +2366,7 @@ export default function FlightMap() {
           { id: 'toggle-recat', group: 'View', label: showRecat ? 'Close RECAT-EU Wake Separation Monitor' : 'RECAT-EU Pairwise Wake Vortex Separation Monitor (ICAO Doc 9426 / EUROCONTROL RECAT 6-cat matrix)', run: () => { const nv = !showRecat; setShowRecat(nv); lsSet('ft-recat', nv) }, keywords: ['recat', 'wake', 'vortex', 'separation', 'eurocontrol', 'icao doc 9426', 'faa jo 7110.659', 'pairwise', 'leader follower', 'cat-a', 'cat-b', 'cat-c', 'cat-d', 'cat-e', 'cat-f', 'super heavy', 'a380', 'b777'] },
           { id: 'toggle-eai', group: 'View', label: showEai ? 'Close Engine Anti-Ice Penalty Monitor' : 'Engine Anti-Ice (EAI) / Cowl Heat Penalty Monitor (FAA AC 20-73A / AC 91-74B / 14 CFR 25 App C+O bleed-extraction N1/SFC/climb-gradient/EGT-rise stack)', run: () => { const nv = !showEai; setShowEai(nv); lsSet('ft-eai', nv) }, keywords: ['eai', 'anti-ice', 'cowl heat', 'engine anti-ice', 'bleed', 'app c', 'app o', 'sld', 'supercooled', 'tat', 'sat', 'ac 20-73a', 'ac 91-74b', 'cs-25.1419', 'n1 penalty', 'climb gradient', 'sfc'] },
           { id: 'toggle-adiz', group: 'View', label: showAdiz ? 'Close ADIZ Penetration Monitor' : 'ADIZ Penetration & Intercept-Risk Monitor (ICAO Annex 15 / FAA JO 7610.4 / 14 CFR 99 / NORAD CONR-CANR / JADIZ / KADIZ / ECS-ADIZ 24-zone QRA-risk scoring)', run: () => { const nv = !showAdiz; setShowAdiz(nv); lsSet('ft-adiz', nv) }, keywords: ['adiz', 'air defense', 'intercept', 'qra', 'norad', 'jadiz', 'kadiz', 'ecs', 'taiwan', 'cadiz', 'fir security', '14 cfr 99', 'icao annex 15', 'dvfr', 'transponder', 'mode 3a', 'incursion'] },
+          { id: 'toggle-apu', group: 'View', label: showApu ? 'Close APU Health / ETOPS-CR Monitor' : 'APU Health & ETOPS Continuous-Running Capability Monitor · EGT margin / oil / start reliability / MEL APU-INOP vs ETOPS authority (14 CFR 121.633 · FAA AC 120-42B · AC 25-19A · EASA AMC 20-6 · Honeywell 131-9 · APS5000)', run: () => { const nv = !showApu; setShowApu(nv); lsSet('ft-apu', nv) }, keywords: ['apu', 'auxiliary power unit', 'etops', 'edto', 'continuous running', 'cr', 'honeywell', '131-9', 'aps5000', 'aps3200', 'egt margin', 'oil pressure', 'inop', 'mel', '14 cfr 121.633', 'ac 120-42b', 'ac 25-19a', 'amc 20-6', 'annex 6', 'in-flight start', 'pneumatic bleed'] },
           { id: 'toggle-sidc', group: 'View', label: showSidc ? 'Close SID Climb Gradient Monitor' : 'SID Climb Gradient Monitor (departure PDG compliance)', run: () => { const nv = !showSidc; setShowSidc(nv); lsSet('ft-sidc', nv) }, keywords: ['sid', 'pdg', 'climb gradient', 'departure', 'obstacle clearance', 'pans-ops', 'terps', '8260.3', '8168', 'innsbruck', 'aspen', 'der'] },
           { id: 'toggle-rvsm', group: 'View', label: showRvsm ? 'Close RVSM Compliance Monitor' : 'RVSM Compliance Monitor (altitude-keeping / TVE / prox)', run: () => { const nv = !showRvsm; setShowRvsm(nv); lsSet('ft-rvsm', nv) }, keywords: ['rvsm', 'reduced vertical separation', 'altitude keeping', 'tve', 'total vertical error', 'ase', 'altimetry', 'icao 9574', 'ac 91-85', 'amc 20-13', 'aad', 'assigned altitude deviation', 'altitude bust', 'separation loss'] },
           { id: 'toggle-spdlim', group: 'View', label: showSpdLim ? 'Close Speed Limit Compliance' : 'Speed Limit Compliance (FAR 91.117 / Vmo / MMO)', run: () => { const nv = !showSpdLim; setShowSpdLim(nv); lsSet('ft-spdlim', nv) }, keywords: ['speed', 'limit', 'compliance', 'far 91.117', '250 knots', '200 knots', 'vmo', 'mmo', 'kias', 'mach', 'overspeed', 'speed bust', 'cruise ceiling', 'icao annex 2', 'restriction'] },
@@ -4497,6 +4500,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showApu && (
+        <ApuMonitor
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowApu(false); lsSet('ft-apu', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
+
       {showSidc && (
         <SidClimb
           map={mapRef.current}
@@ -5090,6 +5102,7 @@ export default function FlightMap() {
                 ['NOTAM / TFR', showNotam, ()=>{ const nv=!showNotam; setShowNotam(nv); lsSet('ft-notam', nv) }],
                 ['5G C-Band / Radalt', showRadalt5g, ()=>{ const nv=!showRadalt5g; setShowRadalt5g(nv); lsSet('ft-radalt5g', nv) }],
                 ['CT-Alt (cold-temp)', showCtAlt, ()=>{ const nv=!showCtAlt; setShowCtAlt(nv); lsSet('ft-ctalt', nv) }],
+                ['APU / ETOPS-CR', showApu, ()=>{ const nv=!showApu; setShowApu(nv); lsSet('ft-apu', nv) }],
               ]},
               {group:'Environment', items:[
                 ['Wake', showWake, ()=>{ const nv=!showWake; setShowWake(nv); lsSet('ft-wake', nv) }],
