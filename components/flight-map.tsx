@@ -157,6 +157,7 @@ import PaxOxygenMonitor from './pax-oxygen'
 import StartEnvelope from './start-envelope'
 import DAtisMonitor from './datis-monitor'
 import UlbPingerMonitor from './ulb-pinger'
+import SlopMonitor from './slop-monitor'
 import SelcalMonitor from './selcal-monitor'
 import AdscFans from './adsc-fans'
 import AiracNavDb from './airac-nav-db'
@@ -472,6 +473,7 @@ export default function FlightMap() {
   const [showVmon, setShowVmon] = useState<boolean>(() => lsGet('ft-vmon', false))
   const [showPaxO2, setShowPaxO2] = useState<boolean>(() => lsGet('ft-paxo2', false))
   const [showUlb, setShowUlb] = useState<boolean>(() => lsGet('ft-ulb', false))
+  const [showSlop, setShowSlop] = useState<boolean>(() => lsGet('ft-slop', false))
   const [showSelcal, setShowSelcal] = useState<boolean>(() => lsGet('ft-selcal', false))
   const [showAdsc, setShowAdsc] = useState<boolean>(() => lsGet('ft-adsc', false))
   const [showAirac, setShowAirac] = useState<boolean>(() => lsGet('ft-airac', false))
@@ -609,7 +611,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0) + (showSpwx?1:0) + (showFoqa?1:0) + (showEgt?1:0) + (showPolar?1:0) + (showLibat?1:0) + (showRexhyd?1:0) + (showCgTrim?1:0) + (showOwl?1:0) + (showNadp?1:0) + (showRecat?1:0) + (showUas?1:0) + (showBleed?1:0) + (showDeice?1:0) + (showPstatic?1:0) + (showFlutter?1:0) + (showStall?1:0) + (showTailStrike?1:0) + (showTaws?1:0) + (showCtot?1:0) + (showRera?1:0) + (showEai?1:0) + (showTold?1:0) + (showRelight?1:0) + (showHotsec?1:0) + (showLhirf?1:0) + (showAdiz?1:0) + (showEgress?1:0) + (showNotam?1:0) + (showRadalt5g?1:0) + (showCtAlt?1:0) + (showHyd?1:0) + (showApu?1:0) + (showPcn?1:0) + (showFuelImb?1:0) + (showCsff?1:0) + (showCargoFs?1:0) + (showFbw?1:0) + (showMel?1:0) + (showOil?1:0) + (showVib?1:0) + (showNgs?1:0) + (showAutoland?1:0) + (showGadss?1:0) + (showEfvs?1:0) + (showIrs?1:0) + (showRcam?1:0) + (showMlat?1:0) + (showPbcs?1:0) + (showTanker?1:0) + (showVapp?1:0) + (showGls?1:0) + (showSaf?1:0) + (showHfdl?1:0) + (showArff?1:0) + (showIlsCs?1:0) + (showTrim?1:0) + (showDme?1:0) + (showTRev?1:0) + (showPaxO2?1:0) + (showUlb?1:0) + (showSelcal?1:0) + (showAdsc?1:0) + (showAirac?1:0) + (showVolmet?1:0) + (showStart?1:0) + (showWow?1:0) + (showItp?1:0) + (showAsdex?1:0) + (showPsrSsr?1:0) + (showFireLoop?1:0) + (showTpis?1:0) + (showVaac?1:0) + (showEosid?1:0)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0) + (showSpwx?1:0) + (showFoqa?1:0) + (showEgt?1:0) + (showPolar?1:0) + (showLibat?1:0) + (showRexhyd?1:0) + (showCgTrim?1:0) + (showOwl?1:0) + (showNadp?1:0) + (showRecat?1:0) + (showUas?1:0) + (showBleed?1:0) + (showDeice?1:0) + (showPstatic?1:0) + (showFlutter?1:0) + (showStall?1:0) + (showTailStrike?1:0) + (showTaws?1:0) + (showCtot?1:0) + (showRera?1:0) + (showEai?1:0) + (showTold?1:0) + (showRelight?1:0) + (showHotsec?1:0) + (showLhirf?1:0) + (showAdiz?1:0) + (showEgress?1:0) + (showNotam?1:0) + (showRadalt5g?1:0) + (showCtAlt?1:0) + (showHyd?1:0) + (showApu?1:0) + (showPcn?1:0) + (showFuelImb?1:0) + (showCsff?1:0) + (showCargoFs?1:0) + (showFbw?1:0) + (showMel?1:0) + (showOil?1:0) + (showVib?1:0) + (showNgs?1:0) + (showAutoland?1:0) + (showGadss?1:0) + (showEfvs?1:0) + (showIrs?1:0) + (showRcam?1:0) + (showMlat?1:0) + (showPbcs?1:0) + (showTanker?1:0) + (showVapp?1:0) + (showGls?1:0) + (showSaf?1:0) + (showHfdl?1:0) + (showArff?1:0) + (showIlsCs?1:0) + (showTrim?1:0) + (showDme?1:0) + (showTRev?1:0) + (showPaxO2?1:0) + (showUlb?1:0) + (showSlop?1:0) + (showSelcal?1:0) + (showAdsc?1:0) + (showAirac?1:0) + (showVolmet?1:0) + (showStart?1:0) + (showWow?1:0) + (showItp?1:0) + (showAsdex?1:0) + (showPsrSsr?1:0) + (showFireLoop?1:0) + (showTpis?1:0) + (showVaac?1:0) + (showEosid?1:0)
   + (showLahso?1:0)
   + (showMora?1:0)
   + (showStar?1:0)
@@ -4849,6 +4851,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showSlop && (
+        <SlopMonitor
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowSlop(false); lsSet('ft-slop', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 5) } }}
+        />
+      )}
+
       {showSelcal && (
         <SelcalMonitor
           map={mapRef.current}
@@ -5736,6 +5747,7 @@ export default function FlightMap() {
                 ['WoW · squat-switch / air-ground', showWow, ()=>{ const nv=!showWow; setShowWow(nv); lsSet('ft-wow', nv) }],
                 ['TPIS · BTMS · fuse-plug', showTpis, ()=>{ const nv=!showTpis; setShowTpis(nv); lsSet('ft-tpis', nv) }],
                 ['ITP · ASEPS oceanic 1000 ft', showItp, ()=>{ const nv=!showItp; setShowItp(nv); lsSet('ft-itp', nv) }],
+                ['SLOP · lateral offset (Doc 4444 §16.5)', showSlop, ()=>{ const nv=!showSlop; setShowSlop(nv); lsSet('ft-slop', nv) }],
                 ['ASDE-X · surface incursion', showAsdex, ()=>{ const nv=!showAsdex; setShowAsdex(nv); lsSet('ft-asdex', nv) }],
                 ['PSR/SSR · radar coverage gap', showPsrSsr, ()=>{ const nv=!showPsrSsr; setShowPsrSsr(nv); lsSet('ft-psrssr', nv) }],
                 ['Fire-loop · halon reserve', showFireLoop, ()=>{ const nv=!showFireLoop; setShowFireLoop(nv); lsSet('ft-fireloop', nv) }],
