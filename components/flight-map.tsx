@@ -98,6 +98,7 @@ import FuelTemp from './fuel-temp'
 import NavaidCoverage from './navaid-coverage'
 import DriftDown from './drift-down'
 import ReserveFuel from './reserve-fuel'
+import EtpAtlas from './etp-atlas'
 import CdaCompliance from './cda-compliance'
 import RvsmMonitor from './rvsm-monitor'
 import SpeedLimit from './speed-limit'
@@ -322,6 +323,7 @@ export default function FlightMap() {
   const [showNavaid, setShowNavaid] = useState<boolean>(() => lsGet('ft-navaid', false))
   const [showDrift, setShowDrift] = useState<boolean>(() => lsGet('ft-drift', false))
   const [showReserve, setShowReserve] = useState<boolean>(() => lsGet('ft-reserve', false))
+  const [showEtp, setShowEtp] = useState<boolean>(() => lsGet('ft-etp', false))
   const [showCda, setShowCda] = useState<boolean>(() => lsGet('ft-cda', false))
   const [showSidc, setShowSidc] = useState<boolean>(() => lsGet('ft-sidc', false))
   const [showRvsm, setShowRvsm] = useState<boolean>(() => lsGet('ft-rvsm', false))
@@ -430,7 +432,7 @@ export default function FlightMap() {
   const [showFilters, setShowFilters] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
-  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0)
+  const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2254,6 +2256,7 @@ export default function FlightMap() {
           { id: 'toggle-navaid', group: 'View', label: showNavaid ? 'Close Navaid Coverage Atlas' : 'Navaid Coverage Atlas (DME/DME RNP, VOR backup, GPS-degraded)', run: () => { const nv = !showNavaid; setShowNavaid(nv); lsSet('ft-navaid', nv) }, keywords: ['navaid', 'vor', 'dme', 'vortac', 'rnp', 'rnav', 'pbn', 'positioning', 'gps backup', 'gnss degraded', 'coverage', 'line of sight', 'slant range', 'ssv'] },
           { id: 'toggle-drift', group: 'View', label: showDrift ? 'Close Drift-Down OEI Atlas' : 'Drift-Down OEI Atlas (engine-out ceiling, divert reach)', run: () => { const nv = !showDrift; setShowDrift(nv); lsSet('ft-drift', nv) }, keywords: ['drift', 'drift down', 'oei', 'one engine inoperative', 'engine out', 'divert', 'service ceiling', 'etops', 'single engine', 'driftdown', 'failure'] },
           { id: 'toggle-reserve', group: 'View', label: showReserve ? 'Close Reserve Fuel Monitor' : 'Reserve Fuel Monitor (FAR 91.167 / 121.639 bingo fuel)', run: () => { const nv = !showReserve; setShowReserve(nv); lsSet('ft-reserve', nv) }, keywords: ['reserve', 'reserve fuel', 'bingo', 'min fuel', 'mayday fuel', 'far 91.167', 'far 121.639', 'endurance', 'fuel remaining', 'divert'] },
+          { id: 'toggle-etp', group: 'View', label: showEtp ? 'Close ETP / Critical Point Atlas' : 'ETP / Critical Point Atlas (equal-time point return vs continue)', run: () => { const nv = !showEtp; setShowEtp(nv); lsSet('ft-etp', nv) }, keywords: ['etp', 'equal time', 'critical point', 'cp', 'point of no return', 'ponr', 'oceanic', 'nat ops', 'return', 'committed', 'divert', 'ac 120-42b', 'dispatch'] },
           { id: 'toggle-cda', group: 'View', label: showCda ? 'Close CDA Compliance Monitor' : 'CDA Compliance Monitor (continuous descent approach grading)', run: () => { const nv = !showCda; setShowCda(nv); lsSet('ft-cda', nv) }, keywords: ['cda', 'cdo', 'continuous descent', 'idle descent', 'level-off', 'noise', 'fuel penalty', 'glide path', 'three degree', 'ac 91-86', 'icao doc 9931'] },
           { id: 'toggle-sidc', group: 'View', label: showSidc ? 'Close SID Climb Gradient Monitor' : 'SID Climb Gradient Monitor (departure PDG compliance)', run: () => { const nv = !showSidc; setShowSidc(nv); lsSet('ft-sidc', nv) }, keywords: ['sid', 'pdg', 'climb gradient', 'departure', 'obstacle clearance', 'pans-ops', 'terps', '8260.3', '8168', 'innsbruck', 'aspen', 'der'] },
           { id: 'toggle-rvsm', group: 'View', label: showRvsm ? 'Close RVSM Compliance Monitor' : 'RVSM Compliance Monitor (altitude-keeping / TVE / prox)', run: () => { const nv = !showRvsm; setShowRvsm(nv); lsSet('ft-rvsm', nv) }, keywords: ['rvsm', 'reduced vertical separation', 'altitude keeping', 'tve', 'total vertical error', 'ase', 'altimetry', 'icao 9574', 'ac 91-85', 'amc 20-13', 'aad', 'assigned altitude deviation', 'altitude bust', 'separation loss'] },
@@ -4070,6 +4073,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showEtp && (
+        <EtpAtlas
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowEtp(false); lsSet('ft-etp', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
+
       {showCda && (
         <CdaCompliance
           map={mapRef.current}
@@ -4674,6 +4686,7 @@ export default function FlightMap() {
                 ['Approach mins', showApMin, ()=>{ const nv=!showApMin; setShowApMin(nv); lsSet('ft-apmin', nv) }],
                 ['CDA compliance', showCda, ()=>{ const nv=!showCda; setShowCda(nv); lsSet('ft-cda', nv) }],
                 ['SID climb', showSidc, ()=>{ const nv=!showSidc; setShowSidc(nv); lsSet('ft-sidc', nv) }],
+                ['ETP / CP', showEtp, ()=>{ const nv=!showEtp; setShowEtp(nv); lsSet('ft-etp', nv) }],
                 ['RNP / PBN', showRnp, ()=>{ const nv=!showRnp; setShowRnp(nv); lsSet('ft-rnp', nv) }],
                 ['Fuel tankering', showTank, ()=>{ const nv=!showTank; setShowTank(nv); lsSet('ft-tank', nv) }],
                 ['FIR crossings', showFirX, ()=>{ const nv=!showFirX; setShowFirX(nv); lsSet('ft-firx', nv) }],
