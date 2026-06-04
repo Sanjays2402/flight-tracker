@@ -206,6 +206,7 @@ import ColdTempCorr from './cold-temp-corr'
 import CcmCallsignConfusion from './ccm-callsign-confusion'
 import TasarAdvisor from './tasar-advisor'
 import TcamCyclone from './tcam-cyclone'
+import DaaWellClear from './daa-wellclear'
 import NgsInerting from './ngs-inerting'
 import GadssEltDt from './gadss-eltdt'
 import EfvsHud from './efvs-hud'
@@ -564,6 +565,7 @@ export default function FlightMap() {
   const [showCcm, setShowCcm] = useState<boolean>(() => lsGet('ft-ccm', false))
   const [showTasar, setShowTasar] = useState<boolean>(() => lsGet('ft-tasar', false))
   const [showTcam, setShowTcam] = useState<boolean>(() => lsGet('ft-tcam', false))
+  const [showDaaWc, setShowDaaWc] = useState<boolean>(() => lsGet('ft-daawc', false))
   const [showElec, setShowElec] = useState<boolean>(() => lsGet('ft-elec', false))
   const [showNgs, setShowNgs] = useState<boolean>(() => lsGet('ft-ngs', false))
   const [showGadss, setShowGadss] = useState<boolean>(() => lsGet('ft-gadss', false))
@@ -697,6 +699,7 @@ export default function FlightMap() {
   + (showCcm?1:0)
   + (showTasar?1:0)
   + (showTcam?1:0)
+  + (showDaaWc?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
   + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0) + (showCdr?1:0) + (showStca?1:0) + (showDcb?1:0) + (showRwsl?1:0) + (showAltm?1:0) + (showHold?1:0)
@@ -5405,6 +5408,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showDaaWc && (
+        <DaaWellClear
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowDaaWc(false); lsSet('ft-daawc', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 9) } }}
+        />
+      )}
+
       {showElec && (
         <ElectricalBus
           map={mapRef.current}
@@ -6067,6 +6079,7 @@ export default function FlightMap() {
                 ['Formation', showFormation, ()=>{ const nv=!showFormation; setShowFormation(nv); lsSet('ft-form', nv) }],
                 ['Anomaly', showAnomaly, ()=>{ const nv=!showAnomaly; setShowAnomaly(nv); lsSet('ft-anomaly', nv) }],
                 ['Glide atlas', showGlide, ()=>{ const nv=!showGlide; setShowGlide(nv); lsSet('ft-glide', nv) }],
+                ['DAA-WC · Detect-And-Avoid Well-Clear · RTCA DO-365B DWC pair scorer + ACAS Xu / sXu coordination (RTCA DO-365B §2.2.4.3 / DO-366A / DO-386 / DO-389 / SC-228 / FAA UAS-NAS ConOps v3.0 / AC 90-114B / AC 91-57C / Order 8900.1 Vol 16 / ICAO Doc 10019 RPAS / Annex 2 App 4 / EASA SORA v2.5 / JARUS RPAS Manual / NASA UTM ConOps v2.0 / TM-2020-220615)', showDaaWc, ()=>{ const nv=!showDaaWc; setShowDaaWc(nv); lsSet('ft-daawc', nv) }],
                 ['Coffin corner', showCoffin, ()=>{ const nv=!showCoffin; setShowCoffin(nv); lsSet('ft-coffin', nv) }],
                 ['Hypoxia', showHypoxia, ()=>{ const nv=!showHypoxia; setShowHypoxia(nv); lsSet('ft-hypoxia', nv) }],
                 ['Cabin pressure', showCabin, ()=>{ const nv=!showCabin; setShowCabin(nv); lsSet('ft-cabin', nv) }],
