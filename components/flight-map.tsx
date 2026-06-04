@@ -186,6 +186,7 @@ import FireLoop from './fire-loop'
 import VaacMonitor from './vaac-monitor'
 import VolmetMonitor from './volmet-monitor'
 import OxygenDuration from './oxygen-duration'
+import ColdTempCorr from './cold-temp-corr'
 import NgsInerting from './ngs-inerting'
 import GadssEltDt from './gadss-eltdt'
 import EfvsHud from './efvs-hud'
@@ -524,6 +525,7 @@ export default function FlightMap() {
   const [showVolmet, setShowVolmet] = useState<boolean>(() => lsGet('ft-volmet', false))
   const [showStart, setShowStart] = useState<boolean>(() => lsGet('ft-start', false))
   const [showO2dur, setShowO2dur] = useState<boolean>(() => lsGet('ft-o2dur', false))
+  const [showCtac, setShowCtac] = useState<boolean>(() => lsGet('ft-ctac', false))
   const [showElec, setShowElec] = useState<boolean>(() => lsGet('ft-elec', false))
   const [showNgs, setShowNgs] = useState<boolean>(() => lsGet('ft-ngs', false))
   const [showGadss, setShowGadss] = useState<boolean>(() => lsGet('ft-gadss', false))
@@ -653,6 +655,7 @@ export default function FlightMap() {
   + (showEhs?1:0)
   + (showPrm?1:0)
   + (showO2dur?1:0)
+  + (showCtac?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
   + (showVdl2?1:0)
@@ -5196,6 +5199,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showCtac && (
+        <ColdTempCorr
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowCtac(false); lsSet('ft-ctac', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 10) } }}
+        />
+      )}
+
       {showElec && (
         <ElectricalBus
           map={mapRef.current}
@@ -5935,6 +5947,7 @@ export default function FlightMap() {
                 ['STAR · descend-via speed/alt constraints', showStar, ()=>{ const nv=!showStar; setShowStar(nv); lsSet('ft-star', nv) }],
                 ['Engine start envelope', showStart, ()=>{ const nv=!showStart; setShowStart(nv); lsSet('ft-start', nv) }],
                 ['O₂ supply duration', showO2dur, ()=>{ const nv=!showO2dur; setShowO2dur(nv); lsSet('ft-o2dur', nv) }],
+                ['CTAC · cold-temp altitude correction', showCtac, ()=>{ const nv=!showCtac; setShowCtac(nv); lsSet('ft-ctac', nv) }],
                 ['Electrical / IDG / Bus-tie / RAT', showElec, ()=>{ const nv=!showElec; setShowElec(nv); lsSet('ft-elec', nv) }],
                 ['NGS / OBIGGS inerting', showNgs, ()=>{ const nv=!showNgs; setShowNgs(nv); lsSet('ft-ngs', nv) }],
                 ['Autoland / LVO', showAutoland, ()=>{ const nv=!showAutoland; setShowAutoland(nv); lsSet('ft-autoland', nv) }],
