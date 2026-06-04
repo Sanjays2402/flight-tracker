@@ -158,6 +158,7 @@ import HotspotIncursion from './hotspot-incursion'
 import LrahMonitor from './lrah-monitor'
 import RffsMonitor from './rffs-monitor'
 import CwyWakeEncounter from './cwy-wake-encounter'
+import MrvaMonitor from './mrva-monitor'
 import PmsPointMerge from './pms-pointmerge'
 import FraFreeRoute from './fra-free-route'
 import CdrConditionalRoute from './cdr-conditional-route'
@@ -550,6 +551,7 @@ export default function FlightMap() {
   const [showLrah, setShowLrah] = useState<boolean>(() => lsGet('ft-lrah', false))
   const [showRffs, setShowRffs] = useState<boolean>(() => lsGet('ft-rffs', false))
   const [showCwy, setShowCwy] = useState<boolean>(() => lsGet('ft-cwy', false))
+  const [showMrva, setShowMrva] = useState<boolean>(() => lsGet('ft-mrva', false))
   const [showPms, setShowPms] = useState<boolean>(() => lsGet('ft-pms', false))
   const [showFra, setShowFra] = useState<boolean>(() => lsGet('ft-fra', false))
   const [showCdr, setShowCdr] = useState<boolean>(() => lsGet('ft-cdr', false))
@@ -712,6 +714,7 @@ export default function FlightMap() {
   + (showLrah?1:0)
   + (showRffs?1:0)
   + (showCwy?1:0)
+  + (showMrva?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
   + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0) + (showCdr?1:0) + (showStca?1:0) + (showDcb?1:0) + (showRwsl?1:0) + (showAltm?1:0) + (showHold?1:0)
@@ -5237,6 +5240,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 10) } }}
         />
       )}
+      {showMrva && (
+        <MrvaMonitor
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowMrva(false); lsSet('ft-mrva', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 10) } }}
+        />
+      )}
       {showPms && (
         <PmsPointMerge
           map={mapRef.current}
@@ -6200,6 +6211,7 @@ export default function FlightMap() {
                 ['LRAH · launch & reentry Aircraft-Hazard-Area monitor · 24-pad catalogue, T-minus countdown, AHA + downrange corridor, dynamic SDI (14 CFR Part 450 §450.101 §450.139 / FAA AC 450.139-1A / AC 91-63D / JO 7110.65 §9-3 §9-4 / JO 7210.3DD §18-9 / FAA SDI ConOps v2.0 / ICAO Annex 11 §2.20 / Doc 10039 §4 / EUROCONTROL Sub-Orb ConOps 2019 / Aerospace TOR-2018-02816 / NTSB AAR-15-02 SS2)', showLrah, ()=>{ const nv=!showLrah; setShowLrah(nv); lsSet('ft-lrah', nv) }],
                 ['RFFS · ARFF category compliance monitor · req-cat vs avail-cat by ICAO Annex 14 Tbl 9-1 length/fuselage, Q1/Q2 agent deficit, vehicle count, response-time (Annex 14 §9.2 / Doc 9137 Pt 1 §2 §6 §13 / Doc 9981 Pt I ch 9 / 14 CFR Part 139.315/.317/.319 / AC 150/5210-6E / AC 150/5220-10E / Order 5200.12C / EASA CS-ADR-DSN.D.305/.310 / CAP 168 ch.8 / NFPA 403 / NFPA 412 / NFPA 414 / NTSB AAR-04-04 5481 / AAR-14-01 Asiana 214 SFO)', showRffs, ()=>{ const nv=!showRffs; setShowRffs(nv); lsSet('ft-rffs', nv) }],
                 ['CWY · wake-vortex decay & encounter predictor · Burnham-Hallock vortex profile, Sarpkaya atmospheric decay, b0/2 sink, rolling-moment Cl, in-tube alert (FAA AC 90-23G / JO 7110.65 §5-5 / RECAT-EU ed.3 / ICAO Doc 4444 §5.8 / Doc 9426 §3 / EUROCONTROL EUROWAKE / CREDOS / DLR WakeNet3 / NASA TM-2008-215534 / TP-1976-1465 / Sarpkaya JA 1998 / Spalart ARFM 1998 / Hinton-Tatnall NASA TM-4768 / Holzäpfel JA 2003 / Crow AIAA 1970 / NTSB AAR-02-01 AA587)', showCwy, ()=>{ const nv=!showCwy; setShowCwy(nv); lsSet('ft-cwy', nv) }],
+                ['MRVA · Minimum Radar Vectoring Altitude conformance · 36-sector TRACON/APP catalogue (KJFK/EWR/LAX/SFO/DEN/ATL/ORD/BOS/DFW/PHX/SEA/LAS/SLC/ANC + LON/AMS/CDG/FRA/MUC/ZRH/MAD/FCO/HND/HKG/SIN/SYD) with terrain/obstacle floor + MVA bust scorer (FAA JO 7110.65 §5-6-3 / JO 7210.3 §7-4 / 8260.19 §8 / JO 7110.118 / Doc 4444 §8.6 / Doc 8168 Vol II Pt I §3 / Annex 11 §3.7.5 / EUROCONTROL MSA Spec ed.1.0 / EASA AMC1 SERA.8005(b) / CAP 493 §1.7 / CAP 670 RAC §3 / NTSB AAR-77-04 DL-723 BOS / NTSB AAR-08-04 EJM-748 SDL)', showMrva, ()=>{ const nv=!showMrva; setShowMrva(nv); lsSet('ft-mrva', nv) }],
                 ['PAPI/VGSI · visual glide-slope deviation (Annex 14 §5.3.5)', showPapi, ()=>{ const nv=!showPapi; setShowPapi(nv); lsSet('ft-papi', nv) }],
                 ['STEEP · approach approval & configuration (AC 25-29 / SC-D-04)', showSteep, ()=>{ const nv=!showSteep; setShowSteep(nv); lsSet('ft-steepappr', nv) }],
                 ['MORA · Grid-MORA / OROCA terrain clearance', showMora, ()=>{ const nv=!showMora; setShowMora(nv); lsSet('ft-mora', nv) }],
