@@ -205,6 +205,7 @@ import OxygenDuration from './oxygen-duration'
 import ColdTempCorr from './cold-temp-corr'
 import CcmCallsignConfusion from './ccm-callsign-confusion'
 import TasarAdvisor from './tasar-advisor'
+import TcamCyclone from './tcam-cyclone'
 import NgsInerting from './ngs-inerting'
 import GadssEltDt from './gadss-eltdt'
 import EfvsHud from './efvs-hud'
@@ -562,6 +563,7 @@ export default function FlightMap() {
   const [showCtac, setShowCtac] = useState<boolean>(() => lsGet('ft-ctac', false))
   const [showCcm, setShowCcm] = useState<boolean>(() => lsGet('ft-ccm', false))
   const [showTasar, setShowTasar] = useState<boolean>(() => lsGet('ft-tasar', false))
+  const [showTcam, setShowTcam] = useState<boolean>(() => lsGet('ft-tcam', false))
   const [showElec, setShowElec] = useState<boolean>(() => lsGet('ft-elec', false))
   const [showNgs, setShowNgs] = useState<boolean>(() => lsGet('ft-ngs', false))
   const [showGadss, setShowGadss] = useState<boolean>(() => lsGet('ft-gadss', false))
@@ -694,6 +696,7 @@ export default function FlightMap() {
   + (showCtac?1:0)
   + (showCcm?1:0)
   + (showTasar?1:0)
+  + (showTcam?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
   + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0) + (showCdr?1:0) + (showStca?1:0) + (showDcb?1:0) + (showRwsl?1:0) + (showAltm?1:0) + (showHold?1:0)
@@ -5393,6 +5396,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showTcam && (
+        <TcamCyclone
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowTcam(false); lsSet('ft-tcam', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 5) } }}
+        />
+      )}
+
       {showElec && (
         <ElectricalBus
           map={mapRef.current}
@@ -6175,6 +6187,7 @@ export default function FlightMap() {
                 ['VOLMET · HF/VHF met broadcast', showVolmet, ()=>{ const nv=!showVolmet; setShowVolmet(nv); lsSet('ft-volmet', nv) }],
                 ['PIREP · pilot-report geo-correlation & decay (AC 00-45H / AIM 7-1-21 / Annex 3 §5)', showPirep, ()=>{ const nv=!showPirep; setShowPirep(nv); lsSet('ft-pirep', nv) }],
                 ['SIGMET/AIRMET · MWO hazard polygon penetration (Annex 3 App 6 / AIM 7-1-6/7/8)', showSigmet, ()=>{ const nv=!showSigmet; setShowSigmet(nv); lsSet('ft-sigmet', nv) }],
+                ['TCAM · Tropical Cyclone Avoidance & Eye-Wall Standoff · R64/R50/R34 wind-radii + Saffir-Simpson / JMA / IMD severity + forecast-cone convergence (ICAO Annex 3 App 1 §1 / App 5 TCAC / Doc 9817 §3.7 / Doc 9874 / WMO 1194 §4.6 / NHC SSHWS 2012 / JMA RSMC Tokyo / IMD RSMC New Delhi / BOM TCOP / MFR La Réunion / FAA AC 00-24C §11 / AC 00-45H §5 / Boeing FCTM 5.50-5.51 / Airbus GTG Adverse Weather §6 / IATA FCG-005 §4 / NHC TCR Hugo 1989)', showTcam, ()=>{ const nv=!showTcam; setShowTcam(nv); lsSet('ft-tcam', nv) }],
               ]},
               {group:'Analysis', items:[
                 ['Top of climb', showToc, ()=>{ const nv=!showToc; setShowToc(nv); lsSet('ft-toc', nv) }],
