@@ -192,6 +192,7 @@ import NvpmParticulate from './nvpm-particulate'
 import RtowRtoMargin from './rtow-rto-margin'
 import TropoEncounter from './tropo-encounter'
 import WafsWindFL from './wafs-wind-fl'
+import AcasX from './acasx-collision'
 import OlsObstacleSurface from './ols-obstacle-surface'
 import PmsPointMerge from './pms-pointmerge'
 import FraFreeRoute from './fra-free-route'
@@ -617,6 +618,7 @@ export default function FlightMap() {
   const [showRtow, setShowRtow] = useState<boolean>(() => lsGet('ft-rtow', false))
   const [showTropo, setShowTropo] = useState<boolean>(() => lsGet('ft-tropo', false))
   const [showWafs, setShowWafs] = useState<boolean>(() => lsGet('ft-wafs', false))
+  const [showAcasx, setShowAcasx] = useState<boolean>(() => lsGet('ft-acasx', false))
   const [showVrp, setShowVrp] = useState<boolean>(() => lsGet('ft-vrp', false))
   const [showPms, setShowPms] = useState<boolean>(() => lsGet('ft-pms', false))
   const [showFra, setShowFra] = useState<boolean>(() => lsGet('ft-fra', false))
@@ -766,7 +768,7 @@ export default function FlightMap() {
   const [showStats, setShowStats] = useState(false)
   const [showLayers, setShowLayers] = useState(false)
   const activeLayerCount = [showHeat,chase,showWatch,showStats,showRadar,showEmissions,showConflict,showOverhead,showSun,showHolding,showFormation,showCpa,showDiversion,showVProfile,showTcas,showWake,showContrail,showAtlas,showVip,showFlow,showRecords,showShadow,showDoppler,showAprSeq,showPass,showNoise,showTod,showTripwire,showGeofence,showVoronoi,showSunGlare,showAnomaly,showGlide,showCoffin,showCompareStudio,showSymphony,showTimeMachine,showReach,showTrip,showEventLog,showLadder,showPhase,showCockpit,showRuler,showBullseye,showWinds,showBoard,showScatter,showSquawk,showRace,showDensity,showRoute,showSua,showShear,showCosmic,showHypoxia,showStepClimb,showEtops,showDepSeq,showXwind,showJet,showHstack,showIcing,showCurfew,showMtnWave,showBird,showAsh,showRaim,showOcean,showE6b,showMetar,showCells,showSar,showStable,showFir,showFirX,showRwyCfg,showEnergy].filter(Boolean).length + (showCostIdx?1:0) + (showTaf?1:0) + (showToc?1:0) + (showCabin?1:0) + (showApMin?1:0) + (showFuelTemp?1:0) + (showNavaid?1:0) + (showDrift?1:0) + (showReserve?1:0) + (showTurb?1:0) + (showCrew?1:0) + (showNordo?1:0) + (showTerrain?1:0) + (showMass?1:0) + (showMagVar?1:0) + (showCda?1:0) + (showSidc?1:0) + (showRvsm?1:0) + (showSpdLim?1:0) + (showBoom?1:0) + (showRnp?1:0) + (showSaar?1:0) + (showTank?1:0) + (showWkld?1:0) + (showGnss?1:0) + (showCpdlc?1:0) + (showLbust?1:0) + (showOzone?1:0) + (showAdsbq?1:0) + (showEtp?1:0) + (showRta?1:0) + (showSatcom?1:0) + (showBrake?1:0) + (showMapp?1:0) + (showVhf?1:0) + (showSpwx?1:0) + (showFoqa?1:0) + (showEgt?1:0) + (showPolar?1:0) + (showLibat?1:0) + (showRexhyd?1:0) + (showCgTrim?1:0) + (showOwl?1:0) + (showNadp?1:0) + (showRecat?1:0) + (showUas?1:0) + (showBleed?1:0) + (showDeice?1:0) + (showPstatic?1:0) + (showFlutter?1:0) + (showStall?1:0) + (showTailStrike?1:0) + (showTaws?1:0) + (showCtot?1:0) + (showRera?1:0) + (showEai?1:0) + (showTold?1:0) + (showRelight?1:0) + (showHotsec?1:0) + (showLhirf?1:0) + (showAdiz?1:0) + (showEgress?1:0) + (showNotam?1:0) + (showRadalt5g?1:0) + (showCtAlt?1:0) + (showHyd?1:0) + (showApu?1:0) + (showPcn?1:0) + (showFuelImb?1:0) + (showCsff?1:0) + (showCargoFs?1:0) + (showFbw?1:0) + (showMel?1:0) + (showOil?1:0) + (showVib?1:0) + (showNgs?1:0) + (showAutoland?1:0) + (showGadss?1:0) + (showEfvs?1:0) + (showIrs?1:0) + (showRcam?1:0) + (showMlat?1:0) + (showPbcs?1:0) + (showTanker?1:0) + (showVapp?1:0) + (showGls?1:0) + (showSaf?1:0) + (showHfdl?1:0) + (showArff?1:0) + (showIlsCs?1:0) + (showTrim?1:0) + (showDme?1:0) + (showTRev?1:0) + (showPaxO2?1:0) + (showUlb?1:0) + (showSlop?1:0) + (showSelcal?1:0) + (showAdsc?1:0) + (showAirac?1:0) + (showVolmet?1:0) + (showStart?1:0) + (showWow?1:0) + (showItp?1:0) + (showAsdex?1:0) + (showPsrSsr?1:0) + (showFireLoop?1:0) + (showTpis?1:0) + (showVaac?1:0) + (showEosid?1:0) + (showTfm?1:0) + (showRowRop?1:0) + (showPapi?1:0) + (showSteep?1:0) + (showRedispatch?1:0) + (showOptAlt?1:0) + (showMsaw?1:0) + (showPirep?1:0) + (showSigmet?1:0) + (showVdl2?1:0) + (showTbs?1:0) + (showRfi?1:0) + (showMnt?1:0) + (showCco?1:0) + (showWat?1:0) + (showAcdm?1:0) + (showAman?1:0) + (showHiro?1:0) + (showFim?1:0) + (showClam?1:0) + (showCast?1:0) + (showBlkhol?1:0) + (showGld?1:0) + (showCrzl?1:0) + (showDrftdn?1:0) + (showTmi?1:0) + (showFleet?1:0) + (showGust?1:0) + (showEdr?1:0) + (showNvpm?1:0) + (showRtow?1:0) + (showTropo?1:0) + (showWafs?1:0)
-  + (showLahso?1:0)
+  + (showLahso?1:0) + (showAcasx?1:0)
   + (showMora?1:0)
   + (showStar?1:0)
   + (showSbas?1:0)
@@ -2564,6 +2566,7 @@ export default function FlightMap() {
           { id: 'toggle-div', group: 'View', label: showDiversion ? 'Close diversion finder' : 'Diversion finder (nearest airports)', run: () => { const nv = !showDiversion; setShowDiversion(nv); lsSet('ft-div', nv) }, keywords: ['divert', 'diversion', 'alternate', 'airport', 'nearest', 'glide', 'emergency', 'land'] },
           { id: 'toggle-vp', group: 'View', label: showVProfile ? 'Close vertical profile' : 'Vertical profile (side view from center)', run: () => { const nv = !showVProfile; setShowVProfile(nv); lsSet('ft-vp', nv) }, keywords: ['vertical', 'profile', 'side', 'view', 'altitude', 'range', 'cross', 'section', 'arrival', 'descent', 'climb'] },
           { id: 'toggle-tcas', group: 'View', label: showTcas ? 'Close TCAS scope' : 'TCAS traffic display (head-up scope)', run: () => { const nv = !showTcas; setShowTcas(nv); lsSet('ft-tcas', nv) }, keywords: ['tcas', 'traffic', 'collision', 'avoidance', 'scope', 'ra', 'ta', 'proximate', 'cockpit'] },
+          { id: 'toggle-acasx', group: 'View', label: showAcasx ? 'Close ACAS-Xa monitor' : 'ACAS-Xa collision-avoidance monitor (DO-385)', run: () => { const nv = !showAcasx; setShowAcasx(nv); lsSet('ft-acasx', nv) }, keywords: ['acas', 'acas-x', 'acasx', 'do-385', 'do-386', 'tso-c219', 'ed-256', 'collision', 'avoidance', 'ra', 'ta', 'cpa', 'nmac', 'ueberlingen', 'tcas-replacement'] },
           { id: 'toggle-wake', group: 'View', label: showWake ? 'Close wake turbulence' : 'Wake turbulence (corridors + risk)', run: () => { const nv = !showWake; setShowWake(nv); lsSet('ft-wake', nv) }, keywords: ['wake', 'turbulence', 'heavy', 'super', 'separation', 'recat', 'vortex', 'corridor'] },
           { id: 'toggle-contrail', group: 'View', label: showContrail ? 'Close contrail forecast' : 'Contrail forecast (Schmidt-Appleman)', run: () => { const nv = !showContrail; setShowContrail(nv); lsSet('ft-contrail', nv) }, keywords: ['contrail', 'climate', 'schmidt', 'appleman', 'ISSR', 'cirrus', 'plume', 'forcing'] },
           { id: 'toggle-flow', group: 'View', label: showFlow ? 'Close flow rose' : 'Flow rose (heading wind-rose)', run: () => { const nv = !showFlow; setShowFlow(nv); lsSet('ft-flow', nv) }, keywords: ['flow', 'rose', 'wind rose', 'heading', 'direction', 'track', 'sector', 'compass'] },
@@ -5564,6 +5567,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 6) } }}
         />
       )}
+      {showAcasx && (
+        <AcasX
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowAcasx(false); lsSet('ft-acasx', false) }}
+          onFly={(icao, lat, lng, zoom) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(lat, lng, zoom) } }}
+        />
+      )}
       {showVrp && (
         <VrpCorridor
           map={mapRef.current}
@@ -6486,6 +6497,7 @@ export default function FlightMap() {
                 ['Radar', showRadar, ()=>{ const nv=!showRadar; setShowRadar(nv); lsSet('ft-radar', nv) }],
                 ['Conflict', showConflict, ()=>{ const nv=!showConflict; setShowConflict(nv); lsSet('ft-cflx', nv) }],
                 ['TCAS', showTcas, ()=>{ const nv=!showTcas; setShowTcas(nv); lsSet('ft-tcas', nv) }],
+                ['ACASX', showAcasx, ()=>{ const nv=!showAcasx; setShowAcasx(nv); lsSet('ft-acasx', nv) }],
                 ['CPA', showCpa, ()=>{ const nv=!showCpa; setShowCpa(nv); lsSet('ft-cpa', nv) }],
                 ['Diversion', showDiversion, ()=>{ const nv=!showDiversion; setShowDiversion(nv); lsSet('ft-div', nv) }],
                 ['Holding', showHolding, ()=>{ const nv=!showHolding; setShowHolding(nv); lsSet('ft-hold', nv) }],
