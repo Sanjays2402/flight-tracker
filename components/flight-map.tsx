@@ -208,6 +208,7 @@ import McasStabTrim from './mcas-stab-trim'
 import PioHandling from './pio-handling'
 import CSurgeMargin from './csurge-margin'
 import AsipAging from './asip-aging'
+import RaasRunwayAware from './raas-runway-aware'
 import RtowRtoMargin from './rtow-rto-margin'
 import TropoEncounter from './tropo-encounter'
 import WafsWindFL from './wafs-wind-fl'
@@ -653,6 +654,7 @@ export default function FlightMap() {
   const [showPio, setShowPio] = useState<boolean>(() => lsGet('ft-pio', false))
   const [showCsurge, setShowCsurge] = useState<boolean>(() => lsGet('ft-csurge', false))
   const [showAsip, setShowAsip] = useState<boolean>(() => lsGet('ft-asip', false))
+  const [showRaas, setShowRaas] = useState<boolean>(() => lsGet('ft-raas', false))
   const [showRtow, setShowRtow] = useState<boolean>(() => lsGet('ft-rtow', false))
   const [showTropo, setShowTropo] = useState<boolean>(() => lsGet('ft-tropo', false))
   const [showWafs, setShowWafs] = useState<boolean>(() => lsGet('ft-wafs', false))
@@ -837,7 +839,7 @@ export default function FlightMap() {
   + (showVdl2?1:0)
   + (showTbs?1:0)
   + (showVtf?1:0) + (showCsc?1:0)
-  + (showAsip?1:0)
+  + (showAsip?1:0) + (showRaas?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -5734,6 +5736,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 6) } }}
         />
       )}
+      {showRaas && (
+        <RaasRunwayAware
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowRaas(false); lsSet('ft-raas', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 14) } }}
+        />
+      )}
       {showRtow && (
         <RtowRtoMargin
           map={mapRef.current}
@@ -6780,6 +6790,7 @@ export default function FlightMap() {
                 ['EOSID · OEI escape & net-flight-path', showEosid, ()=>{ const nv=!showEosid; setShowEosid(nv); lsSet('ft-eosid', nv) }],
                 ['LAHSO · land-and-hold-short ALD vs LDR', showLahso, ()=>{ const nv=!showLahso; setShowLahso(nv); lsSet('ft-lahso', nv) }],
                 ['ROW/ROP · runway overrun warning (AC 91-79B / AC 25-32)', showRowRop, ()=>{ const nv=!showRowRop; setShowRowRop(nv); lsSet('ft-rowrop', nv) }],
+                ['RAAS · Runway Awareness & Advisory System (SmartRunway / SmartLanding) · per-airframe live evaluator of the certified Honeywell aural-advisory subsystem layered on top of EGPWS/MK V & MK VI Mod-Block, scoring the nine certified RAAS callouts (APPROACHING, ON-RUNWAY, EXTENDED HOLDING, INSUFFICIENT RUNWAY for take-off, TAXIWAY take-off attempt, WRONG RUNWAY line-up, DISTANCE-REMAINING on landing rollout, EXTENDED HOLDING after taxi-in, and SmartLanding LONG / FAST / HIGH / UNSTABLE energy callouts) against the per-airframe equipage state, runway-identity GPS-vs-magnetic-bearing match, ASDA/TODA/LDA margins, approach-energy gates, and the ARINC-739A MCDU annunciator path · structurally distinct from TAWS (terrain), RWSL (in-pavement red lights), ROW-ROP (runway-overrun energy), LAHSO (intersection short-of-clearance), ASDE-X (surface-radar incursion), HOTSPOT (cartographic hot-spot map), HIRO/RET (rapid-exit selection) — RAAS is uniquely the cockpit AURAL-IDENTITY layer that says aloud the runway/taxiway you are about to enter and the energy state of your landing flare, the last line of defence between an unstabilised approach or wrong-surface line-up and the Comair 5191 LEX precedent · per Honeywell Pilot Guide P/N A28-1146-194 SmartRunway SmartLanding / D202101000048 R6 RAAS Functional Description / D202101000049 SmartLanding Functional Description / RTCA DO-367 MOPS for Airport Surface Awareness Equipment / DO-309 ASA Application Guidance / FAA AC 25-23 SmartRunway / AC 120-29A approach criteria / TSO-C151c TAWS Class A/B / TSO-C194 SmartRunway acceptance / 14 CFR §121.354 §121.358 §135.154 TAWS mandate / EASA AMC1 SPA.TAWS / ICAO Annex 6 Pt I §6.15 TAWS / Doc 9870 §3.5 RAAS guidance / FAA InFO 11008 RAAS · 30-airframe equipage catalogue spanning B73N/B738/B739/B38M/B39M/B752/B753/B763/B764/B772/B77W/B788/B789/B78X/B748 + A319/A320/A321/A20N/A21N/A332/A333/A339/A359/A35K/A388 + E170/E190/E195/E290/E295/CRJ7/CRJ9 + AT72/AT76/DH8D + GLEX/G650/GLF6/FA8X — derived from Honeywell EGPWS/MK V-VI Mod-Block (Block-2/3/4/5/6) install base per 2022 service letters, with per-type runway-database currency (RDC cycle 24-day), GPS-receiver source (GLS LPV-200 / SBAS Class-Beta), and RAAS option-pack (Pack-A baseline 9-callout, Pack-B SmartLanding energy, Pack-C SURF-IA surface indications & alerts) · 32-runway global identity catalogue KJFK/KLGA/KEWR 13L/13R/22L/22R/4L/4R + KLAX 06L/06R/07L/07R/24L/24R/25L/25R + KSFO 01L/01R/10L/10R/19L/19R/28L/28R + KDEN 16R/17L/35L/35R + KATL 08L/08R/09L/09R/26L/26R/27L/27R + KORD 09L/09R/10C/10L/10R/27L/27R/28C + EGLL 09L/09R/27L/27R + EHAM 06/18C/18L/18R/22/24/27/36C/36L/36R + EDDF 07C/07L/07R/18/25C/25L/25R + LFPG 08L/08R/09L/09R/26R/27L + RJAA 16L/16R/34L/34R + RJTT 04/16L/16R/22/34L/34R + WSSS 02L/02R/20C/20L/20R + VHHH 07L/07R/25L/25R · with magnetic bearing, length, ASDA/TODA/LDA, intersection takeoff alternates, taxiway-near-runway hot-pairs (KLEX 26 vs 22 angle-of-divergence 17° / LAX 25L vs 24L parallel-confusion-cluster / SFO 28L vs 28R parallel / FRA 18 high-energy reject runway no full-length opposite-direction) · 7-phase classifier APPROACHING <450ft AGL final / ON-RUNWAY ground·>20kt aligned·brake-release / TAKEOFF-ROLL >40kt ground accelerating / LINE-UP <10kt ground aligned with rwy centerline / TAXI <30kt ground off-rwy / HOLDING ground·<3kt·>60s at hold-short / FLARE <50ft AGL VS<-180 fpm IAS<1.3Vref+10 · 9 drivers RWY-ID (GPS-magnetic vs RDC bearing±5°), ASDA-MARGIN (declared distance vs TOW-required + 15% safety), ENERGY (IAS vs 1.3·Vref ±10kt, glide vs 3°±0.5°), LATERAL (cross-track vs centerline ±50ft on roll), HOLD-TIME (90s threshold), TAXIWAY-DETECT (heading vs nearest rwy ±5°, location lat-lng within 1nm of any active rwy threshold), WRONG-RWY (GPS-bearing match within 5° of any other rwy at same airport), DEEP-LDG (touchdown beyond 1500ft from threshold or remaining-runway < ALD+15%), CALLOUT-SUPPRESS (option-pack vs phase, audio-priority vs higher-priority TCAS/EGPWS) · composite max·0.66 + mean·0.34 × phase-weight × ADV-MUL clipped [0,100] · phase-weight peaks TAKEOFF-ROLL 1.20 / LINE-UP 1.15 / FLARE 1.10 / APPROACHING 1.00 · hard escalators WRONG-RWY ≥ score-min 92 (Comair 5191 Cat-A: line-up on RWY-26 instead of RWY-22 at LEX, 49 fatal, NTSB AAR-07-05) / TAXIWAY-TAKEOFF ≥ 90 (Singapore Airlines 006 CKS taxiway NW takeoff attempt 31 Oct 2000 81 fatal, AAIB-OCT-31-2000) / DEEP-LDG with ASDA-MARGIN<0 ≥ 86 (Asiana 162 HIJ runway-end touchdown 14 Apr 2015, ARAIB ARAIB/AAR1604) / INSUFFICIENT-RWY at LINE-UP ≥ 84 (American 1420 LIT overrun 1 Jun 1999 NTSB AAR-01-02 11 fatal) · 6 tiers EMERGENCY (>=90) suppress nothing / CRITICAL (75-89) all 9 callouts armed / WARN (60-74) energy-only / CAUTION (45-59) identity-only / WATCH (30-44) RAAS armed silent / NOMINAL (<30) SmartRunway armed-equipage-only · click-through to AIRCRAFT/CLASSES/PHASE/CALLOUTS/METHOD tab in side-panel · MapLibre per-aircraft halo+pin+label overlay with rwy-bearing radial + ASDA margin bar + energy diamond (chevrons mark glide/IAS/sink deviations from 1.3Vref/3°/-700fpm targets) · references panel cites Honeywell A28-1146-194 / D202101000048 R6 / D202101000049 / RTCA DO-367 / DO-309 / FAA AC 25-23 / AC 120-29A / TSO-C151c / TSO-C194 / 14 CFR §121.354 / EASA AMC1 SPA.TAWS / ICAO Annex 6 Pt I §6.15 / Doc 9870 §3.5 / NTSB AAR-07-05 LEX / AAIB 31-Oct-2000 SQ006 / NTSB AAR-01-02 LIT / ARAIB AAR1604 HIJ', showRaas, ()=>{ const nv=!showRaas; setShowRaas(nv); lsSet('ft-raas', nv) }],
                 ['HIRO / RET · runway occupancy & rapid-exit selection (Annex 14 §3.10 / Doc 9157 Pt 2 §1.10 / Doc 9981 / EUROCONTROL HIRO / CAP 1378 §6 / AC 150/5300-13B §4.5 / IGOM 4.4)', showHiro, ()=>{ const nv=!showHiro; setShowHiro(nv); lsSet('ft-hiro', nv) }],
                 ['HOTSPOT · runway-incursion hot-spot monitor (ICAO Doc 9870 §3.4 / Annex 14 §3.12 / Doc 9981 Pt II / Doc 4444 §7 / FAA AC 91-73B / AC 150/5340-1M / JO 7110.65 §3-7 §3-10 / FAA RIM / Jeppesen 10-9 / EUROCONTROL Hot-Spot Toolkit ed.3 / CAP 791 §6 / IGOM 4.1-4.4 / NTSB AAR-08-02 LEX)', showHspot, ()=>{ const nv=!showHspot; setShowHspot(nv); lsSet('ft-hspot', nv) }],
                 ['LRAH · launch & reentry Aircraft-Hazard-Area monitor · 24-pad catalogue, T-minus countdown, AHA + downrange corridor, dynamic SDI (14 CFR Part 450 §450.101 §450.139 / FAA AC 450.139-1A / AC 91-63D / JO 7110.65 §9-3 §9-4 / JO 7210.3DD §18-9 / FAA SDI ConOps v2.0 / ICAO Annex 11 §2.20 / Doc 10039 §4 / EUROCONTROL Sub-Orb ConOps 2019 / Aerospace TOR-2018-02816 / NTSB AAR-15-02 SS2)', showLrah, ()=>{ const nv=!showLrah; setShowLrah(nv); lsSet('ft-lrah', nv) }],
