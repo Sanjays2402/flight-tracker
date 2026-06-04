@@ -167,6 +167,7 @@ import VmoMmoEnvelope from './vmo-mmo-envelope'
 import NemoOtp from './nemo-otp'
 import BregSpecificRange from './breg-specific-range'
 import RotorOps from './rotor-ops'
+import CzneConflictZone from './czne-conflict-zone'
 import VrpCorridor from './vrp-corridor'
 import TurnMonitor from './turn-monitor'
 import DgsDocking from './dgs-docking'
@@ -573,6 +574,7 @@ export default function FlightMap() {
   const [showNemo, setShowNemo] = useState<boolean>(() => lsGet('ft-nemo', false))
   const [showRotor, setShowRotor] = useState<boolean>(() => lsGet('ft-rotor', false))
   const [showBreg, setShowBreg] = useState<boolean>(() => lsGet('ft-breg', false))
+  const [showCzne, setShowCzne] = useState<boolean>(() => lsGet('ft-czne', false))
   const [showVrp, setShowVrp] = useState<boolean>(() => lsGet('ft-vrp', false))
   const [showPms, setShowPms] = useState<boolean>(() => lsGet('ft-pms', false))
   const [showFra, setShowFra] = useState<boolean>(() => lsGet('ft-fra', false))
@@ -744,7 +746,7 @@ export default function FlightMap() {
   + (showRffs?1:0)
   + (showCwy?1:0)
   + (showJblast?1:0)
-  + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0) + (showCirc?1:0) + (showVmoMmo?1:0) + (showNemo?1:0) + (showRotor?1:0) + (showBreg?1:0)
+  + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0) + (showCirc?1:0) + (showVmoMmo?1:0) + (showNemo?1:0) + (showRotor?1:0) + (showBreg?1:0) + (showCzne?1:0)
   + (showVrp?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
@@ -5343,6 +5345,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 10) } }}
         />
       )}
+      {showCzne && (
+        <CzneConflictZone
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowCzne(false); lsSet('ft-czne', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 6) } }}
+        />
+      )}
       {showVrp && (
         <VrpCorridor
           map={mapRef.current}
@@ -6380,6 +6390,7 @@ export default function FlightMap() {
                 ['ILS critical / sensitive area', showIlsCs, ()=>{ const nv=!showIlsCs; setShowIlsCs(nv); lsSet('ft-ilscs', nv) }],
                 ['PRM / SOIA · NTZ breach', showPrm, ()=>{ const nv=!showPrm; setShowPrm(nv); lsSet('ft-prm', nv) }],
                 ['SAAR · RNP-AR Approach Conformance · 18-procedure SAAR catalogue (KPSP/KEGE/KASE/KSUN/KJAC/KMMH/KSAN/KDCA/KORD/KJFK/PANC/PAJN/CYLW + LSGS/LOWI/LFLB/ENBR/RJAF) · Radius-to-Fix arc containment + RNP 0.10/0.15/0.20/0.30 lateral + baro-VNAV temp limits + missed-approach RNP + dual-FMS/dual-GNSS eligibility · 6 drivers LAT/RF/TMP/ELG/STB/ALT · 6 tiers INCURSION/GO-AROUND/DEVIATION/WATCH/CONFORM/OUT (FAA AC 90-101A §10.4 §11.6 App D / AC 90-105A / 14 CFR §91.205 §97 §121.353 §135.165 / ICAO Doc 9905 Vol II Pt B Table II-A-3-1 §3.3 §3.5 / Annex 6 Pt I §4.5.7.5 / Annex 11 §2.27 §3.7.5 / Doc 8168 PANS-OPS Vol II Pt III §3.1 §3.3 §3.6 / Doc 9613 Vol II PBN Manual §3 §C-5 / EASA AMC 20-26 / SPA.PBN.105 / Decision 2016/021/R / UK CAP 1385 §3 / CAP 670 SUR §5 / EUROCONTROL PBN Spec 2020 §6.4 / Boeing FCOM 11.40 / Airbus PRO-NOR-SOP-19 / ARINC 424-21 §5.10-5.16 / NTSB AAR-13-02 Asiana 214 SFO / AAIB EW/C2017/04/02 EGGD / ATSB AO-2018-016 Mildura)', showSaar, ()=>{ const nv=!showSaar; setShowSaar(nv); lsSet('ft-saar', nv) }],
+                ['CZNE · Conflict-Zone & Airspace-Restriction Overflight Advisor · 18-zone catalogue (UKBV / RUEU / SYRI / IRAQ / IRAN / YEMI / LIBY / SUDA / SSDN / LEBN / GAZA / SOMA / MALI / DPRK / ETHI / NIGR / MYAN / VENZ) AVOID/DISCR/CAUTION threat bands with FL floor/ceiling + FIR-envelope polygon + sanctioned-operator pinning · 6 drivers INZ/ALT/DWL/PRX/OPR/RTE with forward-projected dwell minutes · 5 tiers CRITICAL/HIGH/ELEVATED/GUARDED/CLEAR · MapLibre zone fill+boundary+halo+pin+label overlay · AIRCRAFT/ZONES tabs · (EASA CZIB portal v2024 / EASA SIB 2022-05R3 / EU Reg 376/2014 / 14 CFR §91.703 §91.711 / FAA SFAR 77/79/81/110/112/113/114/116/117 / FAA AC 91-70B ch.10 / ICAO Annex 11 §2.18 / Annex 15 §5.1 / Doc 4444 §16 / Doc 10084 CZ-RAM / ICAO C-WP/14533 post-MH17 / UK CAA Overseas Territories Ops Notices 2024 / CAP 1864 / IATA Safety Issue Hub Q1 2025 / Dutch Safety Board MH17 §5 / ATSB AO-2014-110 / BFU 5X008-14)', showCzne, ()=>{ const nv=!showCzne; setShowCzne(nv); lsSet('ft-czne', nv) }],
               ]},
               {group:'Environment', items:[
                 ['Wake', showWake, ()=>{ const nv=!showWake; setShowWake(nv); lsSet('ft-wake', nv) }],
