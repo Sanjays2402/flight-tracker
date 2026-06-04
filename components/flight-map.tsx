@@ -155,6 +155,7 @@ import AcdmMonitor from './acdm-monitor'
 import AmanMonitor from './aman-monitor'
 import HiroMonitor from './hiro-monitor'
 import HotspotIncursion from './hotspot-incursion'
+import LrahMonitor from './lrah-monitor'
 import PmsPointMerge from './pms-pointmerge'
 import FraFreeRoute from './fra-free-route'
 import CdrConditionalRoute from './cdr-conditional-route'
@@ -544,6 +545,7 @@ export default function FlightMap() {
   const [showAman, setShowAman] = useState<boolean>(() => lsGet('ft-aman', false))
   const [showHiro, setShowHiro] = useState<boolean>(() => lsGet('ft-hiro', false))
   const [showHspot, setShowHspot] = useState<boolean>(() => lsGet('ft-hspot', false))
+  const [showLrah, setShowLrah] = useState<boolean>(() => lsGet('ft-lrah', false))
   const [showPms, setShowPms] = useState<boolean>(() => lsGet('ft-pms', false))
   const [showFra, setShowFra] = useState<boolean>(() => lsGet('ft-fra', false))
   const [showCdr, setShowCdr] = useState<boolean>(() => lsGet('ft-cdr', false))
@@ -703,6 +705,7 @@ export default function FlightMap() {
   + (showTcam?1:0)
   + (showDaaWc?1:0)
   + (showHspot?1:0)
+  + (showLrah?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
   + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0) + (showCdr?1:0) + (showStca?1:0) + (showDcb?1:0) + (showRwsl?1:0) + (showAltm?1:0) + (showHold?1:0)
@@ -5204,6 +5207,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 14) } }}
         />
       )}
+      {showLrah && (
+        <LrahMonitor
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowLrah(false); lsSet('ft-lrah', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 7) } }}
+        />
+      )}
       {showPms && (
         <PmsPointMerge
           map={mapRef.current}
@@ -6164,6 +6175,7 @@ export default function FlightMap() {
                 ['ROW/ROP · runway overrun warning (AC 91-79B / AC 25-32)', showRowRop, ()=>{ const nv=!showRowRop; setShowRowRop(nv); lsSet('ft-rowrop', nv) }],
                 ['HIRO / RET · runway occupancy & rapid-exit selection (Annex 14 §3.10 / Doc 9157 Pt 2 §1.10 / Doc 9981 / EUROCONTROL HIRO / CAP 1378 §6 / AC 150/5300-13B §4.5 / IGOM 4.4)', showHiro, ()=>{ const nv=!showHiro; setShowHiro(nv); lsSet('ft-hiro', nv) }],
                 ['HOTSPOT · runway-incursion hot-spot monitor (ICAO Doc 9870 §3.4 / Annex 14 §3.12 / Doc 9981 Pt II / Doc 4444 §7 / FAA AC 91-73B / AC 150/5340-1M / JO 7110.65 §3-7 §3-10 / FAA RIM / Jeppesen 10-9 / EUROCONTROL Hot-Spot Toolkit ed.3 / CAP 791 §6 / IGOM 4.1-4.4 / NTSB AAR-08-02 LEX)', showHspot, ()=>{ const nv=!showHspot; setShowHspot(nv); lsSet('ft-hspot', nv) }],
+                ['LRAH · launch & reentry Aircraft-Hazard-Area monitor · 24-pad catalogue, T-minus countdown, AHA + downrange corridor, dynamic SDI (14 CFR Part 450 §450.101 §450.139 / FAA AC 450.139-1A / AC 91-63D / JO 7110.65 §9-3 §9-4 / JO 7210.3DD §18-9 / FAA SDI ConOps v2.0 / ICAO Annex 11 §2.20 / Doc 10039 §4 / EUROCONTROL Sub-Orb ConOps 2019 / Aerospace TOR-2018-02816 / NTSB AAR-15-02 SS2)', showLrah, ()=>{ const nv=!showLrah; setShowLrah(nv); lsSet('ft-lrah', nv) }],
                 ['PAPI/VGSI · visual glide-slope deviation (Annex 14 §5.3.5)', showPapi, ()=>{ const nv=!showPapi; setShowPapi(nv); lsSet('ft-papi', nv) }],
                 ['STEEP · approach approval & configuration (AC 25-29 / SC-D-04)', showSteep, ()=>{ const nv=!showSteep; setShowSteep(nv); lsSet('ft-steepappr', nv) }],
                 ['MORA · Grid-MORA / OROCA terrain clearance', showMora, ()=>{ const nv=!showMora; setShowMora(nv); lsSet('ft-mora', nv) }],
