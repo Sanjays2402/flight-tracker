@@ -159,6 +159,7 @@ import CdrConditionalRoute from './cdr-conditional-route'
 import StcaConflict from './stca-conflict'
 import DcbSectorLoad from './dcb-sector-load'
 import RwslStatusLights from './rwsl-status-lights'
+import AltmSettingRegion from './altm-setting-region'
 import ApuMonitor from './apu-monitor'
 import FuelTanker from './fuel-tanker'
 import PcnPavement from './pcn-pavement'
@@ -537,6 +538,7 @@ export default function FlightMap() {
   const [showStca, setShowStca] = useState<boolean>(() => lsGet('ft-stca', false))
   const [showDcb, setShowDcb] = useState<boolean>(() => lsGet('ft-dcb', false))
   const [showRwsl, setShowRwsl] = useState<boolean>(() => lsGet('ft-rwsl', false))
+  const [showAltm, setShowAltm] = useState<boolean>(() => lsGet('ft-altm', false))
   const [showSigmet, setShowSigmet] = useState<boolean>(() => lsGet('ft-sigmet', false))
   const [showLahso, setShowLahso] = useState<boolean>(() => lsGet('ft-lahso', false))
   const [showMora, setShowMora] = useState<boolean>(() => lsGet('ft-mora', false))
@@ -678,7 +680,7 @@ export default function FlightMap() {
   + (showCtac?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
-  + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0) + (showCdr?1:0) + (showStca?1:0) + (showDcb?1:0) + (showRwsl?1:0)
+  + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0) + (showCdr?1:0) + (showStca?1:0) + (showDcb?1:0) + (showRwsl?1:0) + (showAltm?1:0)
   + (showVdl2?1:0)
   + (showTbs?1:0)
   + (showVtf?1:0)
@@ -5209,6 +5211,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 13) } }}
         />
       )}
+      {showAltm && (
+        <AltmSettingRegion
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowAltm(false); lsSet('ft-altm', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 6) } }}
+        />
+      )}
 
       {showSigmet && (
         <SigmetAirmet
@@ -6150,6 +6160,7 @@ export default function FlightMap() {
                 ['CDR · Conditional Route activation & compliance (EUROCONTROL ASM Hbk ed.6 §3.4 / RAD / AUP-UUP / NMIR 2019/123 / Doc 9554 FUA / Doc 4444 §15 / Reg 2150/2005 / FAA JO 7110.65 §4-3 CDR-US Playbook)', showCdr, ()=>{ const nv=!showCdr; setShowCdr(nv); lsSet('ft-cdr', nv) }],
                 ['DCB · Sector demand-capacity-balancing & overload (EUROCONTROL DCB Hbk ed.2.0 / ATFCM Ops Manual ed.27 §4.4 / NMIR 2019/123 §6 / Doc 9971 / JO 7210.3 §17 / JO 7110.65 §17-1)', showDcb, ()=>{ const nv=!showDcb; setShowDcb(nv); lsSet('ft-dcb', nv) }],
                 ['RWSL · Runway Status Lights · REL/THL/RIL surface conflict (FAA AC 150/5340-30J ch 14 / JO 7110.65 §3-1-12 / 6850.2B App F-G / RWSL ConOps ed.4 / AIM 2-1-6 / ICAO Doc 9476 SMGCS / Doc 9830 A-SMGCS)', showRwsl, ()=>{ const nv=!showRwsl; setShowRwsl(nv); lsSet('ft-rwsl', nv) }],
+                ['ALTM · Altimeter Setting Region & TA/TL transition + cold-temp correction (ICAO Annex 2 §3.6 / Doc 8168 §I.2.7 / §4.3 / Doc 7030 / FAA AIM 7-2 / 14 CFR §91.121 / AC 91-79A / SERA.5005(d))', showAltm, ()=>{ const nv=!showAltm; setShowAltm(nv); lsSet('ft-altm', nv) }],
                 ['VDL-2 / FANS-1A · datalink coverage & RCP/RSP handoff (DO-281B / Doc 9869 PBCS / AC 20-140C)', showVdl2, ()=>{ const nv=!showVdl2; setShowVdl2(nv); lsSet('ft-vdl2', nv) }],
                 ['TBS · Time-Based Separation HW-compression (RECAT-EU / eTBS / LHR-TBS / JO 7110.65 §5-5 / CAP 1378)', showTbs, ()=>{ const nv=!showTbs; setShowTbs(nv); lsSet('ft-tbs', nv) }],
                 ['VTF · Vector-to-Final intercept geometry (JO 7110.65 §5-9 / AIM 5-4-7 / Doc 4444 §8.6.5 / FCOM 11.31)', showVtf, ()=>{ const nv=!showVtf; setShowVtf(nv); lsSet('ft-vtf', nv) }],
