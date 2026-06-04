@@ -165,6 +165,7 @@ import MedlinkDiversion from './medlink-diversion'
 import CirclingApproach from './circling-approach'
 import VmoMmoEnvelope from './vmo-mmo-envelope'
 import NemoOtp from './nemo-otp'
+import BregSpecificRange from './breg-specific-range'
 import RotorOps from './rotor-ops'
 import VrpCorridor from './vrp-corridor'
 import TurnMonitor from './turn-monitor'
@@ -571,6 +572,7 @@ export default function FlightMap() {
   const [showVmoMmo, setShowVmoMmo] = useState<boolean>(() => lsGet('ft-vmommo', false))
   const [showNemo, setShowNemo] = useState<boolean>(() => lsGet('ft-nemo', false))
   const [showRotor, setShowRotor] = useState<boolean>(() => lsGet('ft-rotor', false))
+  const [showBreg, setShowBreg] = useState<boolean>(() => lsGet('ft-breg', false))
   const [showVrp, setShowVrp] = useState<boolean>(() => lsGet('ft-vrp', false))
   const [showPms, setShowPms] = useState<boolean>(() => lsGet('ft-pms', false))
   const [showFra, setShowFra] = useState<boolean>(() => lsGet('ft-fra', false))
@@ -742,7 +744,7 @@ export default function FlightMap() {
   + (showRffs?1:0)
   + (showCwy?1:0)
   + (showJblast?1:0)
-  + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0) + (showCirc?1:0) + (showVmoMmo?1:0) + (showNemo?1:0) + (showRotor?1:0)
+  + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0) + (showCirc?1:0) + (showVmoMmo?1:0) + (showNemo?1:0) + (showRotor?1:0) + (showBreg?1:0)
   + (showVrp?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
@@ -5333,6 +5335,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 10) } }}
         />
       )}
+      {showBreg && (
+        <BregSpecificRange
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowBreg(false); lsSet('ft-breg', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 10) } }}
+        />
+      )}
       {showVrp && (
         <VrpCorridor
           map={mapRef.current}
@@ -6424,6 +6434,7 @@ export default function FlightMap() {
                 ['Runway excursion RCAM', showRera, ()=>{ const nv=!showRera; setShowRera(nv); lsSet('ft-rera', nv) }],
                 ['EGPWS / TAWS modes', showTaws, ()=>{ const nv=!showTaws; setShowTaws(nv); lsSet('ft-taws', nv) }],
                 ['Lightning / HIRF', showLhirf, ()=>{ const nv=!showLhirf; setShowLhirf(nv); lsSet('ft-lhirf', nv) }],
+                ['BREG · Breguet Specific-Range & Cruise-Efficiency Optimizer · per-airframe parametric drag-polar + TSFC model computing SR [NM/kg-fuel], current FF [kg/hr], MRC (Maximum Range Cruise) Mach maximising M·(L/D), LRC (Long-Range Cruise) at 99%-MRC, Cost-Index optimum Mach (CI 0-500 kg/min slider), and optimum FL · 36-type catalogue (B738/A320/B789/A359/B77W/A388/E190/CRJ9/ATR/Q400/GLEX/G650 etc.) with class-specific drag polar CD = CD0 + k·CL² + ΔCD_wave(M, Mcrit) (Lock-style wave-drag rise per Mason Configuration Aero Ch 8 + Boeing PEM §3) · Mach-corrected TSFC = SFC0·(1+0.16·M) per Roskam Pt VI / Mattingly §8 · ISA atmosphere with TAS/Mach/CL/CD numerical brute-force optimisation over Mach 0.55-0.92 · weight estimator deterministic per ICAO24 hash between OEW + typical-payload and MTOW with WT-MUL 70-130% slider · 6 tiers WASTE/POOR/OK/GOOD/OPTIMAL based on SR/MRC ratio · burn-penalty %: (FF_current - FF_LRC) / FF_LRC · MapLibre overlay class-coloured halo rings 7-19px by tier + WASTE/POOR pins + cs δ% pen% labels · AIRCRAFT/CLASSES/POLAR tabs · POLAR tab renders SR-vs-Mach curve with Mcrit/Mmo reference lines + MRC/LRC/CI/CUR markers · (Breguet 1923 · Anderson Aircraft Performance & Design §5 · Hale §5 · Roskam Airplane Design Pt VI Ch 3-4 · Mason Configuration Aero Ch 8 · Mattingly Aircraft Engine Design §8 · Boeing 737/777/787 PEM §3 §4 · Boeing FCOM PI-22 LRC tables · Airbus Getting to Grips with Fuel Economy §1.3 §2.1 · Airbus Getting to Grips with the Cost Index ed.2 · EUROCONTROL BADA 3.15 / 4.2 · ICAO Doc 9889 §A.3)', showBreg, ()=>{ const nv=!showBreg; setShowBreg(nv); lsSet('ft-breg', nv) }],
                 ['NEMO · Network ETA & OTP Monitor with IATA AHM-730 Delay-Code Classifier · per-airframe airborne arrival predictor over 28-hub global catalogue (KJFK/KLAX/KORD/KATL/KDFW/KSFO/KSEA/KBOS/KEWR/KMIA/CYYZ/EGLL/EGKK/EHAM/EDDF/EDDM/LFPG/LSZH/LIRF/LEMD/LEBL/OMDB/OMAA/WSSS/VHHH/RJTT/RJAA/YSSY) · ETA = cruise + 3°-descent + decel + TMA-saturation overhead minus ANSP-absorption capacity · STA from 5-tier punctuality (A-Tier 82% legacy / B-Tier 76% / C-Tier 68% LCC / D-Tier 71% US-dom / E-Tier 64% regional per CODA 2024 + BTS Form 234) with deterministic slack jitter · delay drivers TIME/WX/ATFM/SAT/CFW/ROT composite max·0.62 + mean·0.38 · 6 tiers CANCEL/SEVERE/MAJOR/MODERATE/MINOR/ON-TIME mapped to delay-band 180/120/60/30/15min · 27-code AHM-730/SCAP classifier (06-Reactionary/11-12-Late-pax/16-17-Comm-Cater/23-25-Handling/31-32-Cargo/37-Doc/41-Tech-AOG/51-Damage/61-FOC/71-72-75-WX/81-83-84-ATFM/85-Sec/87-89-Airport/93-Rotation/94-95-Crew/97-Industrial/99-Cancel) with hold-pattern detector + curfew-window matcher + emergency-squawk override · MapLibre overlay tier-coloured halo+pin+link with hub-cluster markers + holding-ring annotations · (IATA AHM-730/SCAP 2024 · IATA WSG ed.32 §8.7 · EUROCONTROL CODA Punctuality 2024 · EUROCONTROL NOP 2024-2028 §5 · ICAO Doc 9971 Pt I §6.3 · ICAO Doc 4444 §6.5 · FAA TBFM Concept of Use v3 · FAA TFMS/TFDM EOBT-TOBT-TTOT chain v2.1 · FAA Order JO 7210.3DD ch.17 · BTS Form 234 B43 · EU Reg 261/2004 · EU Reg 80/2009 · UK CAA CAP 1862 NATS XMAN · SESAR PJ.07 SWIM FF-ICE/R1 §5)', showNemo, ()=>{ const nv=!showNemo; setShowNemo(nv); lsSet('ft-nemo', nv) }],
               ]},
               {group:'Routes & Flow', items:[
