@@ -196,6 +196,7 @@ import WxadRadarTilt from './wxad-radar-tilt'
 import VfeFlapMargin from './vfe-flap-margin'
 import DecrabSideload from './decrab-sideload'
 import VestiSpatialDisorient from './vesti-spatial-disorient'
+import ScxComplexity from './scx-complexity'
 import HailImpact from './hail-impact'
 import LaserIllumination from './laser-illumination'
 import HoldoverFluid from './holdover-fluid'
@@ -650,6 +651,7 @@ export default function FlightMap() {
   const [showVfe, setShowVfe] = useState<boolean>(() => lsGet('ft-vfe', false))
   const [showDecrab, setShowDecrab] = useState<boolean>(() => lsGet('ft-decrab', false))
   const [showVesti, setShowVesti] = useState<boolean>(() => lsGet('ft-vesti', false))
+  const [showScx, setShowScx] = useState<boolean>(() => lsGet('ft-scx', false))
   const [showHail, setShowHail] = useState<boolean>(() => lsGet('ft-hail', false))
   const [showLaser, setShowLaser] = useState<boolean>(() => lsGet('ft-laser', false))
   const [showHoldover, setShowHoldover] = useState<boolean>(() => lsGet('ft-holdover', false))
@@ -857,6 +859,7 @@ export default function FlightMap() {
   + (showVtf?1:0) + (showCsc?1:0)
   + (showAsip?1:0) + (showRaas?1:0) + (showEmas?1:0) + (showProp?1:0) + (showAclass?1:0) + (showPws?1:0) + (showFma?1:0) + (showTcasRa?1:0) + (showAdsbInt?1:0)
   + (showVesti?1:0)
+  + (showScx?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -5657,6 +5660,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
         />
       )}
+      {showScx && (
+        <ScxComplexity
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowScx(false); lsSet('ft-scx', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
       {showHail && (
         <HailImpact
           map={mapRef.current}
@@ -7037,6 +7048,7 @@ export default function FlightMap() {
                 ['FRA · Free Route Airspace direct-routing efficiency (EUROCONTROL FRA ConOps ed.3.0 / NMIR 2019/123 / Doc 9854 §3.6 / Doc 9931 §4 / Doc 9993 §3 / PCP AF-5)', showFra, ()=>{ const nv=!showFra; setShowFra(nv); lsSet('ft-fra', nv) }],
                 ['CDR · Conditional Route activation & compliance (EUROCONTROL ASM Hbk ed.6 §3.4 / RAD / AUP-UUP / NMIR 2019/123 / Doc 9554 FUA / Doc 4444 §15 / Reg 2150/2005 / FAA JO 7110.65 §4-3 CDR-US Playbook)', showCdr, ()=>{ const nv=!showCdr; setShowCdr(nv); lsSet('ft-cdr', nv) }],
                 ['DCB · Sector demand-capacity-balancing & overload (EUROCONTROL DCB Hbk ed.2.0 / ATFCM Ops Manual ed.27 §4.4 / NMIR 2019/123 §6 / Doc 9971 / JO 7210.3 §17 / JO 7110.65 §17-1)', showDcb, ()=>{ const nv=!showDcb; setShowDcb(nv); lsSet('ft-dcb', nv) }],
+                ['SCX · Dynamic Sector Complexity / Controller-Workload Density Index & Capacity-Saturation Monitor · per-sector live evaluator of the canonical Laudeman/Mogford/Histon Dynamic Density (DD) metric used in ATM research and ANSP capacity planning to predict controller cognitive workload independent of raw aircraft count · structurally distinct from FIR-LOAD (count-only, no complexity weighting) / STCA-MTCD (pair-conflict probes, not workload) / DCB (declared capacity vs demand, not dynamic real-time) / FLOW (vector flow visualisation) / CPA (single-pair geometric closest-point) / AIRPROX (post-event encounter severity grading) — SCX is uniquely the SECTOR-LEVEL complexity-index evaluator that drives operational decisions to deploy planner support, split sectors, slow upstream flows, or absorb complexity into next sector boundary · 28-sector global ACC/UAC/TRACON catalogue ZNY-E NY ARTCC East-Tenor / ZOB-W Cleveland West / ZAU-N Chicago North / ZDV-E Denver East-Plains / ZLA-S LA Center South-Coast / ZOA-PAC Oakland Pacific / ZMA-CA Miami Caribbean / ZAB-W Albuquerque West / ZAN-PAC Anchorage Oceanic / EDUU-MUAC Maastricht UAC / EISN-SHA Shannon UIR / EGTT-LON London ACC / EBBU-BRU Brussels UAC / LFFF-PAR Paris ACC / EDMM-MUN Munich UAC / LSAS-ZRH Zurich UAC / LIRR-ROM Rome ACC / LECM-MAD Madrid ACC / EKDK-COP Copenhagen ACC / LGGG-ATH Athens ACC / OMAE-AUH Emirates ACC / OOMM-MUS Muscat ACC / OPLR-LAH Lahore FIR / VIDP-DEL Delhi ACC / ZGZU-GUA Guangzhou ACC / VHHK-HKG Hong Kong ACC / WSJC-SIN Singapore ACC / RJJJ-FUK Fukuoka ACC / YBBB-MEL Melbourne ACC / SBBS-BRA Brasília ACC each with declared capacity (movements/hr per NM CHMI), FL band, kind HIGH-ENR/LOW-ENR/TMA/OCEANIC/MIL · 8-driver Dynamic Density decomposition with Laudeman 1998 Table-3 regression weights normalised: N (0.18) raw count vs declared capacity / CONV (0.14) converging pairs <30NM with negative range-rate dot product / VMIX (0.16) vertical mix climb+descend share / HENT (0.10) Shannon heading entropy in 45° bins (max 3.0b) / SVAR (0.06) speed-variance σ-GS amplifier / PCFL (0.22) potential pair conflicts in look-ahead probe biggest driver per Histon 2002 / ABND (0.08) altitude-band-mix 4kft bins occupied per Kopardekar 2003 / XING (0.06) crossing-traffic geometry entropy×√N · composite DD = 0.18·N + 0.14·CONV + 0.16·VMIX + 0.10·HENT + 0.06·SVAR + 0.22·PCFL + 0.08·ABND + 0.06·XING × ADV-MUL · per-flight sector assignment via great-circle distance vs sector radius + FL band membership · 6 tiers SATURATED ≥75 rose split sector or upstream MIT slowdown advised / HIGH ≥58 rose-pink planner-support warranted conflict probe active / ELEVATED ≥42 amber monitor convergence vertical-mix nominal high / MODERATE ≥22 sky nominal envelope single-controller comfortable / LIGHT <22 emerald low complexity / IDLE slate no traffic in volume · adjustable look-ahead 1-10min CAP-MUL 50-200% ADV-MUL 50-200% FL window 0-660 · MapLibre overlay 16-vertex sector polygon fill + dashed outline tier-coloured + centroid halo 8-22px + sector label + per-flight tier-coloured dots inside sector volume · Side panel 6-tier counter strip click-to-filter + 5-cell summary μ-DD / total flights / total potential conflicts / saturated count / worst-sector ID · ANSP/KIND filter chips · search by sector ID/name/ANSP · 4 tabs SECTORS (per-sector DD card with 8-driver bar chart) / DRIVERS (network-wide mean driver contribution with weight & % bar) / AIRCRAFT (per-flight assignment to high-complexity sectors with FL/GS/TRK/V/S, click-to-fly) / METHOD (Dynamic Density methodology + tier definitions + 8-driver reference + ANSP operational use) · Refs Laudeman NASA TM-1998-112226 / Mogford FAA/CT-TN95/22 / Histon JATM 13(4) 2002 / Hilburn EEC Note 04/04 2004 / Chatterji-Sridhar AIAA-2001-5022 / Delahaye-Puechmorel ICRAT 2010 / Lee-Prevot-Mercer AIAA 2006-6312 / Kopardekar-Schwartz NASA TM-2003-211405 / Sridhar NASA TM-1998-112225 / EUROCONTROL CAPAN-7 / SAAM / DDR2 / PRR 2024 §3.6 / CANSO PRC 2024 §4.4 / ICAO Doc 9854 GATMOC §3.2 / Doc 9971 Pt II Ch 6 / Doc 9426 §III.3 / Doc 9882 SWIM / FAA Order JO 7210.3DD §17 / FAA TFMS/TFDM/TBFM v2.1 / NAS SAS sector-design hbk 2023', showScx, ()=>{ const nv=!showScx; setShowScx(nv); lsSet('ft-scx', nv) }],
                 ['HOLD · Racetrack holding-pattern & stack monitor · leg / spacing / fuel burn (ICAO Doc 4444 §6.5 / Doc 8168 Vol II Pt III §3.3 §3.5 / FAA AIM 5-3-7 / JO 7110.65 §4-4 / IATA FCG-005)', showHold, ()=>{ const nv=!showHold; setShowHold(nv); lsSet('ft-hold', nv) }],
                 ['FIM · ASPA Flight-deck Interval Management · pairwise spacing / Vfim / RECAT wake (RTCA DO-328A / DO-361A / DO-317C / ICAO Doc 9854 §3.6 / Doc 9993 / FAA AC 20-172A / JO 7110.65 §5-3 / SESAR PJ.01-W2-04 / Boeing FCOM PI 11.32)', showFim, ()=>{ const nv=!showFim; setShowFim(nv); lsSet('ft-fim', nv) }],
                 ['TASAR · Traffic Aware Strategic Aircrew Requests · wind/fuel/time-optimal route advisor with conflict + SUA probe (RTCA DO-381 / DO-388 / NASA ConOps v2.0 2017 / NASA TM-2013-218001 TAP / NASA TM-2015-218788 Alaska Airlines Trial / NASA TM-2018-219839 EFB Phase-2 / FAA AC 120-76D / AC 90-100A / ICAO Doc 4444 §4.5 / Doc 9931 §4 / Doc 9993 §3 / Doc 9613 / EUROCONTROL FRA ConOps ed.3.0 §4 / IATA FCG-005)', showTasar, ()=>{ const nv=!showTasar; setShowTasar(nv); lsSet('ft-tasar', nv) }],
