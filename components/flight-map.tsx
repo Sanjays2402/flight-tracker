@@ -203,6 +203,7 @@ import LvtoMonitor from './lvto-monitor'
 import DeepStlMonitor from './deepstl-monitor'
 import MachTuck from './mach-tuck'
 import DutchRoll from './dutch-roll'
+import AarMonitor from './aar-monitor'
 import LaserIllumination from './laser-illumination'
 import HoldoverFluid from './holdover-fluid'
 import TowsConfig from './tows-config'
@@ -663,6 +664,7 @@ export default function FlightMap() {
   const [showDeepStl, setShowDeepStl] = useState<boolean>(() => lsGet('ft-deepstl', false))
   const [showMachTuck, setShowMachTuck] = useState<boolean>(() => lsGet('ft-machtuck', false))
   const [showDutchRoll, setShowDutchRoll] = useState<boolean>(() => lsGet('ft-dutchroll', false))
+  const [showAar, setShowAar] = useState<boolean>(() => lsGet('ft-aar', false))
   const [showLaser, setShowLaser] = useState<boolean>(() => lsGet('ft-laser', false))
   const [showHoldover, setShowHoldover] = useState<boolean>(() => lsGet('ft-holdover', false))
   const [showTows, setShowTows] = useState<boolean>(() => lsGet('ft-tows', false))
@@ -875,6 +877,7 @@ export default function FlightMap() {
   + (showDeepStl?1:0)
   + (showMachTuck?1:0)
   + (showDutchRoll?1:0)
+  + (showAar?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -5731,6 +5734,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
         />
       )}
+      {showAar && (
+        <AarMonitor
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowAar(false); lsSet('ft-aar', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
       {showLaser && (
         <LaserIllumination
           map={mapRef.current}
@@ -7084,6 +7095,7 @@ export default function FlightMap() {
                 ['Curfew', showCurfew, ()=>{ const nv=!showCurfew; setShowCurfew(nv); lsSet('ft-curfew', nv) }],
                 ['Approach seq', showAprSeq, ()=>{ const nv=!showAprSeq; setShowAprSeq(nv); lsSet('ft-aprseq', nv) }],
                 ['Oceanic tracks', showOcean, ()=>{ const nv=!showOcean; setShowOcean(nv); lsSet('ft-ocean', nv) }],
+                ['AAR · Air-to-Air Refueling Track / Receptacle-Tanker Compatibility & Boom-Drogue Service-Match Monitor · per-airframe live evaluator of every airborne MILITARY platform\'s AAR eligibility, receptacle type (BOOM single-point USAF heavy-bomber/fighter vs PROBE-AND-DROGUE multipoint USN/USMC/NATO/RAF fighter/heli/V-22), nearest compatible tanker within practical rendezvous range, currently-active AR-track corridor (USAF AR-1xx anchor/track racetracks + NATO/RAF tracks), tanker-formation rendezvous geometry, and MARSA (Military Accepts Responsibility for Separation of Aircraft) joinup probability · 11-class catalogue USAF-FTR-A F-22/F-15E/F-16 BOOM / USAF-FTR-B F-35A BOOM low-RCS / USAF-BMR B-1B/B-2A/B-52H BOOM / USAF-HVY C-5M/C-17A/E-3G/E-4B BOOM / USN-FTR-PD F/A-18E/F/F-35C/EA-18G PROBE / USMC-FTR-PD F-35B/V-22/AV-8B+ PROBE / NATO-FTR-PD Typhoon/Rafale/Gripen/Tornado/Mirage-2000 PROBE / NATO-HVY-PD A400M/C-130J/E-7/NH90 PROBE / TKR-BOOM KC-135R/T·KC-10A·KC-30A·A330MRTT-boom / TKR-PD KC-130J·KC-10A-centerline·A330MRTT-pod·Mk32B-HDU / TKR-DUAL KC-46A·A330MRTT dual (boom+wing pods) per ATP-3.3.4.2 NATO AAR Manual ed.G / AFI 11-235 / NTRP 3-22.4-VAQ / MIL-STD-1709C boom-receptacle / MIL-STD-1791E probe-drogue · 18 AR-track anchor catalogue AR-105/115/202/215/302/401 CONUS-E·S / AR-553/625/820 CONUS-W / AR-712 CONUS-N / AR-911 AK Yukon / AR-1004 HI PACAF / AR-115B UK Atlantic / AR-04N GE EurFighter / AR-67N Nordic / AR-31M IT Med Rafale/Typhoon / AR-PAC1 JASDF / AR-ROK1 ROKAF KC-330 per FAA JO 7110.65BB §10-1-2 air-refueling areas / AFI 13-201 §6 / AP/1B Mil Aero Pubs / EUROCONTROL EAUP refueling-area DB · receptacle compatibility matrix BOOM↔BOOM/DUAL direct PROBE↔PROBE/DUAL direct cross-service requires Mk32B Boom-Drogue-Adapter conversion (KC-10A standard / KC-46A standard / KC-135R field-installed kit per AMC NOTAM K-AAR / AFI 11-2KC-10 Vol.3) · 7 drivers COMPAT/PROX/AR-TRK/FUEL-LO/ALT-WIN/SPD-WIN/FORMATION · 5 tiers READY-AAR≥80 emerald active joinup imminent / PENDING-AAR≥60 sky tanker on station rendezvous-slip / COMPATIBLE≥35 amber catalogue-match no proximity / INCOMPATIBLE≥20 rose receptacle-track mismatch or no compatible tanker airborne / NON-AAR<20 slate civilian or non-AAR-equipped · hard escalators in-AR-corridor + compatible-tanker<80NM + FUEL-REQ flag → READY≥85 (active joinup under MARSA per ATP-3.3.4.2) / receptacle-track mismatch → INCOMPATIBLE≥50 alternate-tanker or Mk32B BDA cross-service handoff / no compatible tanker anywhere in envelope → INCOMPATIBLE≥35 JFACC tanker-airlift coordination cell request · MapLibre halo+pin+label + AR-track anchor circles (BOOM blue / PROBE violet / DUAL emerald) + joinup-vector dashed receiver→nearest-compatible-tanker line · 4-tab AIRCRAFT/TANKERS/TRACKS/METHOD panel with receptacle-tanker compatibility table + tanker fleet inventory + 18-anchor regional map + SVG equirectangular world plot · refs ATP-3.3.4.2 / AFI 11-235 / AFI 11-2KC-135 Vol.3 / AFI 11-2KC-46 Vol.3 / NTRP 3-22.4-VAQ / MIL-STD-1709C / MIL-STD-1791E / MIL-STD-1853 / FAA JO 7110.65BB §10-1-2 / FAA JO 7610.4P §10-1 SUA · §10-3 ATCAA / AP/1B DoD FLIP / EUROCONTROL EAUP / NATO ATP-56(C) / USN OPNAV 3710.7V §8.10 / USMC MCO 3500.30B §6 / RAAF AAP 7214.003 §6 KC-30A / Boeing KC-46A Pegasus Test Report 2019 / Airbus A330 MRTT FCOM §3 boom + pod operation / GAO-21-105279 KC-46 RVS deficiency / NTSB AAR-66 KC-135 56-3592 Lake Mead 1962 / USAF AMC Air Refueling Initial Qualification Course CGTM / MIL-HDBK-516C §15', showAar, ()=>{ const nv=!showAar; setShowAar(nv); lsSet('ft-aar', nv) }],
                 ['FIR load', showFir, ()=>{ const nv=!showFir; setShowFir(nv); lsSet('ft-fir', nv) }],
                 ['SAR planner', showSar, ()=>{ const nv=!showSar; setShowSar(nv); lsSet('ft-sar', nv) }],
                 ['Stable approach', showStable, ()=>{ const nv=!showStable; setShowStable(nv); lsSet('ft-stable', nv) }],
