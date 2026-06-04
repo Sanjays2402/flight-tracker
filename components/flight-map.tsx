@@ -160,6 +160,7 @@ import StcaConflict from './stca-conflict'
 import DcbSectorLoad from './dcb-sector-load'
 import RwslStatusLights from './rwsl-status-lights'
 import AltmSettingRegion from './altm-setting-region'
+import HoldStack from './hold-stack'
 import ApuMonitor from './apu-monitor'
 import FuelTanker from './fuel-tanker'
 import PcnPavement from './pcn-pavement'
@@ -539,6 +540,7 @@ export default function FlightMap() {
   const [showDcb, setShowDcb] = useState<boolean>(() => lsGet('ft-dcb', false))
   const [showRwsl, setShowRwsl] = useState<boolean>(() => lsGet('ft-rwsl', false))
   const [showAltm, setShowAltm] = useState<boolean>(() => lsGet('ft-altm', false))
+  const [showHold, setShowHold] = useState<boolean>(() => lsGet('ft-hold', false))
   const [showSigmet, setShowSigmet] = useState<boolean>(() => lsGet('ft-sigmet', false))
   const [showLahso, setShowLahso] = useState<boolean>(() => lsGet('ft-lahso', false))
   const [showMora, setShowMora] = useState<boolean>(() => lsGet('ft-mora', false))
@@ -680,7 +682,7 @@ export default function FlightMap() {
   + (showCtac?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
-  + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0) + (showCdr?1:0) + (showStca?1:0) + (showDcb?1:0) + (showRwsl?1:0) + (showAltm?1:0)
+  + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0) + (showCdr?1:0) + (showStca?1:0) + (showDcb?1:0) + (showRwsl?1:0) + (showAltm?1:0) + (showHold?1:0)
   + (showVdl2?1:0)
   + (showTbs?1:0)
   + (showVtf?1:0)
@@ -5219,6 +5221,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 6) } }}
         />
       )}
+      {showHold && (
+        <HoldStack
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowHold(false); lsSet('ft-hold', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 9) } }}
+        />
+      )}
 
       {showSigmet && (
         <SigmetAirmet
@@ -6159,6 +6169,7 @@ export default function FlightMap() {
                 ['FRA · Free Route Airspace direct-routing efficiency (EUROCONTROL FRA ConOps ed.3.0 / NMIR 2019/123 / Doc 9854 §3.6 / Doc 9931 §4 / Doc 9993 §3 / PCP AF-5)', showFra, ()=>{ const nv=!showFra; setShowFra(nv); lsSet('ft-fra', nv) }],
                 ['CDR · Conditional Route activation & compliance (EUROCONTROL ASM Hbk ed.6 §3.4 / RAD / AUP-UUP / NMIR 2019/123 / Doc 9554 FUA / Doc 4444 §15 / Reg 2150/2005 / FAA JO 7110.65 §4-3 CDR-US Playbook)', showCdr, ()=>{ const nv=!showCdr; setShowCdr(nv); lsSet('ft-cdr', nv) }],
                 ['DCB · Sector demand-capacity-balancing & overload (EUROCONTROL DCB Hbk ed.2.0 / ATFCM Ops Manual ed.27 §4.4 / NMIR 2019/123 §6 / Doc 9971 / JO 7210.3 §17 / JO 7110.65 §17-1)', showDcb, ()=>{ const nv=!showDcb; setShowDcb(nv); lsSet('ft-dcb', nv) }],
+                ['HOLD · Racetrack holding-pattern & stack monitor · leg / spacing / fuel burn (ICAO Doc 4444 §6.5 / Doc 8168 Vol II Pt III §3.3 §3.5 / FAA AIM 5-3-7 / JO 7110.65 §4-4 / IATA FCG-005)', showHold, ()=>{ const nv=!showHold; setShowHold(nv); lsSet('ft-hold', nv) }],
                 ['RWSL · Runway Status Lights · REL/THL/RIL surface conflict (FAA AC 150/5340-30J ch 14 / JO 7110.65 §3-1-12 / 6850.2B App F-G / RWSL ConOps ed.4 / AIM 2-1-6 / ICAO Doc 9476 SMGCS / Doc 9830 A-SMGCS)', showRwsl, ()=>{ const nv=!showRwsl; setShowRwsl(nv); lsSet('ft-rwsl', nv) }],
                 ['ALTM · Altimeter Setting Region & TA/TL transition + cold-temp correction (ICAO Annex 2 §3.6 / Doc 8168 §I.2.7 / §4.3 / Doc 7030 / FAA AIM 7-2 / 14 CFR §91.121 / AC 91-79A / SERA.5005(d))', showAltm, ()=>{ const nv=!showAltm; setShowAltm(nv); lsSet('ft-altm', nv) }],
                 ['VDL-2 / FANS-1A · datalink coverage & RCP/RSP handoff (DO-281B / Doc 9869 PBCS / AC 20-140C)', showVdl2, ()=>{ const nv=!showVdl2; setShowVdl2(nv); lsSet('ft-vdl2', nv) }],
