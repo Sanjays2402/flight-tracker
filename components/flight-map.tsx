@@ -203,6 +203,7 @@ import VolmetMonitor from './volmet-monitor'
 import OxygenDuration from './oxygen-duration'
 import ColdTempCorr from './cold-temp-corr'
 import CcmCallsignConfusion from './ccm-callsign-confusion'
+import TasarAdvisor from './tasar-advisor'
 import NgsInerting from './ngs-inerting'
 import GadssEltDt from './gadss-eltdt'
 import EfvsHud from './efvs-hud'
@@ -558,6 +559,7 @@ export default function FlightMap() {
   const [showO2dur, setShowO2dur] = useState<boolean>(() => lsGet('ft-o2dur', false))
   const [showCtac, setShowCtac] = useState<boolean>(() => lsGet('ft-ctac', false))
   const [showCcm, setShowCcm] = useState<boolean>(() => lsGet('ft-ccm', false))
+  const [showTasar, setShowTasar] = useState<boolean>(() => lsGet('ft-tasar', false))
   const [showElec, setShowElec] = useState<boolean>(() => lsGet('ft-elec', false))
   const [showNgs, setShowNgs] = useState<boolean>(() => lsGet('ft-ngs', false))
   const [showGadss, setShowGadss] = useState<boolean>(() => lsGet('ft-gadss', false))
@@ -689,6 +691,7 @@ export default function FlightMap() {
   + (showO2dur?1:0)
   + (showCtac?1:0)
   + (showCcm?1:0)
+  + (showTasar?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
   + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0) + (showCdr?1:0) + (showStca?1:0) + (showDcb?1:0) + (showRwsl?1:0) + (showAltm?1:0) + (showHold?1:0)
@@ -5371,6 +5374,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showTasar && (
+        <TasarAdvisor
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowTasar(false); lsSet('ft-tasar', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 7) } }}
+        />
+      )}
+
       {showElec && (
         <ElectricalBus
           map={mapRef.current}
@@ -6216,6 +6228,7 @@ export default function FlightMap() {
                 ['DCB · Sector demand-capacity-balancing & overload (EUROCONTROL DCB Hbk ed.2.0 / ATFCM Ops Manual ed.27 §4.4 / NMIR 2019/123 §6 / Doc 9971 / JO 7210.3 §17 / JO 7110.65 §17-1)', showDcb, ()=>{ const nv=!showDcb; setShowDcb(nv); lsSet('ft-dcb', nv) }],
                 ['HOLD · Racetrack holding-pattern & stack monitor · leg / spacing / fuel burn (ICAO Doc 4444 §6.5 / Doc 8168 Vol II Pt III §3.3 §3.5 / FAA AIM 5-3-7 / JO 7110.65 §4-4 / IATA FCG-005)', showHold, ()=>{ const nv=!showHold; setShowHold(nv); lsSet('ft-hold', nv) }],
                 ['FIM · ASPA Flight-deck Interval Management · pairwise spacing / Vfim / RECAT wake (RTCA DO-328A / DO-361A / DO-317C / ICAO Doc 9854 §3.6 / Doc 9993 / FAA AC 20-172A / JO 7110.65 §5-3 / SESAR PJ.01-W2-04 / Boeing FCOM PI 11.32)', showFim, ()=>{ const nv=!showFim; setShowFim(nv); lsSet('ft-fim', nv) }],
+                ['TASAR · Traffic Aware Strategic Aircrew Requests · wind/fuel/time-optimal route advisor with conflict + SUA probe (RTCA DO-381 / DO-388 / NASA ConOps v2.0 2017 / NASA TM-2013-218001 TAP / NASA TM-2015-218788 Alaska Airlines Trial / NASA TM-2018-219839 EFB Phase-2 / FAA AC 120-76D / AC 90-100A / ICAO Doc 4444 §4.5 / Doc 9931 §4 / Doc 9993 §3 / Doc 9613 / EUROCONTROL FRA ConOps ed.3.0 §4 / IATA FCG-005)', showTasar, ()=>{ const nv=!showTasar; setShowTasar(nv); lsSet('ft-tasar', nv) }],
                 ['RWSL · Runway Status Lights · REL/THL/RIL surface conflict (FAA AC 150/5340-30J ch 14 / JO 7110.65 §3-1-12 / 6850.2B App F-G / RWSL ConOps ed.4 / AIM 2-1-6 / ICAO Doc 9476 SMGCS / Doc 9830 A-SMGCS)', showRwsl, ()=>{ const nv=!showRwsl; setShowRwsl(nv); lsSet('ft-rwsl', nv) }],
                 ['ALTM · Altimeter Setting Region & TA/TL transition + cold-temp correction (ICAO Annex 2 §3.6 / Doc 8168 §I.2.7 / §4.3 / Doc 7030 / FAA AIM 7-2 / 14 CFR §91.121 / AC 91-79A / SERA.5005(d))', showAltm, ()=>{ const nv=!showAltm; setShowAltm(nv); lsSet('ft-altm', nv) }],
                 ['VDL-2 / FANS-1A · datalink coverage & RCP/RSP handoff (DO-281B / Doc 9869 PBCS / AC 20-140C)', showVdl2, ()=>{ const nv=!showVdl2; setShowVdl2(nv); lsSet('ft-vdl2', nv) }],
