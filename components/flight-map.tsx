@@ -128,6 +128,7 @@ import OptAltCruise from './optalt-cruise'
 import MsawController from './msaw-controller'
 import PirepMonitor from './pirep-monitor'
 import TdwrLlwas from './tdwr-llwas'
+import MtcdMonitor from './mtcd-monitor'
 import Vdl2Datalink from './vdl2-datalink'
 import SigmetAirmet from './sigmet-airmet'
 import TfmInitiatives from './tfm-initiatives'
@@ -514,6 +515,7 @@ export default function FlightMap() {
   const [showMsaw, setShowMsaw] = useState<boolean>(() => lsGet('ft-msaw', false))
   const [showPirep, setShowPirep] = useState<boolean>(() => lsGet('ft-pirep', false))
   const [showTdwr, setShowTdwr] = useState<boolean>(() => lsGet('ft-tdwr', false))
+  const [showMtcd, setShowMtcd] = useState<boolean>(() => lsGet('ft-mtcd', false))
   const [showVdl2, setShowVdl2] = useState<boolean>(() => lsGet('ft-vdl2', false))
   const [showTbs, setShowTbs] = useState<boolean>(() => lsGet('ft-tbs', false))
   const [showVtf, setShowVtf] = useState<boolean>(() => lsGet('ft-vtf', false))
@@ -664,6 +666,7 @@ export default function FlightMap() {
   + (showCtac?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
+  + (showMtcd?1:0)
   + (showVdl2?1:0)
   + (showTbs?1:0)
   + (showVtf?1:0)
@@ -5066,6 +5069,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 9) } }}
         />
       )}
+      {showMtcd && (
+        <MtcdMonitor
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowMtcd(false); lsSet('ft-mtcd', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 7) } }}
+        />
+      )}
       {showVdl2 && (
         <Vdl2Datalink
           map={mapRef.current}
@@ -6072,6 +6083,7 @@ export default function FlightMap() {
                 ['Optimum-Altitude · SAR / tropopause / step-climb (AC 120-103A)', showOptAlt, ()=>{ const nv=!showOptAlt; setShowOptAlt(nv); lsSet('ft-optalt', nv) }],
                 ['MSAW · APW controller-side low-altitude warning (JO 7110.65 §5-15)', showMsaw, ()=>{ const nv=!showMsaw; setShowMsaw(nv); lsSet('ft-msaw', nv) }],
                 ['TDWR / LLWAS-NE · terminal wind-shear / microburst (JO 7110.65 §3-1-8 / AC 00-54 / ICAO Doc 9817)', showTdwr, ()=>{ const nv=!showTdwr; setShowTdwr(nv); lsSet('ft-tdwr', nv) }],
+                ['MTCD · medium-term conflict detection 8-20min trajectory probe (Doc 4444 §15.7 / EUROCONTROL iFACTS / ED-202A / JO 7110.65 §5-7)', showMtcd, ()=>{ const nv=!showMtcd; setShowMtcd(nv); lsSet('ft-mtcd', nv) }],
                 ['VDL-2 / FANS-1A · datalink coverage & RCP/RSP handoff (DO-281B / Doc 9869 PBCS / AC 20-140C)', showVdl2, ()=>{ const nv=!showVdl2; setShowVdl2(nv); lsSet('ft-vdl2', nv) }],
                 ['TBS · Time-Based Separation HW-compression (RECAT-EU / eTBS / LHR-TBS / JO 7110.65 §5-5 / CAP 1378)', showTbs, ()=>{ const nv=!showTbs; setShowTbs(nv); lsSet('ft-tbs', nv) }],
                 ['VTF · Vector-to-Final intercept geometry (JO 7110.65 §5-9 / AIM 5-4-7 / Doc 4444 §8.6.5 / FCOM 11.31)', showVtf, ()=>{ const nv=!showVtf; setShowVtf(nv); lsSet('ft-vtf', nv) }],
