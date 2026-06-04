@@ -155,6 +155,7 @@ import AmanMonitor from './aman-monitor'
 import HiroMonitor from './hiro-monitor'
 import PmsPointMerge from './pms-pointmerge'
 import FraFreeRoute from './fra-free-route'
+import CdrConditionalRoute from './cdr-conditional-route'
 import ApuMonitor from './apu-monitor'
 import FuelTanker from './fuel-tanker'
 import PcnPavement from './pcn-pavement'
@@ -529,6 +530,7 @@ export default function FlightMap() {
   const [showHiro, setShowHiro] = useState<boolean>(() => lsGet('ft-hiro', false))
   const [showPms, setShowPms] = useState<boolean>(() => lsGet('ft-pms', false))
   const [showFra, setShowFra] = useState<boolean>(() => lsGet('ft-fra', false))
+  const [showCdr, setShowCdr] = useState<boolean>(() => lsGet('ft-cdr', false))
   const [showSigmet, setShowSigmet] = useState<boolean>(() => lsGet('ft-sigmet', false))
   const [showLahso, setShowLahso] = useState<boolean>(() => lsGet('ft-lahso', false))
   const [showMora, setShowMora] = useState<boolean>(() => lsGet('ft-mora', false))
@@ -670,7 +672,7 @@ export default function FlightMap() {
   + (showCtac?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
-  + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0)
+  + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0) + (showCdr?1:0)
   + (showVdl2?1:0)
   + (showTbs?1:0)
   + (showVtf?1:0)
@@ -5169,6 +5171,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 6) } }}
         />
       )}
+      {showCdr && (
+        <CdrConditionalRoute
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowCdr(false); lsSet('ft-cdr', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 6) } }}
+        />
+      )}
 
       {showSigmet && (
         <SigmetAirmet
@@ -6106,6 +6116,7 @@ export default function FlightMap() {
                 ['MTCD · medium-term conflict detection 8-20min trajectory probe (Doc 4444 §15.7 / EUROCONTROL iFACTS / ED-202A / JO 7110.65 §5-7)', showMtcd, ()=>{ const nv=!showMtcd; setShowMtcd(nv); lsSet('ft-mtcd', nv) }],
                 ['PMS · Point Merge System arrival sequencer (EUROCONTROL PMS ConOps v3 / DSNA STAC / CAP 1772 / Doc 9931 §4 / Doc 4444 §8)', showPms, ()=>{ const nv=!showPms; setShowPms(nv); lsSet('ft-pms', nv) }],
                 ['FRA · Free Route Airspace direct-routing efficiency (EUROCONTROL FRA ConOps ed.3.0 / NMIR 2019/123 / Doc 9854 §3.6 / Doc 9931 §4 / Doc 9993 §3 / PCP AF-5)', showFra, ()=>{ const nv=!showFra; setShowFra(nv); lsSet('ft-fra', nv) }],
+                ['CDR · Conditional Route activation & compliance (EUROCONTROL ASM Hbk ed.6 §3.4 / RAD / AUP-UUP / NMIR 2019/123 / Doc 9554 FUA / Doc 4444 §15 / Reg 2150/2005 / FAA JO 7110.65 §4-3 CDR-US Playbook)', showCdr, ()=>{ const nv=!showCdr; setShowCdr(nv); lsSet('ft-cdr', nv) }],
                 ['VDL-2 / FANS-1A · datalink coverage & RCP/RSP handoff (DO-281B / Doc 9869 PBCS / AC 20-140C)', showVdl2, ()=>{ const nv=!showVdl2; setShowVdl2(nv); lsSet('ft-vdl2', nv) }],
                 ['TBS · Time-Based Separation HW-compression (RECAT-EU / eTBS / LHR-TBS / JO 7110.65 §5-5 / CAP 1378)', showTbs, ()=>{ const nv=!showTbs; setShowTbs(nv); lsSet('ft-tbs', nv) }],
                 ['VTF · Vector-to-Final intercept geometry (JO 7110.65 §5-9 / AIM 5-4-7 / Doc 4444 §8.6.5 / FCOM 11.31)', showVtf, ()=>{ const nv=!showVtf; setShowVtf(nv); lsSet('ft-vtf', nv) }],
