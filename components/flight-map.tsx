@@ -169,6 +169,7 @@ import BregSpecificRange from './breg-specific-range'
 import OldLandingDistance from './old-landing-distance'
 import DocCostBreakeven from './doc-cost-breakeven'
 import CircadFatigue from './circad-fatigue'
+import VmcaMonitor from './vmca-monitor'
 import RotorOps from './rotor-ops'
 import CzneConflictZone from './czne-conflict-zone'
 import CastAccidentCat from './cast-accident-cat'
@@ -585,6 +586,7 @@ export default function FlightMap() {
   const [showBreg, setShowBreg] = useState<boolean>(() => lsGet('ft-breg', false))
   const [showDoc, setShowDoc] = useState<boolean>(() => lsGet('ft-doc', false))
   const [showCircad, setShowCircad] = useState<boolean>(() => lsGet('ft-circad', false))
+  const [showVmca, setShowVmca] = useState<boolean>(() => lsGet('ft-vmca', false))
   const [showCzne, setShowCzne] = useState<boolean>(() => lsGet('ft-czne', false))
   const [showCast, setShowCast] = useState<boolean>(() => lsGet('ft-cast', false))
   const [showBlkhol, setShowBlkhol] = useState<boolean>(() => lsGet('ft-blkhol', false))
@@ -765,7 +767,7 @@ export default function FlightMap() {
   + (showCwy?1:0)
   + (showJblast?1:0)
   + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0) + (showCirc?1:0) + (showVmoMmo?1:0) + (showNemo?1:0) + (showRotor?1:0) + (showBreg?1:0) + (showCzne?1:0) + (showOld?1:0)
-  + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0) + (showCirc?1:0) + (showVmoMmo?1:0) + (showNemo?1:0) + (showRotor?1:0) + (showBreg?1:0) + (showCzne?1:0) + (showDoc?1:0) + (showPrd?1:0) + (showAltn?1:0) + (showFlex?1:0) + (showCircad?1:0)
+  + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0) + (showCirc?1:0) + (showVmoMmo?1:0) + (showNemo?1:0) + (showRotor?1:0) + (showBreg?1:0) + (showCzne?1:0) + (showDoc?1:0) + (showPrd?1:0) + (showAltn?1:0) + (showFlex?1:0) + (showCircad?1:0) + (showVmca?1:0)
   + (showVrp?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
@@ -5380,6 +5382,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
         />
       )}
+      {showVmca && (
+        <VmcaMonitor
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowVmca(false); lsSet('ft-vmca', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
       {showCzne && (
         <CzneConflictZone
           map={mapRef.current}
@@ -6362,6 +6372,7 @@ export default function FlightMap() {
                 ['Fullscreen', isFullscreen, toggleFullscreen],
               ]},
               {group:'Safety & Traffic', items:[
+                ['VMCA · OEI Vmcg/Vmca/Vmcl asymmetric-control margin (14 CFR §25.149 / AC 25-7D §6 / AMC 25.149 / FCTM Eng-Out)', showVmca, ()=>{ const nv=!showVmca; setShowVmca(nv); lsSet('ft-vmca', nv) }],
                 ['Radar', showRadar, ()=>{ const nv=!showRadar; setShowRadar(nv); lsSet('ft-radar', nv) }],
                 ['Conflict', showConflict, ()=>{ const nv=!showConflict; setShowConflict(nv); lsSet('ft-cflx', nv) }],
                 ['TCAS', showTcas, ()=>{ const nv=!showTcas; setShowTcas(nv); lsSet('ft-tcas', nv) }],
