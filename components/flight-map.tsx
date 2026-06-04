@@ -197,6 +197,7 @@ import VfeFlapMargin from './vfe-flap-margin'
 import DecrabSideload from './decrab-sideload'
 import VestiSpatialDisorient from './vesti-spatial-disorient'
 import ScxComplexity from './scx-complexity'
+import CdfaVdp from './cdfa-vdp'
 import HailImpact from './hail-impact'
 import LaserIllumination from './laser-illumination'
 import HoldoverFluid from './holdover-fluid'
@@ -652,6 +653,7 @@ export default function FlightMap() {
   const [showDecrab, setShowDecrab] = useState<boolean>(() => lsGet('ft-decrab', false))
   const [showVesti, setShowVesti] = useState<boolean>(() => lsGet('ft-vesti', false))
   const [showScx, setShowScx] = useState<boolean>(() => lsGet('ft-scx', false))
+  const [showCdfa, setShowCdfa] = useState<boolean>(() => lsGet('ft-cdfa', false))
   const [showHail, setShowHail] = useState<boolean>(() => lsGet('ft-hail', false))
   const [showLaser, setShowLaser] = useState<boolean>(() => lsGet('ft-laser', false))
   const [showHoldover, setShowHoldover] = useState<boolean>(() => lsGet('ft-holdover', false))
@@ -860,6 +862,7 @@ export default function FlightMap() {
   + (showAsip?1:0) + (showRaas?1:0) + (showEmas?1:0) + (showProp?1:0) + (showAclass?1:0) + (showPws?1:0) + (showFma?1:0) + (showTcasRa?1:0) + (showAdsbInt?1:0)
   + (showVesti?1:0)
   + (showScx?1:0)
+  + (showCdfa?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -5668,6 +5671,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
         />
       )}
+      {showCdfa && (
+        <CdfaVdp
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowCdfa(false); lsSet('ft-cdfa', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
       {showHail && (
         <HailImpact
           map={mapRef.current}
@@ -7029,6 +7040,7 @@ export default function FlightMap() {
                 ['SAR planner', showSar, ()=>{ const nv=!showSar; setShowSar(nv); lsSet('ft-sar', nv) }],
                 ['Stable approach', showStable, ()=>{ const nv=!showStable; setShowStable(nv); lsSet('ft-stable', nv) }],
                 ['Approach mins', showApMin, ()=>{ const nv=!showApMin; setShowApMin(nv); lsSet('ft-apmin', nv) }],
+                ['CDFA / VDP · Continuous Descent Final Approach & Visual Descent Point conformance · per-airframe live evaluator of NPA vertical-path conformance (LOC/VOR/NDB/LNAV/RNP-LNAV) replacing dive-and-drive · scores published-VPA deviation / ROD-target deviation / FAF crossing / VDP timing / below-MDA without visual / level-segment continuity per ICAO Doc 8168 PANS-OPS Vol I §4.5.7 / Vol II Pt I §3.5 / FAA AC 120-108 / FAA AIM 5-4-5 / EASA AMC1 CAT.OP.MPA.110 / IATA STEADES 2024 §6 / FSF ALAR Briefing Note 7.2 · 25-airport NPA-runway catalogue PGUM/PANC/PHTO/PHKO/KEGE/KASE/KJAC/KTEX/LOWI/LSZS/VNKT/VABB/OPKC/OEMA/ZBAA/ZSPD/RJTT/YSSY/CYYZ/CYUL/MROC/MMMX/SBKP/SCEL/KMRY with per-rwy threshold lat/lng/elev/VPA/TCH/FAF-dist/FAF-alt/MDA/HAT/MAP-dist/approach-type/ALS/VDP-pub · KAL801 KGUM 1997 (228 fatal NTSB AAR-00-01) / UPS 1354 KBHM 2013 (AAR-14-02) / Asiana 214 KSFO 2013 (AAR-14-01) / Hewa Bora 728 FZIC 2011 (74 fatal) / Cubana 972 MUHA 2018 (112 fatal) / Air India Express 812 VOML 2010 (158 fatal) CFIT precedent · 8 drivers ANG/ROD/FAFX/VDPV/STAB/EARLY/CONT/PHASE · 6 tiers CFIT-IMM≥85 / CRIT-DEV≥65 / UNSTAB≥45 / MONITOR≥25 / STABILISED<25 / OFF · hard escalators below-MDA+no-visual+past-VDP score≥92 (KAL801 mode) / VPA>4° in FINAL score≥78 / ROD>1.5× target in CDFA-WIN score≥70 / early-below-VPA in FAF score≥82 (terrain undershoot) · MapLibre rwy-pin + CDFA-slope-corridor + VDP-marker + halo + dashed descent-vector projection · 4-tab AIRCRAFT/RUNWAYS/GEOMETRY/METHOD panel with SVG VPA-vs-distance plot 3°/3.5°/4° reference slopes + HAT band + fleet-on-final dots', showCdfa, ()=>{ const nv=!showCdfa; setShowCdfa(nv); lsSet('ft-cdfa', nv) }],
                 ['CDA compliance', showCda, ()=>{ const nv=!showCda; setShowCda(nv); lsSet('ft-cda', nv) }],
                 ['CCO · Continuous Climb Operations (Doc 9993 / AC 91-86 / JO 7110.65 §4-5 / EUROCONTROL CCO ConOps / FCOM PI-22)', showCco, ()=>{ const nv=!showCco; setShowCco(nv); lsSet('ft-cco', nv) }],
                 ['WAT · Weight/Alt/Temp 2nd-segment climb-limit · hot-and-high MTOW envelope (FAR 25.121 / CS-25.121 / AC 25-7D / AC 120-91A / AMC 25-13 / Boeing PI-22 / Airbus FPOM 3.04 / CAP 698 §4 / NTSB AAR-89-04 USAir 5050)', showWat, ()=>{ const nv=!showWat; setShowWat(nv); lsSet('ft-wat', nv) }],
