@@ -171,6 +171,7 @@ import DocCostBreakeven from './doc-cost-breakeven'
 import CircadFatigue from './circad-fatigue'
 import VmcaMonitor from './vmca-monitor'
 import TemEnergy from './tem-energy'
+import TucHypoxia from './tuc-hypoxia'
 import RotorOps from './rotor-ops'
 import CzneConflictZone from './czne-conflict-zone'
 import CastAccidentCat from './cast-accident-cat'
@@ -611,6 +612,7 @@ export default function FlightMap() {
   const [showCircad, setShowCircad] = useState<boolean>(() => lsGet('ft-circad', false))
   const [showVmca, setShowVmca] = useState<boolean>(() => lsGet('ft-vmca', false))
   const [showTem, setShowTem] = useState<boolean>(() => lsGet('ft-tem', false))
+  const [showTuc, setShowTuc] = useState<boolean>(() => lsGet('ft-tuc', false))
   const [showCzne, setShowCzne] = useState<boolean>(() => lsGet('ft-czne', false))
   const [showCast, setShowCast] = useState<boolean>(() => lsGet('ft-cast', false))
   const [showBlkhol, setShowBlkhol] = useState<boolean>(() => lsGet('ft-blkhol', false))
@@ -813,7 +815,7 @@ export default function FlightMap() {
   + (showCwy?1:0)
   + (showJblast?1:0)
   + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0) + (showCirc?1:0) + (showVmoMmo?1:0) + (showNemo?1:0) + (showRotor?1:0) + (showBreg?1:0) + (showCzne?1:0) + (showOld?1:0)
-  + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0) + (showCirc?1:0) + (showVmoMmo?1:0) + (showNemo?1:0) + (showRotor?1:0) + (showBreg?1:0) + (showCzne?1:0) + (showDoc?1:0) + (showPrd?1:0) + (showAltn?1:0) + (showFlex?1:0) + (showCircad?1:0) + (showMelt?1:0) + (showVmca?1:0) + (showTem?1:0)
+  + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0) + (showCirc?1:0) + (showVmoMmo?1:0) + (showNemo?1:0) + (showRotor?1:0) + (showBreg?1:0) + (showCzne?1:0) + (showDoc?1:0) + (showPrd?1:0) + (showAltn?1:0) + (showFlex?1:0) + (showCircad?1:0) + (showMelt?1:0) + (showVmca?1:0) + (showTem?1:0) + (showTuc?1:0)
   + (showVrp?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
@@ -5445,6 +5447,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
         />
       )}
+      {showTuc && (
+        <TucHypoxia
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowTuc(false); lsSet('ft-tuc', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 7) } }}
+        />
+      )}
       {showCzne && (
         <CzneConflictZone
           map={mapRef.current}
@@ -6660,6 +6670,7 @@ export default function FlightMap() {
                 ['5G C-Band / Radalt', showRadalt5g, ()=>{ const nv=!showRadalt5g; setShowRadalt5g(nv); lsSet('ft-radalt5g', nv) }],
                 ['CT-Alt (cold-temp)', showCtAlt, ()=>{ const nv=!showCtAlt; setShowCtAlt(nv); lsSet('ft-ctalt', nv) }],
                 ['APU / ETOPS-CR', showApu, ()=>{ const nv=!showApu; setShowApu(nv); lsSet('ft-apu', nv) }],
+                ['TUC · Time-of-Useful-Consciousness Hypoxia & Rapid-Decompression Risk Monitor · per-airframe live evaluator of crew/pax effective performance window after sudden cabin-decompression at current cruise FL, scoring whether the certified emergency-descent profile can land cabin altitude ≤10,000ft within the available TUC interval per FAA AC 61-107B App.1 / FAA-H-8083-25C Ch.7 / FAA AC 25-20 / 14 CFR §25.841 §121.333 §91.211 §25.1447 §25.1443 / EASA CS-25.841 / AMC-25.841 / ICAO Annex 6 Pt I §4.4.2 §4.3.9.1.2 / Doc 9760 Vol II Pt VI / Doc 8984 §2.5 / MIL-STD-3013A §A.4.43 / USAF AFP 11-217 Vol III §5 / Ernsting Aviation & Space Medicine 5e Ch.5 / Gradwell & Rainford 5e Ch.4 / West Respiratory Physiology 10e Ch.9 · TUC sitting-passenger tabulation log-interpolated from canonical FAA points FL180 20-30min / FL250 3-5min / FL280 2-3min / FL300 1-2min / FL350 30-60s / FL400 15-20s / FL430+ 9-12s · rapid-decompression curve halves baseline per Ernsting Ch.5 / Brooks ASEM 60 1989 / Files JAMA 232 1975 reflecting forced exhalation + pulmonary N₂ washout · 7-class pressurisation/descent catalogue WB-LH (B777/B787/A350/A380 cabin-max 6500ft ΔP-cert 9.4psi ROD 6800fpm dive-TAS 460kt O₂ 22min) / WB-M (B767/A330 7500ft 8.9psi 6500fpm 440kt 18min) / NB (B737/A320/A321 8000ft 8.6psi 6200fpm 420kt 12min) / RGN-J (E190/CRJ9 8000ft 8.1psi 5800fpm 380kt 12min) / RGN-T (AT72/Q400 8000ft 6.5psi 3500fpm 250kt 10min) / BIZ (G650/GLEX 6000ft 10.3psi 8200fpm 480kt 25min) / LIGHT (PC12/C172 12500ft 3.0psi 2000fpm 180kt) per Boeing FCOM SP.16.1 Rapid Depressurisation / Airbus FCOM PRO-ABN-EMER-D / EASA CS-25.841 / CS-25.1447 / manufacturer ACAP/APD §3 · normal cabin-alt derived from ISA atmosphere inversion and max ΔP cert per airframe · emergency-descent time t_d = 10s startup + (FL−10kft)/ROD profile per FCOM SP.16.1 · 7 risk drivers CABIN / DECOMP / TUC / DESC / O2-MARG / DUR-EXP / PAX-MASK (cabin>14kft trigger per §25.1447(c)(1)) · composite max·0.66 + mean·0.34 × ADV-MUL · hard escalators o2Margin<0 at FL≥250 score-min 90 (Helios 522 / Payne Stewart precedent) / TUC<30s 84 / pax-mask triggered 60 / FL≥410 non-biz 55 · 6 tiers CRIT-HYPOX ≥85 rose / SEVERE ≥70 rose-pink / ELEVATED ≥50 amber / WATCH ≥30 sky / NOMINAL <30 emerald / ON-GROUND slate · MapLibre overlay tier-coloured halo+pin+forward emergency-descent reach vector at class dive-TAS × descent duration + cs+FL+TUC+desc labels · 6-tier counter strip + 6-cell summary μTUC/μDESC/WORST/CRIT/PAXMASK/μFL + 6 sliders MIN-FL/MAX-FL/RAPID-MUL/EXERT-MUL/TARGET-FT/ADV-MUL + 7-class chip filter + HALO/PIN/LBL/VEC toggles + AIRCRAFT/CLASSES/TUC-CHART tabs · TUC-CHART SVG cabin-altitude 10k→50k × TUC seconds log-scale with sitting (emerald) / moderate exertion ×0.7 (amber dashed) / rapid-decompression ×0.5 (rose) curves + fleet dots + picked highlight + target-alt marker · structurally distinct from EDR Emergency-Descent (descent reach + MSA conflict), Cabin-Pressure (system-state) and Pax-O2 supply (duration) — TUC quantifies the time-critical HUMAN cognition window · ft-tuc persisted preference', showTuc, ()=>{ const nv=!showTuc; setShowTuc(nv); lsSet('ft-tuc', nv) }],
                 ['Fuel imbalance', showFuelImb, ()=>{ const nv=!showFuelImb; setShowFuelImb(nv); lsSet('ft-fuelimb', nv) }],
                 ['CSFF cold-soak frost', showCsff, ()=>{ const nv=!showCsff; setShowCsff(nv); lsSet('ft-csff', nv) }],
                 ['Cargo fire / DTLD', showCargoFs, ()=>{ const nv=!showCargoFs; setShowCargoFs(nv); lsSet('ft-cargofs', nv) }],
