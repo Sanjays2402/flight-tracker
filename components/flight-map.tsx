@@ -170,6 +170,7 @@ import OldLandingDistance from './old-landing-distance'
 import DocCostBreakeven from './doc-cost-breakeven'
 import CircadFatigue from './circad-fatigue'
 import VmcaMonitor from './vmca-monitor'
+import TemEnergy from './tem-energy'
 import RotorOps from './rotor-ops'
 import CzneConflictZone from './czne-conflict-zone'
 import CastAccidentCat from './cast-accident-cat'
@@ -599,6 +600,7 @@ export default function FlightMap() {
   const [showDoc, setShowDoc] = useState<boolean>(() => lsGet('ft-doc', false))
   const [showCircad, setShowCircad] = useState<boolean>(() => lsGet('ft-circad', false))
   const [showVmca, setShowVmca] = useState<boolean>(() => lsGet('ft-vmca', false))
+  const [showTem, setShowTem] = useState<boolean>(() => lsGet('ft-tem', false))
   const [showCzne, setShowCzne] = useState<boolean>(() => lsGet('ft-czne', false))
   const [showCast, setShowCast] = useState<boolean>(() => lsGet('ft-cast', false))
   const [showBlkhol, setShowBlkhol] = useState<boolean>(() => lsGet('ft-blkhol', false))
@@ -791,7 +793,7 @@ export default function FlightMap() {
   + (showCwy?1:0)
   + (showJblast?1:0)
   + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0) + (showCirc?1:0) + (showVmoMmo?1:0) + (showNemo?1:0) + (showRotor?1:0) + (showBreg?1:0) + (showCzne?1:0) + (showOld?1:0)
-  + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0) + (showCirc?1:0) + (showVmoMmo?1:0) + (showNemo?1:0) + (showRotor?1:0) + (showBreg?1:0) + (showCzne?1:0) + (showDoc?1:0) + (showPrd?1:0) + (showAltn?1:0) + (showFlex?1:0) + (showCircad?1:0) + (showMelt?1:0) + (showVmca?1:0)
+  + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0) + (showCirc?1:0) + (showVmoMmo?1:0) + (showNemo?1:0) + (showRotor?1:0) + (showBreg?1:0) + (showCzne?1:0) + (showDoc?1:0) + (showPrd?1:0) + (showAltn?1:0) + (showFlex?1:0) + (showCircad?1:0) + (showMelt?1:0) + (showVmca?1:0) + (showTem?1:0)
   + (showVrp?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
@@ -5415,6 +5417,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
         />
       )}
+      {showTem && (
+        <TemEnergy
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowTem(false); lsSet('ft-tem', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
       {showCzne && (
         <CzneConflictZone
           map={mapRef.current}
@@ -6647,6 +6657,7 @@ export default function FlightMap() {
                 ['TCAM · Tropical Cyclone Avoidance & Eye-Wall Standoff · R64/R50/R34 wind-radii + Saffir-Simpson / JMA / IMD severity + forecast-cone convergence (ICAO Annex 3 App 1 §1 / App 5 TCAC / Doc 9817 §3.7 / Doc 9874 / WMO 1194 §4.6 / NHC SSHWS 2012 / JMA RSMC Tokyo / IMD RSMC New Delhi / BOM TCOP / MFR La Réunion / FAA AC 00-24C §11 / AC 00-45H §5 / Boeing FCTM 5.50-5.51 / Airbus GTG Adverse Weather §6 / IATA FCG-005 §4 / NHC TCR Hugo 1989)', showTcam, ()=>{ const nv=!showTcam; setShowTcam(nv); lsSet('ft-tcam', nv) }],
               ]},
               {group:'Analysis', items:[
+                ['TEM · Total Energy Management · specific energy height He = h + V²/(2g) and specific excess power SEP scorer (Rutowski JAS 1954 / Bryson J.Aircraft 1969 / Anderson AFD 6e §6.3 / Etkin & Reid §3.6 / Hale Aircraft Performance §8 / FAA AC 120-71B stabilised approach / IATA Doc 9920 / FAA-H-8083-3C Ch 8 / Boeing FCTM Energy Mgmt / Airbus FCTM PRO-APPR Energy) · per-class HVY/NB/RGN-J/RGN-T/BIZ/LIGHT envelope · phase gate CRZ/CLB/DESC/APP-INT/APP-STAB/LVL-BUST · target He bands ±15m (FAF) / ±60m (intercept) / ±30m (cruise) · 8 drivers DELHE DELSEP DUMP FAST SLOW HIGH LOW ALPHA · 5 tiers DEPLETED/EXCESS/DRIFT/TRACK/OPTIMAL · MapLibre tier-coloured halo+pin+SEP-trend vector + ΔHe labels · side panel sliders ADV-MUL BAND VAPP MIN-FL MAX-FL + 6-class chip filter + HALO/PIN/LBL/VEC toggles + AIRCRAFT/CLASSES/ENERGY tabs · ENERGY tab SVG He-isocurve diagram (V_TAS m/s × altitude ft) with per-class iso-He lines + fleet dots + target marker · hard escalators ΔHe<-30m@AGL<1000ft 92 / ΔHe>+60m@APP-STAB 84 / |SEP|>redline 80 · ft-tem persisted preference', showTem, ()=>{ const nv=!showTem; setShowTem(nv); lsSet('ft-tem', nv) }],
                 ['Top of climb', showToc, ()=>{ const nv=!showToc; setShowToc(nv); lsSet('ft-toc', nv) }],
                 ['Vertical profile', showVProfile, ()=>{ const nv=!showVProfile; setShowVProfile(nv); lsSet('ft-vp', nv) }],
                 ['Flight level', showLadder, ()=>{ const nv=!showLadder; setShowLadder(nv); lsSet('ft-ladder', nv) }],
