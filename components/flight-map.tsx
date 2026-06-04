@@ -158,6 +158,7 @@ import HotspotIncursion from './hotspot-incursion'
 import LrahMonitor from './lrah-monitor'
 import RffsMonitor from './rffs-monitor'
 import CwyWakeEncounter from './cwy-wake-encounter'
+import JblastJetBlast from './jblast-jet-blast'
 import MrvaMonitor from './mrva-monitor'
 import VrpCorridor from './vrp-corridor'
 import TurnMonitor from './turn-monitor'
@@ -553,6 +554,7 @@ export default function FlightMap() {
   const [showLrah, setShowLrah] = useState<boolean>(() => lsGet('ft-lrah', false))
   const [showRffs, setShowRffs] = useState<boolean>(() => lsGet('ft-rffs', false))
   const [showCwy, setShowCwy] = useState<boolean>(() => lsGet('ft-cwy', false))
+  const [showJblast, setShowJblast] = useState<boolean>(() => lsGet('ft-jblast', false))
   const [showMrva, setShowMrva] = useState<boolean>(() => lsGet('ft-mrva', false))
   const [showVrp, setShowVrp] = useState<boolean>(() => lsGet('ft-vrp', false))
   const [showPms, setShowPms] = useState<boolean>(() => lsGet('ft-pms', false))
@@ -719,6 +721,7 @@ export default function FlightMap() {
   + (showLrah?1:0)
   + (showRffs?1:0)
   + (showCwy?1:0)
+  + (showJblast?1:0)
   + (showMrva?1:0)
   + (showVrp?1:0)
   + (showDatis?1:0)
@@ -5246,6 +5249,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 10) } }}
         />
       )}
+      {showJblast && (
+        <JblastJetBlast
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowJblast(false); lsSet('ft-jblast', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 12) } }}
+        />
+      )}
       {showMrva && (
         <MrvaMonitor
           map={mapRef.current}
@@ -6233,6 +6244,7 @@ export default function FlightMap() {
                 ['LRAH · launch & reentry Aircraft-Hazard-Area monitor · 24-pad catalogue, T-minus countdown, AHA + downrange corridor, dynamic SDI (14 CFR Part 450 §450.101 §450.139 / FAA AC 450.139-1A / AC 91-63D / JO 7110.65 §9-3 §9-4 / JO 7210.3DD §18-9 / FAA SDI ConOps v2.0 / ICAO Annex 11 §2.20 / Doc 10039 §4 / EUROCONTROL Sub-Orb ConOps 2019 / Aerospace TOR-2018-02816 / NTSB AAR-15-02 SS2)', showLrah, ()=>{ const nv=!showLrah; setShowLrah(nv); lsSet('ft-lrah', nv) }],
                 ['RFFS · ARFF category compliance monitor · req-cat vs avail-cat by ICAO Annex 14 Tbl 9-1 length/fuselage, Q1/Q2 agent deficit, vehicle count, response-time (Annex 14 §9.2 / Doc 9137 Pt 1 §2 §6 §13 / Doc 9981 Pt I ch 9 / 14 CFR Part 139.315/.317/.319 / AC 150/5210-6E / AC 150/5220-10E / Order 5200.12C / EASA CS-ADR-DSN.D.305/.310 / CAP 168 ch.8 / NFPA 403 / NFPA 412 / NFPA 414 / NTSB AAR-04-04 5481 / AAR-14-01 Asiana 214 SFO)', showRffs, ()=>{ const nv=!showRffs; setShowRffs(nv); lsSet('ft-rffs', nv) }],
                 ['CWY · wake-vortex decay & encounter predictor · Burnham-Hallock vortex profile, Sarpkaya atmospheric decay, b0/2 sink, rolling-moment Cl, in-tube alert (FAA AC 90-23G / JO 7110.65 §5-5 / RECAT-EU ed.3 / ICAO Doc 4444 §5.8 / Doc 9426 §3 / EUROCONTROL EUROWAKE / CREDOS / DLR WakeNet3 / NASA TM-2008-215534 / TP-1976-1465 / Sarpkaya JA 1998 / Spalart ARFM 1998 / Hinton-Tatnall NASA TM-4768 / Holzäpfel JA 2003 / Crow AIAA 1970 / NTSB AAR-02-01 AA587)', showCwy, ()=>{ const nv=!showCwy; setShowCwy(nv); lsSet('ft-cwy', nv) }],
+                ['JBLAST · jet-blast / exhaust-hazard zone monitor · Tollmien-Schlichting axisymmetric centreline decay V=6.5·D_eq·V_e/x, 11.5° Gaussian cone, regime-aware Ve (TOGA/breakaway/taxi/airborne), AGSM 56km/h + Annex-14 24kt thresholds (FAA AC 150/5300-13B §4.10 / AC 91-79B §9 / JO 7110.65 §3-1 / ICAO Annex 14 §3.4.3 / Doc 9157 Pt II §1.6 / Doc 9981 Pt II §4 / Boeing AGSM §8.4 / Airbus AGSM App B / Pope §11.5 / Schlichting §24 / IATA AHM 910 §3 / IGOM 4.1 / NTSB DCA01MA060 / DCA08IA037 / AAIB 12-2019 EGCC)', showJblast, ()=>{ const nv=!showJblast; setShowJblast(nv); lsSet('ft-jblast', nv) }],
                 ['MRVA · Minimum Radar Vectoring Altitude conformance · 36-sector TRACON/APP catalogue (KJFK/EWR/LAX/SFO/DEN/ATL/ORD/BOS/DFW/PHX/SEA/LAS/SLC/ANC + LON/AMS/CDG/FRA/MUC/ZRH/MAD/FCO/HND/HKG/SIN/SYD) with terrain/obstacle floor + MVA bust scorer (FAA JO 7110.65 §5-6-3 / JO 7210.3 §7-4 / 8260.19 §8 / JO 7110.118 / Doc 4444 §8.6 / Doc 8168 Vol II Pt I §3 / Annex 11 §3.7.5 / EUROCONTROL MSA Spec ed.1.0 / EASA AMC1 SERA.8005(b) / CAP 493 §1.7 / CAP 670 RAC §3 / NTSB AAR-77-04 DL-723 BOS / NTSB AAR-08-04 EJM-748 SDL)', showMrva, ()=>{ const nv=!showMrva; setShowMrva(nv); lsSet('ft-mrva', nv) }],
                 ['TURN · Turnaround critical-path monitor · per-airframe ground-service timeline (deplane → clean → fuel+cater → board → push) classified per IATA AHM-630 6-class taxonomy (WB-LONGHAUL / WB-MEDIUM / NB-180 / NB-150 / REGIONAL / BIZ), predicted off-block vs scheduled stand time, slip detection, recovery-room scoring (ICAO Doc 9082 §3.4 / Doc 9971 Pt I Ch 4 / Doc 9554 / IATA AHM 630 / AHM 633 / AHM 810 §4 / IGOM ed.13 ch.4 / EUROCONTROL A-CDM IM ed.5 §4 / EU 716/2014 PCP §AF-3 / FAA SCDM TFDM v3.0 / Boeing AMM ch.10 / Airbus ARM §1.6)', showTurn, ()=>{ const nv=!showTurn; setShowTurn(nv); lsSet('ft-turn', nv) }],
                 ['VRP · Visual Reporting Points & VFR corridor conformance · 36-point catalogue (NY Hudson SFRA / DC SFRA / GCN SFAR-50-2 / LAX mini-route / LHR/LGW/LCY VRPs / CDG-PAR / AMS / FRA / MUC alps / ZRH / MAD / FCO / SYD harbour / BNE / HND heli / HKG / SIN / YVR / YYZ / BOS-CapeCod / CHI lakefront / SF Bay / HNL / CPT / DXB Palm / AKL) with cross-track axis error, alt-band, squawk-code conformance + SFRA incursion scorer (ICAO Annex 11 §2.10 §3.3.2 / Annex 2 §4 / Annex 10 Vol IV §3 / Doc 4444 §16 / Doc 8168 Vol I Pt II §2 / FAA AIM 3-5-6 / JO 7110.65 §7-5 / JO 7400.2 §13-2 / 14 CFR §91.225 §91.215 / SFAR-50-2 / SFAR-71 / SFAR-77 / EASA SERA.5005 §6005 / CAP 413 §4 / CAP 493 §5 / DFS DSNA ENR 6 / NTSB AAR-09-04 Hudson midair)', showVrp, ()=>{ const nv=!showVrp; setShowVrp(nv); lsSet('ft-vrp', nv) }],
