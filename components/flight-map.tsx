@@ -163,6 +163,7 @@ import MrvaMonitor from './mrva-monitor'
 import VrpCorridor from './vrp-corridor'
 import TurnMonitor from './turn-monitor'
 import DgsDocking from './dgs-docking'
+import OlsObstacleSurface from './ols-obstacle-surface'
 import PmsPointMerge from './pms-pointmerge'
 import FraFreeRoute from './fra-free-route'
 import CdrConditionalRoute from './cdr-conditional-route'
@@ -583,6 +584,7 @@ export default function FlightMap() {
   const [showTcam, setShowTcam] = useState<boolean>(() => lsGet('ft-tcam', false))
   const [showTurn, setShowTurn] = useState<boolean>(() => lsGet('ft-turn', false))
   const [showDgs, setShowDgs] = useState<boolean>(() => lsGet('ft-dgs', false))
+  const [showOls, setShowOls] = useState<boolean>(() => lsGet('ft-ols', false))
   const [showDaaWc, setShowDaaWc] = useState<boolean>(() => lsGet('ft-daawc', false))
   const [showElec, setShowElec] = useState<boolean>(() => lsGet('ft-elec', false))
   const [showNgs, setShowNgs] = useState<boolean>(() => lsGet('ft-ngs', false))
@@ -719,6 +721,7 @@ export default function FlightMap() {
   + (showTcam?1:0)
   + (showTurn?1:0)
   + (showDgs?1:0)
+  + (showOls?1:0)
   + (showDaaWc?1:0)
   + (showHspot?1:0)
   + (showLrah?1:0)
@@ -5292,6 +5295,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 17) } }}
         />
       )}
+      {showOls && (
+        <OlsObstacleSurface
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowOls(false); lsSet('ft-ols', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 12) } }}
+        />
+      )}
       {showPms && (
         <PmsPointMerge
           map={mapRef.current}
@@ -6259,6 +6270,7 @@ export default function FlightMap() {
                 ['MRVA · Minimum Radar Vectoring Altitude conformance · 36-sector TRACON/APP catalogue (KJFK/EWR/LAX/SFO/DEN/ATL/ORD/BOS/DFW/PHX/SEA/LAS/SLC/ANC + LON/AMS/CDG/FRA/MUC/ZRH/MAD/FCO/HND/HKG/SIN/SYD) with terrain/obstacle floor + MVA bust scorer (FAA JO 7110.65 §5-6-3 / JO 7210.3 §7-4 / 8260.19 §8 / JO 7110.118 / Doc 4444 §8.6 / Doc 8168 Vol II Pt I §3 / Annex 11 §3.7.5 / EUROCONTROL MSA Spec ed.1.0 / EASA AMC1 SERA.8005(b) / CAP 493 §1.7 / CAP 670 RAC §3 / NTSB AAR-77-04 DL-723 BOS / NTSB AAR-08-04 EJM-748 SDL)', showMrva, ()=>{ const nv=!showMrva; setShowMrva(nv); lsSet('ft-mrva', nv) }],
                 ['TURN · Turnaround critical-path monitor · per-airframe ground-service timeline (deplane → clean → fuel+cater → board → push) classified per IATA AHM-630 6-class taxonomy (WB-LONGHAUL / WB-MEDIUM / NB-180 / NB-150 / REGIONAL / BIZ), predicted off-block vs scheduled stand time, slip detection, recovery-room scoring (ICAO Doc 9082 §3.4 / Doc 9971 Pt I Ch 4 / Doc 9554 / IATA AHM 630 / AHM 633 / AHM 810 §4 / IGOM ed.13 ch.4 / EUROCONTROL A-CDM IM ed.5 §4 / EU 716/2014 PCP §AF-3 / FAA SCDM TFDM v3.0 / Boeing AMM ch.10 / Airbus ARM §1.6)', showTurn, ()=>{ const nv=!showTurn; setShowTurn(nv); lsSet('ft-turn', nv) }],
                 ['DGS · Advanced Visual Docking Guidance & stand-centerline conformance · 24-stand global catalogue · azimuth/closure/stop indications per IATA AHM 621 (ICAO Annex 14 §5.3.24 / Doc 9157 Pt 4 §15 / Doc 9476 / Doc 9830 / Doc 9981 Pt II Ch 4 / IATA AHM 621 / 631 / 651 / IGOM ed.13 §4.1 / FAA AC 150/5300-13B §4.7 / EASA CS-ADR-DSN.M.690 / SAE ARP 4942 / IEC 62700 / NTSB DCA09FA098 / AAIB 5/2014 EGLL)', showDgs, ()=>{ const nv=!showDgs; setShowDgs(nv); lsSet('ft-dgs', nv) }],
+                ['OLS · Obstacle Limitation Surfaces conformance · 20-runway catalogue (KJFK/LAX/SFO/ORD/ATL/DFW/BOS/SEA + EGLL/EGKK/EHAM/EDDF/LFPG/OMDB/WSSS/VHHH/RJTT) · inner-horizontal / conical / approach (2%/3000m + 2.5%/3600m) / transitional (14.3%) / take-off climb (2%/15km) / outer-horizontal penetration scorer with TERPS-grade tier escalators (ICAO Annex 14 Vol I Ch 4 §4.1 / Doc 9137 Pt 6 / Doc 9774 §3.4 / Doc 8168 Vol II Pt III §3.4 / Doc 9905 §3.5 / FAA Order 8260.3D §2-2 / Order 8260.19 §8 / 14 CFR Part 77 Subpart C / AC 150/5300-13B §3 / EASA CS-ADR-DSN.J §J.5 / AMC1 ADR.OPS.B.075 / EUROCONTROL EAD Obstacle DB ed.4 / UK CAA CAP 168 Ch.4 / CAP 738 / Doc 9981 Pt II §2 / NTSB AAR-13-02 Asiana 214 SFO / AAR-09-08 CAL-1404 DEN / AAIB EW/C2008/01/01 BA38 LHR)', showOls, ()=>{ const nv=!showOls; setShowOls(nv); lsSet('ft-ols', nv) }],
                 ['VRP · Visual Reporting Points & VFR corridor conformance · 36-point catalogue (NY Hudson SFRA / DC SFRA / GCN SFAR-50-2 / LAX mini-route / LHR/LGW/LCY VRPs / CDG-PAR / AMS / FRA / MUC alps / ZRH / MAD / FCO / SYD harbour / BNE / HND heli / HKG / SIN / YVR / YYZ / BOS-CapeCod / CHI lakefront / SF Bay / HNL / CPT / DXB Palm / AKL) with cross-track axis error, alt-band, squawk-code conformance + SFRA incursion scorer (ICAO Annex 11 §2.10 §3.3.2 / Annex 2 §4 / Annex 10 Vol IV §3 / Doc 4444 §16 / Doc 8168 Vol I Pt II §2 / FAA AIM 3-5-6 / JO 7110.65 §7-5 / JO 7400.2 §13-2 / 14 CFR §91.225 §91.215 / SFAR-50-2 / SFAR-71 / SFAR-77 / EASA SERA.5005 §6005 / CAP 413 §4 / CAP 493 §5 / DFS DSNA ENR 6 / NTSB AAR-09-04 Hudson midair)', showVrp, ()=>{ const nv=!showVrp; setShowVrp(nv); lsSet('ft-vrp', nv) }],
                 ['PAPI/VGSI · visual glide-slope deviation (Annex 14 §5.3.5)', showPapi, ()=>{ const nv=!showPapi; setShowPapi(nv); lsSet('ft-papi', nv) }],
                 ['STEEP · approach approval & configuration (AC 25-29 / SC-D-04)', showSteep, ()=>{ const nv=!showSteep; setShowSteep(nv); lsSet('ft-steepappr', nv) }],
