@@ -163,6 +163,7 @@ import AltmSettingRegion from './altm-setting-region'
 import HoldStack from './hold-stack'
 import FimAspa from './fim-aspa'
 import ClamRam from './clam-ram'
+import CscCallsign from './csc-callsign'
 import ApuMonitor from './apu-monitor'
 import FuelTanker from './fuel-tanker'
 import PcnPavement from './pcn-pavement'
@@ -545,6 +546,7 @@ export default function FlightMap() {
   const [showHold, setShowHold] = useState<boolean>(() => lsGet('ft-hold', false))
   const [showFim, setShowFim] = useState<boolean>(() => lsGet('ft-fim', false))
   const [showClam, setShowClam] = useState<boolean>(() => lsGet('ft-clam', false))
+  const [showCsc, setShowCsc] = useState<boolean>(() => lsGet('ft-csc', false))
   const [showSigmet, setShowSigmet] = useState<boolean>(() => lsGet('ft-sigmet', false))
   const [showLahso, setShowLahso] = useState<boolean>(() => lsGet('ft-lahso', false))
   const [showMora, setShowMora] = useState<boolean>(() => lsGet('ft-mora', false))
@@ -689,7 +691,7 @@ export default function FlightMap() {
   + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0) + (showCdr?1:0) + (showStca?1:0) + (showDcb?1:0) + (showRwsl?1:0) + (showAltm?1:0) + (showHold?1:0)
   + (showVdl2?1:0)
   + (showTbs?1:0)
-  + (showVtf?1:0)
+  + (showVtf?1:0) + (showCsc?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -5249,6 +5251,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 7) } }}
         />
       )}
+      {showCsc && (
+        <CscCallsign
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowCsc(false); lsSet('ft-csc', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 10) } }}
+        />
+      )}
 
       {showSigmet && (
         <SigmetAirmet
@@ -6186,6 +6196,7 @@ export default function FlightMap() {
                 ['MTCD · medium-term conflict detection 8-20min trajectory probe (Doc 4444 §15.7 / EUROCONTROL iFACTS / ED-202A / JO 7110.65 §5-7)', showMtcd, ()=>{ const nv=!showMtcd; setShowMtcd(nv); lsSet('ft-mtcd', nv) }],
                 ['STCA · Short-Term Conflict Alert controller safety-net 60-180s CPA probe (Doc 4444 §15.7 / EUROCONTROL STCA Spec ed.1.0 / Safety Nets Implementation Guideline 2018 / ED-202A / ED-153 / JO 7110.65 §5-7 / JO 6190.18 / Annex 11 §2.27 / CAP 670 SUR §5)', showStca, ()=>{ const nv=!showStca; setShowStca(nv); lsSet('ft-stca', nv) }],
                 ['CLAM / RAM · Cleared Level & Route Adherence ground safety-net · CFL vertical / cross-track lateral conformance (EUROCONTROL Safety Nets Implementation Guideline 2018 / CLAM Spec ed.1.0 / RAM Spec ed.1.2 / EUROCAE ED-202A / ED-153 / ICAO Doc 4444 §15.7 / Annex 11 §2.27 / Doc 9426 III.4 / FAA JO 7110.65 §5-6-1 / JO 6190.18 / CAP 670 SUR §5 / CAP 710 Level Bust Action Plan / EASA SIB 2018-04 / BFU 02-02 Überlingen)', showClam, ()=>{ const nv=!showClam; setShowClam(nv); lsSet('ft-clam', nv) }],
+                ['CSC · Call-Sign Confusion & R/T mis-identification · pairwise similarity / transpose / 1-digit Δ / anagram (ICAO Doc 9870 §4 / Doc 4444 §12.3 / Annex 10 Vol II §5.2 / EASA SIB 2018-08 / EUROCONTROL AGC-AP / CSC Hot-Spot Tool 2019 / FAA JO 7110.65 §2-4 / AC 120-71B ch 7 / CAP 413 §1.1 / CAP 745 §3 / NTSB AAR-91-08 LAX1493 / AAR-09-03 LEX5191)', showCsc, ()=>{ const nv=!showCsc; setShowCsc(nv); lsSet('ft-csc', nv) }],
                 ['PMS · Point Merge System arrival sequencer (EUROCONTROL PMS ConOps v3 / DSNA STAC / CAP 1772 / Doc 9931 §4 / Doc 4444 §8)', showPms, ()=>{ const nv=!showPms; setShowPms(nv); lsSet('ft-pms', nv) }],
                 ['FRA · Free Route Airspace direct-routing efficiency (EUROCONTROL FRA ConOps ed.3.0 / NMIR 2019/123 / Doc 9854 §3.6 / Doc 9931 §4 / Doc 9993 §3 / PCP AF-5)', showFra, ()=>{ const nv=!showFra; setShowFra(nv); lsSet('ft-fra', nv) }],
                 ['CDR · Conditional Route activation & compliance (EUROCONTROL ASM Hbk ed.6 §3.4 / RAD / AUP-UUP / NMIR 2019/123 / Doc 9554 FUA / Doc 4444 §15 / Reg 2150/2005 / FAA JO 7110.65 §4-3 CDR-US Playbook)', showCdr, ()=>{ const nv=!showCdr; setShowCdr(nv); lsSet('ft-cdr', nv) }],
