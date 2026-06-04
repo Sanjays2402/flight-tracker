@@ -156,6 +156,7 @@ import HiroMonitor from './hiro-monitor'
 import PmsPointMerge from './pms-pointmerge'
 import FraFreeRoute from './fra-free-route'
 import CdrConditionalRoute from './cdr-conditional-route'
+import StcaConflict from './stca-conflict'
 import ApuMonitor from './apu-monitor'
 import FuelTanker from './fuel-tanker'
 import PcnPavement from './pcn-pavement'
@@ -531,6 +532,7 @@ export default function FlightMap() {
   const [showPms, setShowPms] = useState<boolean>(() => lsGet('ft-pms', false))
   const [showFra, setShowFra] = useState<boolean>(() => lsGet('ft-fra', false))
   const [showCdr, setShowCdr] = useState<boolean>(() => lsGet('ft-cdr', false))
+  const [showStca, setShowStca] = useState<boolean>(() => lsGet('ft-stca', false))
   const [showSigmet, setShowSigmet] = useState<boolean>(() => lsGet('ft-sigmet', false))
   const [showLahso, setShowLahso] = useState<boolean>(() => lsGet('ft-lahso', false))
   const [showMora, setShowMora] = useState<boolean>(() => lsGet('ft-mora', false))
@@ -672,7 +674,7 @@ export default function FlightMap() {
   + (showCtac?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
-  + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0) + (showCdr?1:0)
+  + (showMtcd?1:0) + (showPms?1:0) + (showFra?1:0) + (showCdr?1:0) + (showStca?1:0)
   + (showVdl2?1:0)
   + (showTbs?1:0)
   + (showVtf?1:0)
@@ -5179,6 +5181,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 6) } }}
         />
       )}
+      {showStca && (
+        <StcaConflict
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowStca(false); lsSet('ft-stca', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 6) } }}
+        />
+      )}
 
       {showSigmet && (
         <SigmetAirmet
@@ -6114,6 +6124,7 @@ export default function FlightMap() {
                 ['MSAW · APW controller-side low-altitude warning (JO 7110.65 §5-15)', showMsaw, ()=>{ const nv=!showMsaw; setShowMsaw(nv); lsSet('ft-msaw', nv) }],
                 ['TDWR / LLWAS-NE · terminal wind-shear / microburst (JO 7110.65 §3-1-8 / AC 00-54 / ICAO Doc 9817)', showTdwr, ()=>{ const nv=!showTdwr; setShowTdwr(nv); lsSet('ft-tdwr', nv) }],
                 ['MTCD · medium-term conflict detection 8-20min trajectory probe (Doc 4444 §15.7 / EUROCONTROL iFACTS / ED-202A / JO 7110.65 §5-7)', showMtcd, ()=>{ const nv=!showMtcd; setShowMtcd(nv); lsSet('ft-mtcd', nv) }],
+                ['STCA · Short-Term Conflict Alert controller safety-net 60-180s CPA probe (Doc 4444 §15.7 / EUROCONTROL STCA Spec ed.1.0 / Safety Nets Implementation Guideline 2018 / ED-202A / ED-153 / JO 7110.65 §5-7 / JO 6190.18 / Annex 11 §2.27 / CAP 670 SUR §5)', showStca, ()=>{ const nv=!showStca; setShowStca(nv); lsSet('ft-stca', nv) }],
                 ['PMS · Point Merge System arrival sequencer (EUROCONTROL PMS ConOps v3 / DSNA STAC / CAP 1772 / Doc 9931 §4 / Doc 4444 §8)', showPms, ()=>{ const nv=!showPms; setShowPms(nv); lsSet('ft-pms', nv) }],
                 ['FRA · Free Route Airspace direct-routing efficiency (EUROCONTROL FRA ConOps ed.3.0 / NMIR 2019/123 / Doc 9854 §3.6 / Doc 9931 §4 / Doc 9993 §3 / PCP AF-5)', showFra, ()=>{ const nv=!showFra; setShowFra(nv); lsSet('ft-fra', nv) }],
                 ['CDR · Conditional Route activation & compliance (EUROCONTROL ASM Hbk ed.6 §3.4 / RAD / AUP-UUP / NMIR 2019/123 / Doc 9554 FUA / Doc 4444 §15 / Reg 2150/2005 / FAA JO 7110.65 §4-3 CDR-US Playbook)', showCdr, ()=>{ const nv=!showCdr; setShowCdr(nv); lsSet('ft-cdr', nv) }],
