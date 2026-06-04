@@ -161,6 +161,7 @@ import CwyWakeEncounter from './cwy-wake-encounter'
 import JblastJetBlast from './jblast-jet-blast'
 import MrvaMonitor from './mrva-monitor'
 import AirproxRat from './airprox-rat'
+import MedlinkDiversion from './medlink-diversion'
 import VrpCorridor from './vrp-corridor'
 import TurnMonitor from './turn-monitor'
 import DgsDocking from './dgs-docking'
@@ -560,6 +561,7 @@ export default function FlightMap() {
   const [showJblast, setShowJblast] = useState<boolean>(() => lsGet('ft-jblast', false))
   const [showMrva, setShowMrva] = useState<boolean>(() => lsGet('ft-mrva', false))
   const [showAirprox, setShowAirprox] = useState<boolean>(() => lsGet('ft-airprox', false))
+  const [showMedlink, setShowMedlink] = useState<boolean>(() => lsGet('ft-medlink', false))
   const [showVrp, setShowVrp] = useState<boolean>(() => lsGet('ft-vrp', false))
   const [showPms, setShowPms] = useState<boolean>(() => lsGet('ft-pms', false))
   const [showFra, setShowFra] = useState<boolean>(() => lsGet('ft-fra', false))
@@ -730,7 +732,7 @@ export default function FlightMap() {
   + (showRffs?1:0)
   + (showCwy?1:0)
   + (showJblast?1:0)
-  + (showMrva?1:0) + (showAirprox?1:0)
+  + (showMrva?1:0) + (showAirprox?1:0) + (showMedlink?1:0)
   + (showVrp?1:0)
   + (showDatis?1:0)
   + (showTdwr?1:0)
@@ -5281,6 +5283,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 10) } }}
         />
       )}
+      {showMedlink && (
+        <MedlinkDiversion
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowMedlink(false); lsSet('ft-medlink', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 10) } }}
+        />
+      )}
       {showVrp && (
         <VrpCorridor
           map={mapRef.current}
@@ -6282,6 +6292,7 @@ export default function FlightMap() {
                 ['DGS · Advanced Visual Docking Guidance & stand-centerline conformance · 24-stand global catalogue · azimuth/closure/stop indications per IATA AHM 621 (ICAO Annex 14 §5.3.24 / Doc 9157 Pt 4 §15 / Doc 9476 / Doc 9830 / Doc 9981 Pt II Ch 4 / IATA AHM 621 / 631 / 651 / IGOM ed.13 §4.1 / FAA AC 150/5300-13B §4.7 / EASA CS-ADR-DSN.M.690 / SAE ARP 4942 / IEC 62700 / NTSB DCA09FA098 / AAIB 5/2014 EGLL)', showDgs, ()=>{ const nv=!showDgs; setShowDgs(nv); lsSet('ft-dgs', nv) }],
                 ['OLS · Obstacle Limitation Surfaces conformance · 20-runway catalogue (KJFK/LAX/SFO/ORD/ATL/DFW/BOS/SEA + EGLL/EGKK/EHAM/EDDF/LFPG/OMDB/WSSS/VHHH/RJTT) · inner-horizontal / conical / approach (2%/3000m + 2.5%/3600m) / transitional (14.3%) / take-off climb (2%/15km) / outer-horizontal penetration scorer with TERPS-grade tier escalators (ICAO Annex 14 Vol I Ch 4 §4.1 / Doc 9137 Pt 6 / Doc 9774 §3.4 / Doc 8168 Vol II Pt III §3.4 / Doc 9905 §3.5 / FAA Order 8260.3D §2-2 / Order 8260.19 §8 / 14 CFR Part 77 Subpart C / AC 150/5300-13B §3 / EASA CS-ADR-DSN.J §J.5 / AMC1 ADR.OPS.B.075 / EUROCONTROL EAD Obstacle DB ed.4 / UK CAA CAP 168 Ch.4 / CAP 738 / Doc 9981 Pt II §2 / NTSB AAR-13-02 Asiana 214 SFO / AAR-09-08 CAL-1404 DEN / AAIB EW/C2008/01/01 BA38 LHR)', showOls, ()=>{ const nv=!showOls; setShowOls(nv); lsSet('ft-ols', nv) }],
                 ['AIRPROX · Risk Assessment Tool encounter classifier · pairwise CPA + ICAO severity grading A/B/C/D/E per Doc 9870 §5.4 + ESARR-2 RAT v3 · regime-aware minima (TMA/CTR 3nm·1000ft, ENR-RAD 5nm·1000ft, OCEANIC 23nm RLatSM, RVSM 5nm·1000ft) · 6 drivers SEP/CLOSURE/ACAS-RA/ASP/PILOT/CTRL · TCAS-II tau-based RA likelihood (DO-185B / DO-385) · loss-of-sep escalator · forward-projected CPA geometry + scatter dCPA·vCPA vs minima · (ICAO Doc 9870 §5.4 / Doc 4444 §15.7 §17 / Doc 9859 SMM §2.6 / Annex 13 §2.2 / ESARR-2 ed.3 / EUROCONTROL RAT v3 2018 / SCS / UK CAP 1455 UKAB / CAP 670 SUR / CAP 493 §1.7 / FAA Order 8020.11D §6 / JO 7210.632 §3 ATSAP / JO 7110.65 §2-1-6 §5-5 §5-7 / 14 CFR §830.5 / EASA AMC1 ARO.GEN.305(b) / ARINC 718A / DO-260B / DO-185B / DO-385 / NTSB AAR-09-05 Bashkirian-DHL Überlingen / NTSB AAR-02-04 Cerritos AeroMexico 498 / AAIB EW/C2018/07/01 LHR / BFU 2X004-02 / ATSB AO-2014-101 Mildura / TSB A18C0098 Toronto / JTSB AA2010-04 NRT)', showAirprox, ()=>{ const nv=!showAirprox; setShowAirprox(nv); lsSet('ft-airprox', nv) }],
+                ['MEDLINK · In-Flight Medical Diversion & Trauma-Center Advisor · 11-etiology classifier + 16-hospital ACS Lvl-I trauma-center catalogue + 22-airport diversion catalogue · door-to-care composite (airborne TTF + EMS ground + taxi/hand-off) · MedAire/STAT-MD/GlobaLifeline/LH-MedOps 7-region escalation · 7 tiers DIVERT-IMM/CONS/MON · runway-cat gate per Annex 14 RFFS · (ICAO Annex 6 Pt I §6.2.2 / Doc 8984 Civil Aviation Medicine §2.6 / Annex 9 §8.16 / FAA AC 121-33B / 14 CFR §121.803 §121.805 / JO 7110.65 §10-2 / Order 8900.1 V3 Ch33 §5 / EASA AMC1 CAT.IDE.A.220 / SIB 2018-04 / IATA Medical Manual ed.13 / UK CAP 757 Annex C / CAP 666 / ACS Orange Book 2022 / TJC CSC 2024 / ACC/AHA STEMI door-to-balloon ≤90min / AHA Stroke door-to-needle ≤45min / MedAire MedLink GRC / STAT-MD UPMC / GlobaLifeline ATL / LH MedOps FRA OCC / NTSB SR-95-01 / NEJM 2013;368:2075 Peterson / JAMA 2018;320:2580)', showMedlink, ()=>{ const nv=!showMedlink; setShowMedlink(nv); lsSet('ft-medlink', nv) }],
                 ['VRP · Visual Reporting Points & VFR corridor conformance · 36-point catalogue (NY Hudson SFRA / DC SFRA / GCN SFAR-50-2 / LAX mini-route / LHR/LGW/LCY VRPs / CDG-PAR / AMS / FRA / MUC alps / ZRH / MAD / FCO / SYD harbour / BNE / HND heli / HKG / SIN / YVR / YYZ / BOS-CapeCod / CHI lakefront / SF Bay / HNL / CPT / DXB Palm / AKL) with cross-track axis error, alt-band, squawk-code conformance + SFRA incursion scorer (ICAO Annex 11 §2.10 §3.3.2 / Annex 2 §4 / Annex 10 Vol IV §3 / Doc 4444 §16 / Doc 8168 Vol I Pt II §2 / FAA AIM 3-5-6 / JO 7110.65 §7-5 / JO 7400.2 §13-2 / 14 CFR §91.225 §91.215 / SFAR-50-2 / SFAR-71 / SFAR-77 / EASA SERA.5005 §6005 / CAP 413 §4 / CAP 493 §5 / DFS DSNA ENR 6 / NTSB AAR-09-04 Hudson midair)', showVrp, ()=>{ const nv=!showVrp; setShowVrp(nv); lsSet('ft-vrp', nv) }],
                 ['PAPI/VGSI · visual glide-slope deviation (Annex 14 §5.3.5)', showPapi, ()=>{ const nv=!showPapi; setShowPapi(nv); lsSet('ft-papi', nv) }],
                 ['STEEP · approach approval & configuration (AC 25-29 / SC-D-04)', showSteep, ()=>{ const nv=!showSteep; setShowSteep(nv); lsSet('ft-steepappr', nv) }],
