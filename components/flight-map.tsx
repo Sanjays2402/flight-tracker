@@ -364,6 +364,7 @@ import RimcasMonitor from './rimcas-monitor'
 import QraIntercept from './qra-intercept'
 import WspdSpoiler from './wspd-spoiler'
 import TpmsMonitor from './tpms-monitor'
+import SetMonitor from './set-monitor'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -719,6 +720,7 @@ export default function FlightMap() {
   const [showEdr, setShowEdr] = useState<boolean>(() => lsGet('ft-edr', false))
   const [showNvpm, setShowNvpm] = useState<boolean>(() => lsGet('ft-nvpm', false))
   const [showOpspec, setShowOpspec] = useState<boolean>(() => lsGet('ft-opspec', false))
+  const [showSet, setShowSet] = useState<boolean>(() => lsGet('ft-set', false))
   const [showSwell, setShowSwell] = useState<boolean>(() => lsGet('ft-swell', false))
   const [showWxad, setShowWxad] = useState<boolean>(() => lsGet('ft-wxad', false))
   const [showVfe, setShowVfe] = useState<boolean>(() => lsGet('ft-vfe', false))
@@ -965,6 +967,7 @@ export default function FlightMap() {
   + (showExtlt?1:0)
   + (showDutchRoll?1:0)
   + (showOpspec?1:0)
+  + (showSet?1:0)
   + (showAar?1:0)
   + (showAlphaFloor?1:0)
   + (showRtl?1:0)
@@ -2915,6 +2918,7 @@ export default function FlightMap() {
           { id: 'toggle-rta', group: 'View', label: showRta ? 'Close RTA / 4D Trajectory Conformance' : 'RTA / 4D Trajectory Conformance (CTA tolerance + required Mach/IAS)', run: () => { const nv = !showRta; setShowRta(nv); lsSet('ft-rta', nv) }, keywords: ['rta', 'cta', '4d', 'trajectory', 'tbo', 'sesar', 'pcp', 'time conformance', 'meter fix', 'eta', 'metering', 'arrival slot', 'mach number', 'speed adjust', 'absorb', 'eurocontrol'] },
           { id: 'toggle-satcom', group: 'View', label: showSatcom ? 'Close SATCOM / HF Coverage' : 'SATCOM / HF Voice Coverage Monitor (VHF horizon, Inmarsat, Iridium, HF SSB redundancy)', run: () => { const nv = !showSatcom; setShowSatcom(nv); lsSet('ft-satcom', nv) }, keywords: ['satcom', 'hf', 'vhf', 'inmarsat', 'iridium', 'coverage', 'comm', 'voice', 'link', 'redundancy', 'ssb', 'selcal', 'polar', 'nordo', 'lost comms', 'horizon', 'icao annex 10', 'arinc 741'] },
           { id: 'toggle-nadp', group: 'View', label: showNadp ? 'Close NADP Noise Abatement Monitor' : 'NADP Noise Abatement Departure Procedure Monitor (NADP-1 vs NADP-2 envelope)', run: () => { const nv = !showNadp; setShowNadp(nv); lsSet('ft-nadp', nv) }, keywords: ['nadp', 'noise', 'abatement', 'departure', 'icao pans-ops', 'ac 91-53a', 'cutback', 'thrust reduction', 'v2', 'vzf', 'flap retraction', 'lhr', 'fra', 'jfk', 'lcy', 'sfo', 'climb profile'] },
+          { id: 'toggle-set', group: 'View', label: showSet ? 'Close SET · Single-Engine Taxi Monitor' : 'SET · Single-Engine Taxi · taxi-out/taxi-in engine-config + warm-up/cool-down timer + fuel/CO₂ savings · FCTM Ch.3 · FCOM PRO-NOR-SOP-26 · SAFO 12010 · NLR-CR-2016-265', run: () => { const nv = !showSet; setShowSet(nv); lsSet('ft-set', nv) }, keywords: ['set', 'single engine taxi', 'reduced engine taxi', 'taxi out', 'taxi in', 'warm up', 'cool down', 'engine shutdown', 'fuel save', 'co2', 'emissions', 'safo 12010', 'info 14001', 'fctm', 'nlr', 'green taxi', 'taxi fuel', 'idle fuel', 'apu', 'b737', 'a320', 'leap', 'gtf', 'cfm56', 'sop'] },
           { id: 'toggle-tank', group: 'View', label: showTank ? 'Close Fuel Tankering Advisor' : 'Fuel Tankering Advisor (Jet-A price arbitrage vs cost-of-weight burn penalty)', run: () => { const nv = !showTank; setShowTank(nv); lsSet('ft-tank', nv) }, keywords: ['tanker', 'tankering', 'fuel', 'jet-a', 'price', 'arbitrage', 'cost of weight', 'cow', 'uplift', 'iata', 'eurocontrol', 'savings', 'burn penalty', 'co2', 'refuel', 'usg', 'kerosene'] },
           { id: 'toggle-wkld', group: 'View', label: showWkld ? 'Close Pilot Workload Index Monitor' : 'Pilot Workload Index Monitor (NASA TLX composite cockpit workload score)', run: () => { const nv = !showWkld; setShowWkld(nv); lsSet('ft-wkld', nv) }, keywords: ['workload', 'pilot', 'tlx', 'nasa tlx', 'fatigue', 'wocl', 'circadian', 'saturation', 'cognitive', 'hf', 'human factors', 'phase', 'traffic', 'demand'] },
           { id: 'toggle-gnss', group: 'View', label: showGnss ? 'Close GNSS Integrity Monitor' : 'GNSS Integrity Monitor (GPS jamming / spoofing hotspots, RAIM HPL, IRS drift)', run: () => { const nv = !showGnss; setShowGnss(nv); lsSet('ft-gnss', nv) }, keywords: ['gnss', 'gps', 'jam', 'jamming', 'spoof', 'spoofing', 'raim', 'hpl', 'irs', 'ins drift', 'opsgroup', 'easa sib', 'integrity', 'interference', 'rfi'] },
@@ -5983,6 +5987,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
         />
       )}
+      {showSet && (
+        <SetMonitor
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowSet(false); lsSet('ft-set', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
       {showAar && (
         <AarMonitor
           map={mapRef.current}
@@ -7659,6 +7671,7 @@ export default function FlightMap() {
                 ['RTA / 4D', showRta, ()=>{ const nv=!showRta; setShowRta(nv); lsSet('ft-rta', nv) }],
                 ['NADP Noise', showNadp, ()=>{ const nv=!showNadp; setShowNadp(nv); lsSet('ft-nadp', nv) }],
                 ['Fuel tankering', showTank, ()=>{ const nv=!showTank; setShowTank(nv); lsSet('ft-tank', nv) }],
+                ['SET · Single-Engine Taxi · per-airframe live evaluator of taxi-phase engine-config (TAXI-OUT pre-takeoff warm-up · TAXI-IN post-landing cool-down) at 32 hub airports scoring whether the type is SET-approved (B737/A320/E190/CRJ/B747/A380 YES · B777/B787/A330/A350/ATR/Q400 NO per OEM SOP) · whether warm-up (3-min CFM · 5-min GTF per FCTM Ch.3 · Pratt SB-PW1000G-72-014) and cool-down (3-min CFM · 5-min GTF) timer gates are honoured · whether OAT exceeds class-specific cold-start floor (-15°C CFM · -10°C GTF · -20°C HVY-Q) and taxiway is clean of contamination · the resulting fuel/CO₂ delta (saved kg or forfeit kg per kg×3.16 CO₂ per ICAO Doc 9889) · 8 tiers PROHIB rose / TIMER-VIOL rose-400 / INELIG amber / BOTH-ENG yellow / SET-EARLY sky-400 / SET-ACTIVE emerald / COMPLETE sky-500 / NOT-TAXI slate · per FAA InFO 14001 / SAFO 12010 / EUROCONTROL ATM/4-EFP/2020 §3.2 / ICAO Doc 10031 §3.5 / IATA Fuel Efficiency Best Practice §6.4 / NLR-CR-2016-265 Air-France-KLM 23-29% taxi-fuel reduction trial / Boeing FCTM Ch.3 / FCOM PI §10 / Airbus FCOM PRO-NOR-SOP-26 / Embraer AOM §2.4 / BADA 3.15 OPF taxi-idle / ICAO EEDB Doc 9889 LTO 7% N1', showSet, ()=>{ const nv=!showSet; setShowSet(nv); lsSet('ft-set', nv) }],
                 ['FIR crossings', showFirX, ()=>{ const nv=!showFirX; setShowFirX(nv); lsSet('ft-firx', nv) }],
                 ['Runway config', showRwyCfg, ()=>{ const nv=!showRwyCfg; setShowRwyCfg(nv); lsSet('ft-rwycfg', nv) }],
                 ['Pass-by', showPass, ()=>{ const nv=!showPass; setShowPass(nv); lsSet('ft-pass', nv) }],
