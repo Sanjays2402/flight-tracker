@@ -373,6 +373,7 @@ import EvacMonitor from './evac-monitor'
 import ParaJumpOps from './para-jumpops'
 import SffSmokeIsolation from './sff-smoke-isolation'
 import MtrMonitor from './mtr-monitor'
+import AcarsMonitor from './acars-monitor'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -737,6 +738,7 @@ export default function FlightMap() {
   const [showPara, setShowPara] = useState<boolean>(() => lsGet('ft-para', false))
   const [showSff, setShowSff] = useState<boolean>(() => lsGet('ft-sff', false))
   const [showMtr, setShowMtr] = useState<boolean>(() => lsGet('ft-mtr', false))
+  const [showAcars, setShowAcars] = useState<boolean>(() => lsGet('ft-acars', false))
   const [showSwell, setShowSwell] = useState<boolean>(() => lsGet('ft-swell', false))
   const [showWxad, setShowWxad] = useState<boolean>(() => lsGet('ft-wxad', false))
   const [showVfe, setShowVfe] = useState<boolean>(() => lsGet('ft-vfe', false))
@@ -1031,6 +1033,7 @@ export default function FlightMap() {
   + (showWspd?1:0)
   + (showTpms?1:0)
   + (showSafa?1:0)
+  + (showAcars?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -6078,6 +6081,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
         />
       )}
+      {showAcars && (
+        <AcarsMonitor
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowAcars(false); lsSet('ft-acars', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
       {showAar && (
         <AarMonitor
           map={mapRef.current}
@@ -7758,6 +7769,7 @@ export default function FlightMap() {
                 ['RWSL · Runway Status Lights · REL/THL/RIL surface conflict (FAA AC 150/5340-30J ch 14 / JO 7110.65 §3-1-12 / 6850.2B App F-G / RWSL ConOps ed.4 / AIM 2-1-6 / ICAO Doc 9476 SMGCS / Doc 9830 A-SMGCS)', showRwsl, ()=>{ const nv=!showRwsl; setShowRwsl(nv); lsSet('ft-rwsl', nv) }],
                 ['ALTM · Altimeter Setting Region & TA/TL transition + cold-temp correction (ICAO Annex 2 §3.6 / Doc 8168 §I.2.7 / §4.3 / Doc 7030 / FAA AIM 7-2 / 14 CFR §91.121 / AC 91-79A / SERA.5005(d))', showAltm, ()=>{ const nv=!showAltm; setShowAltm(nv); lsSet('ft-altm', nv) }],
                 ['VDL-2 / FANS-1A · datalink coverage & RCP/RSP handoff (DO-281B / Doc 9869 PBCS / AC 20-140C)', showVdl2, ()=>{ const nv=!showVdl2; setShowVdl2(nv); lsSet('ft-vdl2', nv) }],
+                ['ACARS · Aircraft Communications Addressing & Reporting System · Datalink Bearer-Health, Message-Volume & OOOI-Event Monitor · per-airframe live evaluator of the air-ground messaging stack (ARINC 618-7 / 619-3 / 620-9 character-oriented envelope: Mode/Address/Tech-Ack/Label/Block-ID/MSN/Free-Text) carried over three physical bearers — VHF/VDL-2 D8PSK 31.5 kbps over 25 kHz channelisation (ICAO Annex 10 Vol III Pt I §6 / Doc 9776 / EUROCAE ED-92B / RTCA DO-281B) primary on continental land masses, HFDL OFDM 1.8 kbps over 3-30 MHz ionosphere-bounce (ARINC 635-3 / 17 Honeywell-ARINC ground stations Reykjavik/Shannon/Krasnoyarsk/Hat-Yai/Auckland/Hawaii) primary on oceanic, Inmarsat Aero-H+/Aero-I/SwiftBroadband L-band geo to ±80° lat (ARINC 741-7 / RTCA DO-262C) and Iridium SBD/Certus LEO pole-to-pole (ARINC 781-9 / DO-270A) primary for polar — scoring (a) which bearer each airframe is most-likely using per geography + altitude + latitude + equipage class, (b) the expected message-volume per phase via ~30-entry ARINC 620 label catalogue (Label 10/12/14 dispatch · Label 33/34 weather · Label 4N/5U position · Label H1 free text · Label B2 CPDLC · Label 80/81/82/83 OOOI), (c) the OOOI sequence integrity Out-Off-On-In as airline-dispatch crown-jewel transactions, (d) ACSPC saturation per FAA InFO 18007 / EUROCONTROL ACARS Spectrum 2017 (9 of 30 EU VDL stations >85% peak utilisation), and (e) GADSS escalator if cruise position-report missed >15min per ICAO Annex 6 Pt I Amendment 39 · structurally distinct from CPDLC (controller↔pilot text — ACARS is the BEARER carrying it Label B2/B6), PDC/DCL (single-phase pre-departure clearance Label CR), AIDC (ATC↔ATC inter-facility no aircraft), VDL-2 (single bearer slice — ACARS spans three), SATCOM/HF (single bearer technology), PBCS (RCP/RSP cert framework), SELCAL (voice tone-pair), GADSS (15-min position mandate), HFDL (single bearer), VHF (voice), D-ATIS (Label 4Q uplink), FANS-1/A (oceanic app suite on top of ACARS) · 13-class equipage catalogue NB-MOD/NB-LR/WB-T2/WB-T2-POLAR/HVY-Q/RGN-J/RGN-T/BIZ-LR/BIZ-MID/CRG-WB/CRG-NB/MIL/LIGHT with VHF/HFDL/SATCOM-INM/SATCOM-IRR fitted flags + CMU sustained-rate msg/min per ARINC 758 (4 RGN-T → 24 MIL) + FANS-1/A flag · 15-zone coverage map NA-US/NA-CA/EU/UK/ASIA/PAC/ME/SA/AF/NAT/NOPAC/CENPAC/CAR-SAT/INDIAN/POLAR-N/POLAR-S with VHF-DENSE/VHF-SPARSE/OCEANIC/POLAR kinds driving bearer-selection logic per Honeywell DCM Rev D · 7-driver scorer COV/SAT/MGN/OOI/CPD/CMU/CST composite max·0.60+mean·0.40 · 9 tiers BLK/DEG/SAT/HFB/OOO/CPD/POS/NRM/OFF · per Boeing FCOM Vol II §17 / Airbus FCOM DSC-46-10 / Embraer AOM §11 / Reg (EC) 29/2009 / EASA SIB 2018-04 / FAA AC 90-117 / SITA AIRCOM 2024 Service Spec · MapLibre overlay tier halo+pin+coverage-zone polygons + AIRCRAFT/BEARERS/LABELS/DRIVERS/METHOD tabs', showAcars, ()=>{ const nv=!showAcars; setShowAcars(nv); lsSet('ft-acars', nv) }],
                 ['PDC / DCL · Pre-Departure / Datalink Clearance uplink chain · ARINC 623-A/623-B IFR-route + transponder + initial-alt + SID + departure-frequency uplink ladder · per-airframe live evaluator for every aircraft in pre-pushback gate / pre-taxi / clearance-delivery phase at one of 28 catalogued aerodromes with PDC service (FAA Tower Datalink Service KATL/KORD/KDFW/KLAX/KJFK/KSFO/KSEA/KBOS/KIAD/KMIA/KMSP/KDEN/KCLT/KPHX/KLAS/KMCO/KEWR/KLGA/KDCA + EUROCONTROL DCL EGLL/EGKK/EHAM/EDDF/LFPG/LSZH/EDDM/LOWW + ICAO Doc 9694 §3.5 / DO-258A FANS-1/A uplink elements UM expected route / squawk / initial altitude / SID via VDL-Mode-2 ATN B1 air-ground bearer · scores RTE-MATCH route vs filed-FPL conformance / SQK transponder-code uplink delivery / ALT initial-altitude-vs-MEA validity / SID departure-procedure-vs-runway compatibility / FREQ departure-frequency match to per-aerodrome DEP/CTR catalogue / TIM uplink-acknowledgement timer compliance / VOX voice-readback fallback when DCL fails · 6 tiers ABORT/REQ-REISSUE/AMENDED/WATCH/CLEARED/IDLE · upstream of CPDLC enroute and D-ATIS — every CPDLC and D-ATIS overlay presumes PDC has already issued an accepted clearance · canonical precedent: pre-CPDLC era ARINC 623 PDC uptake at KATL 1990s replaced voice clearance-delivery readback errors and KORD/KDFW congestion bottlenecks · MapLibre overlay tier halo+pin+aircraft→runway-threshold link + departure-procedure label + uplink-chain progress bar', showPdc, ()=>{ const nv=!showPdc; setShowPdc(nv); lsSet('ft-pdc', nv) }],
                 ['FREQ · ATC/CTAF Frequency Directory & per-phase controller-plan compliance · 28-hub ATIS/CLNC/GND/TWR/DEP/APP/CTR catalogue + CTAF self-announce bands 122.700-123.075 + guard 121.500/243.000 + 8.33 kHz EUR mandate per Reg 1079/2012 + oceanic HF SELCAL/CPDLC/SATCOM regime detector + lost-comm 7600/hijack 7500/mayday 7700 guard routing per 14 CFR §91.185 / AIM 6-3-1 / ICAO Annex 10 Vol II §5.3 / Doc 4444 §12 / Doc 9432 / Doc 9869 PBCS / AC 90-66C / AC 90-114A / Order JO 7110.65 §2 §4 §10 §11 / JO 7110.118 / 14 CFR §91.126 §91.183 §91.413 / EASA SERA.6005 / ITU RR App.27 / Reg (EC) 1079/2012 · 11-phase classifier GATE/TAXI/TKOFF/DEPT/CLB/CRZ/DSC/APP/FNL/LDG/OCEANIC mapping to 10-controller assignments (CLNC/GND/TWR/DEP/APP/CTR/OCEANIC/CTAF/GUARD) · 7-driver scorer HANDOFF/CTAF-LONE/EMERG/BAND-NEAR/OCEAN/GUARD-SQK/EDGE composite max·0.60+mean·0.40 · 6 tiers BREACH≥85 (guard-routed)/CRITICAL≥68/HANDOFF≥48/WATCH≥25/NOMINAL/OFF · MapLibre tier halo+pin+aircraft→hub link + hub markers · AIRCRAFT/HUBS/BANDS/METHOD tabs · LAX1493/Comair 5191/Continental 1713/Überlingen precedent', showFreq, ()=>{ const nv=!showFreq; setShowFreq(nv); lsSet('ft-freq', nv) }],
                 ['TBS · Time-Based Separation HW-compression (RECAT-EU / eTBS / LHR-TBS / JO 7110.65 §5-5 / CAP 1378)', showTbs, ()=>{ const nv=!showTbs; setShowTbs(nv); lsSet('ft-tbs', nv) }],
