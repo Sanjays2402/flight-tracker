@@ -216,6 +216,7 @@ import StbrStopbar from './stbr-stopbar'
 import TibaSelfAnnounce from './tiba-self-announce'
 import BirdxStrike from './birdx-strike'
 import ScrmSterileCockpit from './scrm-sterile-cockpit'
+import FreqAtcDirectory from './freq-atc-directory'
 import VmcEnvelope from './vmc-envelope'
 import TempCompColdAlt from './tempcomp-cold-alt'
 import GeomagSpaceWx from './geomag-spacewx'
@@ -684,6 +685,7 @@ export default function FlightMap() {
   const [showTiba, setShowTiba] = useState<boolean>(() => lsGet('ft-tiba', false))
   const [showBirdx, setShowBirdx] = useState<boolean>(() => lsGet('ft-birdx', false))
   const [showScrm, setShowScrm] = useState<boolean>(() => lsGet('ft-scrm', false))
+  const [showFreq, setShowFreq] = useState<boolean>(() => lsGet('ft-freq', false))
   const [showVmc, setShowVmc] = useState<boolean>(() => lsGet('ft-vmc', false))
   const [showTcc, setShowTcc] = useState<boolean>(() => lsGet('ft-tcc', false))
   const [showGeomag, setShowGeomag] = useState<boolean>(() => lsGet('ft-geomag', false))
@@ -899,6 +901,7 @@ export default function FlightMap() {
   + (showTiba?1:0)
   + (showBirdx?1:0)
   + (showScrm?1:0)
+  + (showFreq?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -5822,6 +5825,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 9) } }}
         />
       )}
+      {showFreq && (
+        <FreqAtcDirectory
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowFreq(false); lsSet('ft-freq', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
       {showLaser && (
         <LaserIllumination
           map={mapRef.current}
@@ -7214,6 +7225,7 @@ export default function FlightMap() {
                 ['RWSL · Runway Status Lights · REL/THL/RIL surface conflict (FAA AC 150/5340-30J ch 14 / JO 7110.65 §3-1-12 / 6850.2B App F-G / RWSL ConOps ed.4 / AIM 2-1-6 / ICAO Doc 9476 SMGCS / Doc 9830 A-SMGCS)', showRwsl, ()=>{ const nv=!showRwsl; setShowRwsl(nv); lsSet('ft-rwsl', nv) }],
                 ['ALTM · Altimeter Setting Region & TA/TL transition + cold-temp correction (ICAO Annex 2 §3.6 / Doc 8168 §I.2.7 / §4.3 / Doc 7030 / FAA AIM 7-2 / 14 CFR §91.121 / AC 91-79A / SERA.5005(d))', showAltm, ()=>{ const nv=!showAltm; setShowAltm(nv); lsSet('ft-altm', nv) }],
                 ['VDL-2 / FANS-1A · datalink coverage & RCP/RSP handoff (DO-281B / Doc 9869 PBCS / AC 20-140C)', showVdl2, ()=>{ const nv=!showVdl2; setShowVdl2(nv); lsSet('ft-vdl2', nv) }],
+                ['FREQ · ATC/CTAF Frequency Directory & per-phase controller-plan compliance · 28-hub ATIS/CLNC/GND/TWR/DEP/APP/CTR catalogue + CTAF self-announce bands 122.700-123.075 + guard 121.500/243.000 + 8.33 kHz EUR mandate per Reg 1079/2012 + oceanic HF SELCAL/CPDLC/SATCOM regime detector + lost-comm 7600/hijack 7500/mayday 7700 guard routing per 14 CFR §91.185 / AIM 6-3-1 / ICAO Annex 10 Vol II §5.3 / Doc 4444 §12 / Doc 9432 / Doc 9869 PBCS / AC 90-66C / AC 90-114A / Order JO 7110.65 §2 §4 §10 §11 / JO 7110.118 / 14 CFR §91.126 §91.183 §91.413 / EASA SERA.6005 / ITU RR App.27 / Reg (EC) 1079/2012 · 11-phase classifier GATE/TAXI/TKOFF/DEPT/CLB/CRZ/DSC/APP/FNL/LDG/OCEANIC mapping to 10-controller assignments (CLNC/GND/TWR/DEP/APP/CTR/OCEANIC/CTAF/GUARD) · 7-driver scorer HANDOFF/CTAF-LONE/EMERG/BAND-NEAR/OCEAN/GUARD-SQK/EDGE composite max·0.60+mean·0.40 · 6 tiers BREACH≥85 (guard-routed)/CRITICAL≥68/HANDOFF≥48/WATCH≥25/NOMINAL/OFF · MapLibre tier halo+pin+aircraft→hub link + hub markers · AIRCRAFT/HUBS/BANDS/METHOD tabs · LAX1493/Comair 5191/Continental 1713/Überlingen precedent', showFreq, ()=>{ const nv=!showFreq; setShowFreq(nv); lsSet('ft-freq', nv) }],
                 ['TBS · Time-Based Separation HW-compression (RECAT-EU / eTBS / LHR-TBS / JO 7110.65 §5-5 / CAP 1378)', showTbs, ()=>{ const nv=!showTbs; setShowTbs(nv); lsSet('ft-tbs', nv) }],
                 ['VTF · Vector-to-Final intercept geometry (JO 7110.65 §5-9 / AIM 5-4-7 / Doc 4444 §8.6.5 / FCOM 11.31)', showVtf, ()=>{ const nv=!showVtf; setShowVtf(nv); lsSet('ft-vtf', nv) }],
                 ['RFI · GNSS Jamming / Spoofing threat-zones (EASA SIB 2022-02R3 / 2023-09 / FAA InFO 22002 / Doc 9849 / EVAIR 27-28)', showRfi, ()=>{ const nv=!showRfi; setShowRfi(nv); lsSet('ft-rfi', nv) }],
