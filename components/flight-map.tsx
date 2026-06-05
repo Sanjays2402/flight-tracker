@@ -309,6 +309,7 @@ import EaiPenalty from './eai-penalty'
 import AdizMonitor from './adiz-monitor'
 import SpaceWeatherMonitor from './space-weather'
 import RvsmMonitor from './rvsm-monitor'
+import TcasCoord from './tcas-coord'
 import SpeedLimit from './speed-limit'
 import SonicBoom from './sonic-boom'
 import RnpMonitor from './rnp-monitor'
@@ -798,6 +799,7 @@ export default function FlightMap() {
   const [showTanker, setShowTanker] = useState<boolean>(() => lsGet('ft-tanker', false))
   const [showSidc, setShowSidc] = useState<boolean>(() => lsGet('ft-sidc', false))
   const [showRvsm, setShowRvsm] = useState<boolean>(() => lsGet('ft-rvsm', false))
+  const [showTcasCoord, setShowTcasCoord] = useState<boolean>(() => lsGet('ft-tcas-coord', false))
   const [showSpdLim, setShowSpdLim] = useState<boolean>(() => lsGet('ft-spdlim', false))
   const [showBoom, setShowBoom] = useState<boolean>(() => lsGet('ft-boom', false))
   const [showRnp, setShowRnp] = useState<boolean>(() => lsGet('ft-rnp', false))
@@ -980,6 +982,7 @@ export default function FlightMap() {
   + (showMrar?1:0)
   + (showWsgSlot?1:0)
   + (showAha?1:0)
+  + (showTcasCoord?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -6708,6 +6711,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showTcasCoord && (
+        <TcasCoord
+          map={mapRef.current}
+          flights={flights.map(f => ({ icao: f.icao, callsign: f.callsign, type: f.type, operator: f.operator, category: f.category, lat: f.lat, lng: f.lng, altitudeFt: f.altitudeFt, velocityKts: f.velocityKts, track: f.track, vertRate: f.vertRate, ground: f.ground }))}
+          onClose={() => { setShowTcasCoord(false); lsSet('ft-tcas-coord', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
+
       {showSpdLim && (
         <SpeedLimit
           map={mapRef.current}
@@ -7302,6 +7314,7 @@ export default function FlightMap() {
                 ['NORDO', showNordo, ()=>{ const nv=!showNordo; setShowNordo(nv); lsSet('ft-nordo', nv) }],
                 ['Terrain TAWS', showTerrain, ()=>{ const nv=!showTerrain; setShowTerrain(nv); lsSet('ft-terrain', nv) }],
                 ['RVSM compliance', showRvsm, ()=>{ const nv=!showRvsm; setShowRvsm(nv); lsSet('ft-rvsm', nv) }],
+                ['TCAS-COORD · Reciprocal-Sense', showTcasCoord, ()=>{ const nv=!showTcasCoord; setShowTcasCoord(nv); lsSet('ft-tcas-coord', nv) }],
                 ['Speed limit', showSpdLim, ()=>{ const nv=!showSpdLim; setShowSpdLim(nv); lsSet('ft-spdlim', nv) }],
                 ['Sonic boom', showBoom, ()=>{ const nv=!showBoom; setShowBoom(nv); lsSet('ft-boom', nv) }],
                 ['Brake energy', showBrake, ()=>{ const nv=!showBrake; setShowBrake(nv); lsSet('ft-brake', nv) }],
