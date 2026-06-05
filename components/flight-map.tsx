@@ -219,6 +219,7 @@ import ScrmSterileCockpit from './scrm-sterile-cockpit'
 import FreqAtcDirectory from './freq-atc-directory'
 import ApchCatIls from './apch-cat-ils'
 import CvfpChartedVisual from './cvfp-charted-visual'
+import RdpIntxnDep from './rdp-intxn-dep'
 import VmcEnvelope from './vmc-envelope'
 import TempCompColdAlt from './tempcomp-cold-alt'
 import GeomagSpaceWx from './geomag-spacewx'
@@ -690,6 +691,7 @@ export default function FlightMap() {
   const [showFreq, setShowFreq] = useState<boolean>(() => lsGet('ft-freq', false))
   const [showApchCat, setShowApchCat] = useState<boolean>(() => lsGet('ft-apchcat', false))
   const [showCvfp, setShowCvfp] = useState<boolean>(() => lsGet('ft-cvfp', false))
+  const [showRdp, setShowRdp] = useState<boolean>(() => lsGet('ft-rdp', false))
   const [showVmc, setShowVmc] = useState<boolean>(() => lsGet('ft-vmc', false))
   const [showTcc, setShowTcc] = useState<boolean>(() => lsGet('ft-tcc', false))
   const [showGeomag, setShowGeomag] = useState<boolean>(() => lsGet('ft-geomag', false))
@@ -908,6 +910,7 @@ export default function FlightMap() {
   + (showFreq?1:0)
   + (showApchCat?1:0)
   + (showCvfp?1:0)
+  + (showRdp?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -5855,6 +5858,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 10) } }}
         />
       )}
+      {showRdp && (
+        <RdpIntxnDep
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowRdp(false); lsSet('ft-rdp', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 11) } }}
+        />
+      )}
       {showLaser && (
         <LaserIllumination
           map={mapRef.current}
@@ -7271,6 +7282,7 @@ export default function FlightMap() {
                 ['CTOT / ATFM slot', showCtot, ()=>{ const nv=!showCtot; setShowCtot(nv); lsSet('ft-ctot', nv) }],
                 ['TFM · GDP/GS/AFP/MIT/CTOP (ATCSCC/NMOC)', showTfm, ()=>{ const nv=!showTfm; setShowTfm(nv); lsSet('ft-tfm', nv) }],
                 ['TOLD / V-speeds / BFL', showTold, ()=>{ const nv=!showTold; setShowTold(nv); lsSet('ft-told', nv) }],
+                ['INTXN · Intersection-Departure Reduced-Distance Performance Monitor · per-airframe live evaluator scoring whether each departing aircraft on the initial-climb gate (ground GS>80kt OR airborne alt<4500ft VS>+400fpm 120<GS<280kt) snapped to one of 24 catalogued busy intersection-departure runways (KATL 08L K-W-V / KORD 10L A-B-D-E / KDFW 17R L-M-N-W / KJFK 04L J-K-KE-KG / KJFK 13R KE-KG-Z / KLAX 25L M-N-T / KLAX 24L K-L-D / KSFO 28L F-A / KSEA 16C C-D-G / KDEN 16R M-N-O-P / KBOS 04R M-N-K / KMIA 09 Q-R / KIAH 08L ND-NF / KLAS 26L D-E / KMSP 12L K-M / EGLL 27L S1E-S4E-N4E / EHAM 18R W4-W5-W7 / EDDF 25C M3-N3-S3 / LFPG 09R S1-S3 / LSZH 16 A1-B1-C1 / OMDB 30L D-E-F / WSSS 02L C1-C3 / YSSY 16R A-B / RJAA 16R A4-A6) can still satisfy certified balanced-field length (BFL), accelerate-stop distance (ASDR @ V1), accelerate-go-to-35ft-screen distance (TODR), and §25.121(b) OEI 2nd-segment net-flight-path obstacle clearance from the displaced intersection lift-off point given the reduced TORA/TODA/ASDA — structurally distinct from TOLD-BFL (full-length only), FLEX-ATM (assumed-temperature thrust at full length), EOSID (OEI emergency-escape routing), EMAS (overrun-bed energy absorption), ROW-ROP (landing rollout), STEEP-APCH (landing glidepath) — INTXN is uniquely the DEPARTURE-INTERSECTION declared-distance-reduction compliance evaluator that ATC issues every day at busy hubs · 8-class certified BFL/ASD/TOD/V1/VR/V2 catalogue HVY-Q 4-eng-WB 11400/11800/11200/158/163/168 + 3.0% req grad / HVY-T WB-Heavy 10300/10700/10100/153/158/165 + 2.4% / WB-M 8900/9200/8700/144/149/156 / NB-LR Long-Range NB 8400/8700/8200/142/147/153 / NB 7300/7600/7100/136/141/147 / RGN-J 6400/6700/6200/128/133/140 / RGN-T 4600/4800/4500/106/111/118 / BIZ 5200/5400/5100/124/129/136 sourced from Boeing 737/757/767/777/787/747 FCOM PI-LIM + FCTM Ch.3 Take-Off / Airbus A320/A330/A350/A380 FCOM PER-TOF + FCTM PR-NP-SOP-25 / Embraer E170/E190/E195/E2 AOM §2.4 / Bombardier CRJ FCM Vol I §3 / ATR-72/Q400 FCOM §2.04 / Roskam Pt VII §5.7 field-length equations · BFL correction stack weight²·1.18 / altitude +4% per 1000ft / ISA-dev +6% per 10°C / wind ±1.5%/kt headwind +5%/kt tailwind / TALPA RCC surface 6=1.00 5=1.15 4=1.30 3=1.55 2=1.90 1=2.40 per AC 91-79B App.2 · OEI 2nd-seg gradient capability decays with weight·alt·temp · 7 risk drivers TOR TORA-rem vs BFL / ASD ASDA-rem vs ASDR / TOD TODA-rem vs TODR-35ft / OBS net-flight-path obstacle clearance §25.111 / GRAD §25.121(b) OEI gradient / WIND tailwind penalty / RCC TALPA degradation · composite max·0.66+mean·0.34 × ADV-MUL · hard escalators ASD≥80→score-min 90 / TOD≥80→85 / TOR≥80→88 / OBS≥80→82 / BFL>TORA-rem→86 · 6 tiers STOP-GO ≥80 rose TAXI-BACK FULL LENGTH per AC 91-79B §6.4 / CRITICAL ≥60 rose-pink <5% margin or §25.121b bust / TIGHT ≥40 amber 5-15% margin contingency RTO mandatory / WATCH ≥22 sky adequate-lean verify FMS PERF / BALANCED <22 emerald cleared as offered / IDLE slate not departing · MapLibre tier-coloured halo rings 7-27px score-sized + class-coloured inner ring + STOP-GO/CRITICAL rose pins + intersection markers amber along runway centreline + tier-coloured remaining-distance bar polygons from intersection forward by BFL + dashed NFP projection from lift-off to obstacle (top-12 worst per runway) + cs/intxn/margin labels (top-24) · Side panel 6-tier counter strip click-to-filter ALL + 5-cell summary FLT/INTXN/STOP/μ-MARG/WORST + 6 sliders ADV-MUL 50-200% / WX-MUL 50-200% / INTXN-MUL 0-200% (probability bias full-length vs intersection) / SAFETY-MARG 0-25% / DOY 1-365 day-of-year for ISA-dev / SCOPE 3-20nm runway capture + REGION-NA/EU/ME/AP chip filter + 8-class chip filter + HALO/PIN/LBL/BAR/IX/NFP toggles + search by callsign/type/operator/icao/intxn + AIRCRAFT/RUNWAYS/PHYSICS/METHOD tabs · AIRCRAFT tier-worst-first row stack with cs+type+class-pill+tier-pill + airport-icao+rwy + intersection-id + TORA-rem + 4-cell BFL/ASDR/MARG/OEI% + 4-cell V1/VR/V2/RCC + tier-coloured score bar + 7-driver chips TOR ASD TOD OBS GRAD WIND RCC + tier-coloured advice citing 14 CFR §25.105/107/109/111/113/115/121 / §121.189 / AC 25-7C / AC 91-79B / FCOM PI-LIM / NTSB AAR-89-04 DL1141 DFW precedent click-to-fly · RUNWAYS aggregation per runway with worst-tier dot + count + stopGo ct + TORA + elev + region + intersection inventory pills + airfield note · PHYSICS tab full SVG BFL-vs-TORA-rem scatter plot 440×260 with concentric 3/6/9/12/15/18k ft gridlines + diagonal balanced-field reference + axis labels + fleet plotted as tier-coloured dots positioned by (BFL_corrected, TORA_remaining) + methodology narrative covering BFL correction stack and OEI gradient + distance definitions per FAA Order 5300.1G + references list · METHOD tab covering gate criteria / intersection assignment / 7 drivers / composite / 6 tiers / 6 NTSB-AAIB-ATSB precedents DL1141 DFW 14 fatal / USAir 5050 LGA RTO overrun / Comair 5191 LEX 49 fatal wrong-runway shorter / Atlas 3591 declared-distance / LHR AAIB EW/C2018/07/01 mis-data BFL bust / Emirates A340-541 MEL approach-lighting strike + references 14 CFR §25.105/107/109/111/113/115/121 §121.189 §121.193 §135.379 §91.103 / FAA AC 25-7C §11 / AC 91-79B §6.4 / AC 120-91 / Order 8260.46 / Order 5300.1G / Order JO 7110.65 §3-9 / ICAO Annex 14 Vol I §3.6 / Doc 9157 Pt 1 / Doc 8168 PANS-OPS / Doc 9981 PANS-Aerodromes / EASA CS-25 Subpart B / AMC 25.105 / EUROCONTROL Skybrary Intersection Take-Off / Boeing FCTM Ch.3 / FCOM PI-LIM / Airbus FCTM PR-NP-SOP-25 / QRH PER-TOF / Embraer AOM §2.4 / Bombardier CRJ FCM Vol I §3 / Roskam Pt VII §5.7 / IATA RST ed.2 §5 · INTXN entry registered in Layers Routes & Flow category after TOLD/V-speeds/BFL, ft-rdp persisted preference', showRdp, ()=>{ const nv=!showRdp; setShowRdp(nv); lsSet('ft-rdp', nv) }],
                 ['PCN / ACR pavement', showPcn, ()=>{ const nv=!showPcn; setShowPcn(nv); lsSet('ft-pcn', nv) }],
               ]},
               {group:'Tools', items:[
