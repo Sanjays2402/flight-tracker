@@ -206,6 +206,7 @@ import DutchRoll from './dutch-roll'
 import AarMonitor from './aar-monitor'
 import AlphaFloor from './alpha-floor'
 import RtlRudder from './rtl-rudder'
+import DoorPlug from './door-plug'
 import LaserIllumination from './laser-illumination'
 import HoldoverFluid from './holdover-fluid'
 import TowsConfig from './tows-config'
@@ -669,6 +670,7 @@ export default function FlightMap() {
   const [showAar, setShowAar] = useState<boolean>(() => lsGet('ft-aar', false))
   const [showAlphaFloor, setShowAlphaFloor] = useState<boolean>(() => lsGet('ft-alphafloor', false))
   const [showRtl, setShowRtl] = useState<boolean>(() => lsGet('ft-rtl', false))
+  const [showDoorPlug, setShowDoorPlug] = useState<boolean>(() => lsGet('ft-doorplug', false))
   const [showLaser, setShowLaser] = useState<boolean>(() => lsGet('ft-laser', false))
   const [showHoldover, setShowHoldover] = useState<boolean>(() => lsGet('ft-holdover', false))
   const [showTows, setShowTows] = useState<boolean>(() => lsGet('ft-tows', false))
@@ -884,6 +886,7 @@ export default function FlightMap() {
   + (showAar?1:0)
   + (showAlphaFloor?1:0)
   + (showRtl?1:0)
+  + (showDoorPlug?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -2703,6 +2706,7 @@ export default function FlightMap() {
           { id: 'toggle-taf', group: 'View', label: showTaf ? 'Close TAF Forecast' : 'TAF Forecast (24h lagrangian terminal forecast)', run: () => { const nv = !showTaf; setShowTaf(nv); lsSet('ft-taf', nv) }, keywords: ['taf', 'forecast', 'terminal', 'aerodrome', 'metar', 'becmg', 'tempo', 'prob30', 'lagrangian', 'upwind', 'fm', 'weather'] },
           { id: 'toggle-toc', group: 'View', label: showToc ? 'Close Top of Climb Predictor' : 'Top of Climb Predictor (climb performance vs class)', run: () => { const nv = !showToc; setShowToc(nv); lsSet('ft-toc', nv) }, keywords: ['toc', 'top of climb', 'climb', 'gradient', 'fpm', 'level off', 'cruise', 'rvsm', 'step climb', 'performance'] },
           { id: 'toggle-cabin', group: 'View', label: showCabin ? 'Close Cabin Pressure Monitor' : 'Cabin Pressure Monitor (ΔP / TUC / emergency descent)', run: () => { const nv = !showCabin; setShowCabin(nv); lsSet('ft-cabin', nv) }, keywords: ['cabin', 'pressurization', 'pressure', 'differential', 'delta p', 'tuc', 'time of useful consciousness', 'hypoxia', 'oxygen', 'o2', 'depressurization', 'emergency descent', 'far 121.333', 'rapid decompression'] },
+          { id: 'toggle-doorplug', group: 'View', label: showDoorPlug ? 'Close DOORPLUG Aperture-Integrity Monitor' : 'DOORPLUG · Cabin Door-Plug / Pax-Door / Cargo-Door Latch Integrity & Pressure-Vessel Aperture Blowout-Risk Monitor (CS-25.783 / NTSB DCA24MA063 Alaska 1282 / AAR-89-03 Aloha 243 / AAR-90-01 UAL 811 / JTSB AAIR-87-02 JAL 123 / BEA Turkish 981)', run: () => { const nv = !showDoorPlug; setShowDoorPlug(nv); lsSet('ft-doorplug', nv) }, keywords: ['doorplug', 'door plug', 'door', 'plug', 'latch', 'cargo door', 'pax door', 'overwing exit', 'aft pressure dome', 'apd', 'blowout', 'decompression', 'alaska 1282', 'aloha 243', 'ual 811', 'jal 123', 'turkish 981', 'cal 611', 'ba 5390', 'cs-25.783', '25.783', '25.807', '25.812', '25.365', '25.571', 'wfd', 'widespread fatigue damage', 'cam-lock', 'plug bolt', 'spirit', 'renton', 'ead 2024-02-51', 'ad 2024-02-51', 'sb 737-25a-1955', 'ntsb dca24ma063', 'aar-89-03', 'aar-90-01', 'jtsb aair-87-02', 'aaib bull 1/92', 'ac 91-56b', 'ac 25.571-1d', 'sdr', '121.703'] },
           { id: 'toggle-apmin', group: 'View', label: showApMin ? 'Close Approach Minimums Monitor' : 'Approach Minimums Monitor (CAT I/II/IIIa/IIIb legality)', run: () => { const nv = !showApMin; setShowApMin(nv); lsSet('ft-apmin', nv) }, keywords: ['approach', 'minimums', 'mins', 'cat i', 'cat ii', 'cat iii', 'catiiia', 'catiiib', 'autoland', 'dh', 'decision height', 'rvr', 'ceiling', 'low vis', 'lvto', 'opspec', 'icao annex 14'] },
           { id: 'toggle-fueltemp', group: 'View', label: showFuelTemp ? 'Close Fuel Temperature Monitor' : 'Fuel Temperature Monitor (cold-soak, freeze margin, BA38)', run: () => { const nv = !showFuelTemp; setShowFuelTemp(nv); lsSet('ft-fueltemp', nv) }, keywords: ['fuel', 'temperature', 'temp', 'cold soak', 'freeze', 'wax', 'jet a', 'jet a-1', 'ts-1', 'jp-8', 'sat', 'tat', 'ba38', 'polar', 'cold', 'crystals'] },
           { id: 'toggle-navaid', group: 'View', label: showNavaid ? 'Close Navaid Coverage Atlas' : 'Navaid Coverage Atlas (DME/DME RNP, VOR backup, GPS-degraded)', run: () => { const nv = !showNavaid; setShowNavaid(nv); lsSet('ft-navaid', nv) }, keywords: ['navaid', 'vor', 'dme', 'vortac', 'rnp', 'rnav', 'pbn', 'positioning', 'gps backup', 'gnss degraded', 'coverage', 'line of sight', 'slant range', 'ssv'] },
@@ -5764,6 +5768,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
         />
       )}
+      {showDoorPlug && (
+        <DoorPlug
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowDoorPlug(false); lsSet('ft-doorplug', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 8) } }}
+        />
+      )}
       {showLaser && (
         <LaserIllumination
           map={mapRef.current}
@@ -6911,6 +6923,7 @@ export default function FlightMap() {
                 ['Coffin corner', showCoffin, ()=>{ const nv=!showCoffin; setShowCoffin(nv); lsSet('ft-coffin', nv) }],
                 ['Hypoxia', showHypoxia, ()=>{ const nv=!showHypoxia; setShowHypoxia(nv); lsSet('ft-hypoxia', nv) }],
                 ['Cabin pressure', showCabin, ()=>{ const nv=!showCabin; setShowCabin(nv); lsSet('ft-cabin', nv) }],
+                ['DOORPLUG · Cabin Door-Plug / Pax-Door / Cargo-Door Latch Integrity & Pressure-Vessel Aperture Blowout-Risk Monitor · per-airframe live evaluator of the certified pressure-vessel-aperture integrity subsystem — the latched / bolted / gasket-sealed plug-doors / hinged pax-doors / semi-plug cargo-doors / over-wing exits / aft-pressure-dome whose latch-bolt-sensor-hinge chain resists cabin-to-ambient ΔP across cruise / climb / descent · scores per-aperture latch-state (NORMAL/SUSPECT/UNCERT/OPEN) / blowout-force F=ΔP×area vs certified latch-strength margin (CS-25.783 ≥2.0×) / sensor-coverage uncertainty (NONE/LIMIT-SW/PROX/DUAL) / plug-bolt-fatigue index (Alaska 1282 mode) / Widespread-Fatigue-Damage WFD index (Aloha 243 mode) / seal-gasket degradation / per-class SDR-rate proxy · per 14 CFR §25.783 doors / §25.807 emergency exits / §25.812 indication / §25.365 pressurised compartments / §25.571 damage tolerance / §121.703 SDR rule / AC 25.571-1D / AC 91-56B aging-aircraft / AC 25-9A · EAD 2024-02-51 + SB 737-25A-1955 B737-9 MAX mid-exit-door-plug inspection · NTSB DCA24MA063 Alaska 1282 (4 plug bolts MISSING N704AL) · AAR-89-03 Aloha 243 (5.5m fuselage skin WFD FL240) · AAR-90-01 + AAR-92-02 UAL 811 (B747 fwd cargo-door FL222 latch-cam-sector failure) · BEA F-WL-AW Turkish 981 (DC-10 aft cargo-door FL120 346 fatal) · JTSB AAIR-87-02 JAL 123 (B747SR aft-pressure-dome splice-plate failure 520 fatal) · ASC AOO-91-01-1 CAL 611 (B747 22-yr single-doubler repair FL350 breakup 225 fatal) · AAIB Bull 1/92 BA 5390 (BAC1-11 windshield bolt mis-replacement FL173) · 10 airframe classes (B737-9MAX plug / B737NG / B737CL / B747 / B777-787 / A320 / A330-340 / A350-380 / regional jet / turboprop) with per-class aperture inventory (DOOR-PAX TYPE-A 4-cam / DOOR-PLUG 4-bolt 4-stop-pad / DOOR-CARGO CAM-LOCK 6-8-10-12-cam / DOOR-OWE TYPE-III eject / WINDOW frame-bonded / APD splice-plate) certified ΔP_max range 6.30-9.40psi · ISA cabin-altitude schedule + ΔP=P_cab−P_amb per-FL computation · 8 drivers LATCH/BLOWOUT/SENSOR/PLUG/WFD/SEAL/PHASE/MAINT max·0.66 + mean·0.34 × phase-weight × ADV-MUL · 6 tiers BLOWOUT≥85 / CRITICAL≥65 / UNCERT≥45 / WATCH≥22 / NOMINAL / OFF · hard escalators PLUG-BOLT-fatigue+ΔP>4psi≥95 (Alaska 1282) / CARGO-CAM-LOCK SUSPECT+ΔP>5psi≥88 (UAL811/Turkish981) / WFD>85%+ΔP>5psi≥82 (Aloha243/CAL611) / APD-suspect+ΔP>5psi≥78 (JAL123) · MapLibre halo+pin+ΔP-vector overlay · 4-tab AIRCRAFT/APERTURES/PRECEDENT/METHOD side panel · ADV/ΔP/PLUG/WFD multipliers · 10-class + 6-phase chip filters · structurally distinct from CABIN (ΔP/outflow-valve schedule, not aperture) / TUC-HYPOXIA (physiological consequence not source) / EDR (descent response) / OXYGEN (mask deployment) / ASIP (general airframe fatigue not aperture-specific) / ROW-ROP-EMAS (rollout-side ground events)', showDoorPlug, ()=>{ const nv=!showDoorPlug; setShowDoorPlug(nv); lsSet('ft-doorplug', nv) }],
                 ['Squawk', showSquawk, ()=>{ const nv=!showSquawk; setShowSquawk(nv); lsSet('ft-squawk', nv) }],
                 ['SUA monitor', showSua, ()=>{ const nv=!showSua; setShowSua(nv); lsSet('ft-sua', nv) }],
                 ['Bird strike', showBird, ()=>{ const nv=!showBird; setShowBird(nv); lsSet('ft-bird', nv) }],
