@@ -350,6 +350,7 @@ import EfbMonitor from './efb-monitor'
 import PilotIncap from './pilot-incap'
 import TlsReichCrm from './tls-reich-crm'
 import VaManRudder from './va-man-rudder'
+import FuelpolMonitor from './fuelpol-monitor'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -634,6 +635,7 @@ export default function FlightMap() {
   const [showPdc, setShowPdc] = useState<boolean>(() => lsGet('ft-pdc', false))
   const [showEfb, setShowEfb] = useState<boolean>(() => lsGet('ft-efb', false))
   const [showPincap, setShowPincap] = useState<boolean>(() => lsGet('ft-pincap', false))
+  const [showFuelpol, setShowFuelpol] = useState<boolean>(() => lsGet('ft-fuelpol', false))
   const [showVaac, setShowVaac] = useState<boolean>(() => lsGet('ft-vaac', false))
   const [showEosid, setShowEosid] = useState<boolean>(() => lsGet('ft-eosid', false))
   const [showSteep, setShowSteep] = useState<boolean>(() => lsGet('ft-steepappr', false))
@@ -962,6 +964,7 @@ export default function FlightMap() {
   + (showUprt?1:0)
   + (showTls?1:0)
   + (showVaman?1:0)
+  + (showFuelpol?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -6220,6 +6223,14 @@ export default function FlightMap() {
           onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 9) } }}
         />
       )}
+      {showFuelpol && (
+        <FuelpolMonitor
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowFuelpol(false); lsSet('ft-fuelpol', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 6) } }}
+        />
+      )}
       {showEmas && (
         <EmasResa
           map={mapRef.current}
@@ -7458,6 +7469,7 @@ export default function FlightMap() {
                 ['SID climb', showSidc, ()=>{ const nv=!showSidc; setShowSidc(nv); lsSet('ft-sidc', nv) }],
                 ['ETP / CP', showEtp, ()=>{ const nv=!showEtp; setShowEtp(nv); lsSet('ft-etp', nv) }],
                 ['Re-dispatch · RDP fuel reserve (FAR 121.631(c) / RCF)', showRedispatch, ()=>{ const nv=!showRedispatch; setShowRedispatch(nv); lsSet('ft-redispatch', nv) }],
+                ['FUELPOL · In-Flight Fuel-Policy Compliance, Reserve-Sanctity & MINFUEL/MAYDAY-FUEL Escalation Monitor · per-airframe live evaluator of every aircraft within 1200NM of one of 24 catalogued arrival hubs (KJFK/KEWR/KBOS/KATL/KORD/KDFW/KLAX/KSFO/KSEA/KDEN/KMIA/CYYZ + EGLL/EGKK/LFPG/EHAM/EDDF/LSZH/LIRF + OMDB/WSSS/VHHH/RJTT/YSSY) scoring whether the projected fuel-on-landing (FOB − burn-to-destination − alternate-leg burn) is below the certified Final Reserve Fuel (FRF = 30 min holding @1500ft per ICAO Annex 6 Pt I §4.3.7 / EASA CAT.OP.MPA.150 / FAA §121.639) and accordingly which MINFUEL/MAYDAY-FUEL escalation step is required · structurally distinct from RDP (planning-time re-dispatch credit per §121.631(c) — pre-departure / cruise-phase optimisation, not arrival-fuel compliance), PNR (geographic last-return point — geometric, not regulatory ladder), DRFTDN (OEI driftdown net-ceiling — altitude not fuel), ETP/CP (equal-time inflection — geometric), Optimum-Alt (SAR cruise-FL optimiser — efficiency curve), Tankering (economic uplift decision — upstream economic) — FUELPOL is uniquely the IN-FLIGHT REMAINING-FUEL vs FRF+CONT+ALT compliance evaluator + MINFUEL/MAYDAY escalation classifier · 8-class fuel-burn catalogue HVY-Q B747/A380 12500 kg/h cruise · 230000 max fuel / HVY-T B777/B787/A350/A330 6900/145000 / WB-M B767/A330ceo 4900/87000 / NB-LR A321XLR/B737MAX-LR 2900/32600 / NB B737/A320 2600/20900 / RGN-J E190/CRJ9 1850/13000 / RGN-T AT72/Q400 720/5000 / BIZ G650/GLEX/FA8X 1450/20000 sourced from Boeing PEM §3 / Airbus FCOM PRO-NOR-SOP-19 / BADA 3.15 OPF/APF / ICAO Doc 8643 with per-class holding FF, diversion FF, MTOW, OEW, max usable fuel, FRF duration and typical departure FOB fraction · 24-hub arrival anchor catalogue with per-hub planned alternate (KJFK→KEWR 17NM / KORD→KMDW 14NM / KBOS→KMHT 47NM / KDEN→KCOS 64NM / EHAM→EBBR 90NM / WSSS→WMKK 175NM …) driving diversion-burn computation · 4-phase classifier CRZ / DSC / TMA (alt<12000 dist<60 vel<280) / HOLD (alt<16000 vel<230 |vs|<200 dist<80) · 8-driver scorer FRF clamp((frf − landFOB)/frf×120) / DIVERT clamp((frf − afterDivertFOB)/frf×110) / CONT contingency consumption proxy / HOLD phase=HOLD hash-variability / ENDUR (45 − endur_min)×2.5 / DIST distance penalty when FOB<FRF / PHASE critical-phase low-FOB amplifier / ALT alternate-unreachable post-cruise · composite max·0.66 + mean·0.34 × ADV-MUL · 5 tiers MAYDAY (marginVsFRF<0 → score≥92 → emergency declaration per ICAO Annex 6 §4.3.7.5 + Doc 4444 §15.1.4 transmit MAYDAY MAYDAY MAYDAY [CS] FUEL) / MINFUEL (margin<0.5×cont OR score≥75 → advisory per Doc 4444 §4.3.7.4 declare MINIMUM FUEL request expected delay) / COMMIT (alternate unreachable post-cruise OR score≥55 → committed-to-destination) / WATCH (score≥30) / NOMINAL · canonical precedents Avianca 052 KJFK 1990-01-25 NTSB AAR-91-04 73 fatal failure-to-declare-emergency-fuel + Tuninter 1153 Mediterranean 2005-08-06 ANSV A-01/05 16 fatal wrong FQI fitted + Air Transat 236 LPLA 2001-08-24 GPIAA A04/2002 0 fatal fuel-leak dead-stick-glide + Hapag-Lloyd 3378 LOWW 2000-07-12 BFU 5X007-0/00 0 fatal gear-down drag field-landing-short + BA 38 EGLL 2008-01-17 AAIB EW/C2008/01/01 0 fatal FOHE fuel-icing dual-roll-back · per ICAO Annex 6 Pt I §4.3.7 / §4.3.7.3 / §4.3.7.4 / §4.3.7.5 / Annex 10 Vol II §5.3.1.4 / PANS-ATM Doc 4444 §4.3.7.4 / §15.1.4 / §16.2.2 / Doc 9976 / EASA CAT.OP.MPA.150 / AMC1 / SIB 2017-12 / SIB 2019-06 / FAA 14 CFR §91.167 / §121.639 / §121.645 / §121.647 / §121.631(c) / §135.223 / AC 120-103A / Order JO 7110.65 §2-1-8 / §10-2 / InFO 08020 / SAFO 06006 / Boeing FCOM Suppl Fuel Mgmt / Airbus FCOM PRO-NOR-MNG-30 / IATA Fuel Efficiency 2024 · MapLibre tier halo+pin+label + aircraft→hub arc + alternate-airport markers · panel AIRCRAFT/HUBS/POLICY/METHOD tabs with reserve-ladder bar (BURN slate + ALT sky-500 + FRF tier-color) + 8-driver chips + escalation phraseology card', showFuelpol, ()=>{ const nv=!showFuelpol; setShowFuelpol(nv); lsSet('ft-fuelpol', nv) }],
                 ['Optimum-Altitude · SAR / tropopause / step-climb (AC 120-103A)', showOptAlt, ()=>{ const nv=!showOptAlt; setShowOptAlt(nv); lsSet('ft-optalt', nv) }],
                 ['MSAW · APW controller-side low-altitude warning (JO 7110.65 §5-15)', showMsaw, ()=>{ const nv=!showMsaw; setShowMsaw(nv); lsSet('ft-msaw', nv) }],
                 ['TDWR / LLWAS-NE · terminal wind-shear / microburst (JO 7110.65 §3-1-8 / AC 00-54 / ICAO Doc 9817)', showTdwr, ()=>{ const nv=!showTdwr; setShowTdwr(nv); lsSet('ft-tdwr', nv) }],
