@@ -339,6 +339,7 @@ import FodRunwayContamination from './fod-runway-contamination'
 import CrdaGhostTarget from './crda-ghost-target'
 import PnrMonitor from './pnr-monitor'
 import BtvMonitor from './btv-monitor'
+import PdcClearance from './pdc-clearance'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -619,6 +620,7 @@ export default function FlightMap() {
   const [showCrda, setShowCrda] = useState<boolean>(() => lsGet('ft-crda', false))
   const [showPnr, setShowPnr] = useState<boolean>(() => lsGet('ft-pnr', false))
   const [showBtv, setShowBtv] = useState<boolean>(() => lsGet('ft-btv', false))
+  const [showPdc, setShowPdc] = useState<boolean>(() => lsGet('ft-pdc', false))
   const [showVaac, setShowVaac] = useState<boolean>(() => lsGet('ft-vaac', false))
   const [showEosid, setShowEosid] = useState<boolean>(() => lsGet('ft-eosid', false))
   const [showSteep, setShowSteep] = useState<boolean>(() => lsGet('ft-steepappr', false))
@@ -931,6 +933,7 @@ export default function FlightMap() {
   + (showCrda?1:0)
   + (showPnr?1:0)
   + (showBtv?1:0)
+  + (showPdc?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -5308,6 +5311,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showPdc && (
+        <PdcClearance
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowPdc(false); lsSet('ft-pdc', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 13) } }}
+        />
+      )}
+
       {showVaac && (
         <VaacMonitor
           map={mapRef.current}
@@ -7347,6 +7359,7 @@ export default function FlightMap() {
                 ['RWSL · Runway Status Lights · REL/THL/RIL surface conflict (FAA AC 150/5340-30J ch 14 / JO 7110.65 §3-1-12 / 6850.2B App F-G / RWSL ConOps ed.4 / AIM 2-1-6 / ICAO Doc 9476 SMGCS / Doc 9830 A-SMGCS)', showRwsl, ()=>{ const nv=!showRwsl; setShowRwsl(nv); lsSet('ft-rwsl', nv) }],
                 ['ALTM · Altimeter Setting Region & TA/TL transition + cold-temp correction (ICAO Annex 2 §3.6 / Doc 8168 §I.2.7 / §4.3 / Doc 7030 / FAA AIM 7-2 / 14 CFR §91.121 / AC 91-79A / SERA.5005(d))', showAltm, ()=>{ const nv=!showAltm; setShowAltm(nv); lsSet('ft-altm', nv) }],
                 ['VDL-2 / FANS-1A · datalink coverage & RCP/RSP handoff (DO-281B / Doc 9869 PBCS / AC 20-140C)', showVdl2, ()=>{ const nv=!showVdl2; setShowVdl2(nv); lsSet('ft-vdl2', nv) }],
+                ['PDC / DCL · Pre-Departure / Datalink Clearance uplink chain · ARINC 623-A/623-B IFR-route + transponder + initial-alt + SID + departure-frequency uplink ladder · per-airframe live evaluator for every aircraft in pre-pushback gate / pre-taxi / clearance-delivery phase at one of 28 catalogued aerodromes with PDC service (FAA Tower Datalink Service KATL/KORD/KDFW/KLAX/KJFK/KSFO/KSEA/KBOS/KIAD/KMIA/KMSP/KDEN/KCLT/KPHX/KLAS/KMCO/KEWR/KLGA/KDCA + EUROCONTROL DCL EGLL/EGKK/EHAM/EDDF/LFPG/LSZH/EDDM/LOWW + ICAO Doc 9694 §3.5 / DO-258A FANS-1/A uplink elements UM expected route / squawk / initial altitude / SID via VDL-Mode-2 ATN B1 air-ground bearer · scores RTE-MATCH route vs filed-FPL conformance / SQK transponder-code uplink delivery / ALT initial-altitude-vs-MEA validity / SID departure-procedure-vs-runway compatibility / FREQ departure-frequency match to per-aerodrome DEP/CTR catalogue / TIM uplink-acknowledgement timer compliance / VOX voice-readback fallback when DCL fails · 6 tiers ABORT/REQ-REISSUE/AMENDED/WATCH/CLEARED/IDLE · upstream of CPDLC enroute and D-ATIS — every CPDLC and D-ATIS overlay presumes PDC has already issued an accepted clearance · canonical precedent: pre-CPDLC era ARINC 623 PDC uptake at KATL 1990s replaced voice clearance-delivery readback errors and KORD/KDFW congestion bottlenecks · MapLibre overlay tier halo+pin+aircraft→runway-threshold link + departure-procedure label + uplink-chain progress bar', showPdc, ()=>{ const nv=!showPdc; setShowPdc(nv); lsSet('ft-pdc', nv) }],
                 ['FREQ · ATC/CTAF Frequency Directory & per-phase controller-plan compliance · 28-hub ATIS/CLNC/GND/TWR/DEP/APP/CTR catalogue + CTAF self-announce bands 122.700-123.075 + guard 121.500/243.000 + 8.33 kHz EUR mandate per Reg 1079/2012 + oceanic HF SELCAL/CPDLC/SATCOM regime detector + lost-comm 7600/hijack 7500/mayday 7700 guard routing per 14 CFR §91.185 / AIM 6-3-1 / ICAO Annex 10 Vol II §5.3 / Doc 4444 §12 / Doc 9432 / Doc 9869 PBCS / AC 90-66C / AC 90-114A / Order JO 7110.65 §2 §4 §10 §11 / JO 7110.118 / 14 CFR §91.126 §91.183 §91.413 / EASA SERA.6005 / ITU RR App.27 / Reg (EC) 1079/2012 · 11-phase classifier GATE/TAXI/TKOFF/DEPT/CLB/CRZ/DSC/APP/FNL/LDG/OCEANIC mapping to 10-controller assignments (CLNC/GND/TWR/DEP/APP/CTR/OCEANIC/CTAF/GUARD) · 7-driver scorer HANDOFF/CTAF-LONE/EMERG/BAND-NEAR/OCEAN/GUARD-SQK/EDGE composite max·0.60+mean·0.40 · 6 tiers BREACH≥85 (guard-routed)/CRITICAL≥68/HANDOFF≥48/WATCH≥25/NOMINAL/OFF · MapLibre tier halo+pin+aircraft→hub link + hub markers · AIRCRAFT/HUBS/BANDS/METHOD tabs · LAX1493/Comair 5191/Continental 1713/Überlingen precedent', showFreq, ()=>{ const nv=!showFreq; setShowFreq(nv); lsSet('ft-freq', nv) }],
                 ['TBS · Time-Based Separation HW-compression (RECAT-EU / eTBS / LHR-TBS / JO 7110.65 §5-5 / CAP 1378)', showTbs, ()=>{ const nv=!showTbs; setShowTbs(nv); lsSet('ft-tbs', nv) }],
                 ['VTF · Vector-to-Final intercept geometry (JO 7110.65 §5-9 / AIM 5-4-7 / Doc 4444 §8.6.5 / FCOM 11.31)', showVtf, ()=>{ const nv=!showVtf; setShowVtf(nv); lsSet('ft-vtf', nv) }],
