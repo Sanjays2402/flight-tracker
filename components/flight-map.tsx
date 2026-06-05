@@ -340,6 +340,7 @@ import CrdaGhostTarget from './crda-ghost-target'
 import PnrMonitor from './pnr-monitor'
 import BtvMonitor from './btv-monitor'
 import PdcClearance from './pdc-clearance'
+import EfbMonitor from './efb-monitor'
 
 /* ============================================================
    Flight Tracker — MapLibre GL v5 edition (3D-capable).
@@ -621,6 +622,7 @@ export default function FlightMap() {
   const [showPnr, setShowPnr] = useState<boolean>(() => lsGet('ft-pnr', false))
   const [showBtv, setShowBtv] = useState<boolean>(() => lsGet('ft-btv', false))
   const [showPdc, setShowPdc] = useState<boolean>(() => lsGet('ft-pdc', false))
+  const [showEfb, setShowEfb] = useState<boolean>(() => lsGet('ft-efb', false))
   const [showVaac, setShowVaac] = useState<boolean>(() => lsGet('ft-vaac', false))
   const [showEosid, setShowEosid] = useState<boolean>(() => lsGet('ft-eosid', false))
   const [showSteep, setShowSteep] = useState<boolean>(() => lsGet('ft-steepappr', false))
@@ -934,6 +936,7 @@ export default function FlightMap() {
   + (showPnr?1:0)
   + (showBtv?1:0)
   + (showPdc?1:0)
+  + (showEfb?1:0)
   const [mobileMenu, setMobileMenu] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
   const [fabOpen, setFabOpen] = useState(false)
@@ -5320,6 +5323,15 @@ export default function FlightMap() {
         />
       )}
 
+      {showEfb && (
+        <EfbMonitor
+          map={mapRef.current}
+          flights={flights as any}
+          onClose={() => { setShowEfb(false); lsSet('ft-efb', false) }}
+          onFly={(icao) => { const f = flightsRef.current.find(x => x.icao === icao); if (f) { setSelected(f); flyToLatLng(f.lat, f.lng, 9) } }}
+        />
+      )}
+
       {showVaac && (
         <VaacMonitor
           map={mapRef.current}
@@ -7394,6 +7406,7 @@ export default function FlightMap() {
                 ['Event log', showEventLog, ()=>{ const nv=!showEventLog; setShowEventLog(nv); lsSet('ft-evlog', nv) }],
                 ['Compare studio', showCompareStudio, ()=>{ const nv=!showCompareStudio; setShowCompareStudio(nv); lsSet('ft-compare-studio', nv) }],
                 ['Symphony', showSymphony, ()=>{ const nv=!showSymphony; setShowSymphony(nv); lsSet('ft-symphony', nv) }],
+                ['EFB · Electronic Flight Bag Class/Type/AID Compliance & Hosting-Platform Health Monitor · per-airframe live evaluator of every air-carrier flight\u2019s reliance on its EFB stack for sole-source operational data (RTOW / W&B / Performance / Charts / FCOM / QRH / RNP-AR / EFOB) scoring whether the certified EFB Class (1 portable not-mounted / 2 mounted-removable PED-cert / 3 installed avionics-certified DAL-C) + Application Type (A static viewable FCOM/MEL/QRH / B interactive performance & charts / C avionics-certified only on Class-3) + Aircraft Interface Device wiring (AID-NONE / AID-WIRED ARINC 834 GPS-IRS-ADC tap / AID-CERT DAL-C host) + hosting-platform OS (iOS / Win / Android / Avionics) + battery SOC% + thermal margin per AC 91-21.1B Li-ion + connectivity bearer (GateLink / Cell-4G / ACARS / SATCOM / OFFLINE) + ops-spec authorisation state (CARRIER-AUTH / EXPIRED-AUTH / WAITING-AUTH / MISCONFIG) satisfies the airline\u2019s certified EFB authorisation for the current phase of flight and the procedure currently in use, distinct from FMA (autoflight mode awareness \u2014 EFB is off-board computing not autoflight state), PDC (uplink chain \u2014 EFB consumes PDC for taxi route but is not the uplink), AIRAC (FMS nav-database currency \u2014 EFB charts are a SEPARATE subscription with different cycle / risk), MEL (deferred-item catalogue \u2014 EFB has its own MMEL line items under EFB-INOP / AID-FAIL), CPDLC (pilot\u2194controller datalink \u2014 EFB is local computing not crew\u2194ATC messaging), SCRM (sterile-cockpit distraction \u2014 EFB is the DEVICE, SCRM scores whether USING it during sterile zone is a violation) \u2014 EFB is uniquely the sole-source computing-device compliance evaluator answering whether the off-board platform that now holds the carrier\u2019s authoritative performance / charts / checklist / OFP can be relied upon to deliver authorisation-bounded answers in the next phase \u00b7 24-carrier global profile catalogue AAL/UAL/DAL/SWA/JBU/FDX/UPS/ACA (FAA AC 120-76D regime) + BAW/DLH/AFR/KLM/IBE/SWR/RYR/EZY (EASA AMC 20-25A / UK CAA CAP 1407) + SIA/CPA/JAL/ANA/QFA (CAAS/CAD-HK/JCAB/CASA / ICAO Doc 10020) + UAE/QTR/ETD (GCAA CAR-OPS 1) with per-carrier classMix (1/2/3 probability), osMix (iOS/Win/Android/Avionics), aidMix, authorised app set 4-14/14, and authority citation \u00b7 14-app canonical catalogue per AC 120-76D App.B FCOM/MEL/QRH/COMP (Type-A) + RTOW/WB/PERF/CHRT/MMAP/EFOB/WX/RNPAR (Type-B) + EVS/EAID (Type-C) with per-app AID requirement and active-phase set \u00b7 phase classifier PRE-DEP / TAXI-OUT / CLB-DEP / CRZ / DSC-APP / TAXI-IN / GATE gating which apps are in critical use \u00b7 deterministic per-icao24 hash draws class/OS/AID/battery/thermal/conn/auth from carrier prior \u00b7 8 drivers AUTH (ops-spec alignment) / HOST (Class fit vs Type running) / AID (wiring vs need) / OS (MDM posture) / BATT (SOC% + thermal proxy with iOS 50\u00b0C shutdown per AAIB UK 4/2014) / CONN (bearer for chart-DB refresh) / PHASE (critical-phase weight) / APP (active-app delivery aggregate) \u00b7 composite max\u00b70.62 + mean\u00b70.38 \u00d7 ADV-MUL \u00b7 hard escalators EXPIRED-AUTH + PRE-DEP/TAXI-OUT score-min 92 / Type-C on non-Class-3 90 / battery<10% in critical phase 84 / thermal>60\u00b0C in critical phase 80 / \u22653 active apps failing 72 \u00b7 6 tiers NO-EFB \u226580 rose stack cannot deliver authorised apps voice/paper fallback per QRH NORM-EFB-LOSS / AUTH-LOST \u226560 rose-pk ops-spec breach defer dispatch per AC 120-76D \u00a76.3 / EASA AMC1 ORO.MLR.105 / DEGRADED \u226540 amber core OK but \u22651 active app fail monitor / PARTIAL \u226520 sky nominal w/ minor posture flag / NOMINAL <20 emerald authorised + delivering / IDLE slate at-gate awaiting init \u00b7 MapLibre overlay tier-coloured halo rings 6\u201322px sized by score + NO-EFB/AUTH-LOST rose pins + cs/CLS-X/Type-X/BATT% labels \u00b7 4-tab AC/CARRIERS/APPS/PROTOCOL panel \u00b7 AC tier-sorted with carrier-pill + phase-pill + 6-cell EFB stack chip grid (CLS/TYPE/AID/OS/BATT/CONN) + score bar + 8-driver chips + active-app pills (\u2713 emerald or ! rose) + synthetic EFB-INOP/EFB-AUTH/EFB-DEG/EFB-OK ACARS uplink line + tier-coloured advice \u00b7 CARRIERS per-operator row with authority citation + 6-tier counter + \u03bc-SCORE/\u03bc-BATT/FLT/APP-FAIL% + tri-colour class-mix bar \u00b7 APPS canonical 14-app catalogue with type-pill + phases + AID-need + reg citation + in-use/fail counter + delivery bar \u00b7 PROTOCOL Class catalogue + Type matrix + AID tiers + 6-step failure-mode QRH catalogue \u00b7 (FAA AC 120-76D ed.D 2017-10-27 \u00b7 EASA AMC 20-25A / AMC1 ORO.MLR.105 / Decision 2017/006/R \u00b7 ICAO Doc 10020 ed.1 2014 Amdt 1 2018 \u00b7 UK CAA CAP 1407 ed.4 2020 \u00b7 FAA Order 8900.1 Vol 4 Ch 15 Sec 1 \u00b7 14 CFR \u00a7121.542 sterile-cockpit \u00b7 \u00a7121.585 cockpit-PED \u00b7 RTCA DO-178C \u00b7 DO-257B Airport Moving Map \u00b7 EUROCAE ED-12C / ED-130A \u00b7 ARINC 834 / 759 / 619 AID \u00b7 Boeing FCOM Vol 1 \u00a71.30 \u00b7 Airbus FCOM PRO-NOR-SOP-18 \u00b7 IATA AHM-825 ed.5 \u00b7 AAIB UK 4/2014 EFB SR III thermal shutdown \u00b7 NTSB DCA13MA081 UA1175 perf-input \u00b7 ASRS callback #471 MMAP miscue)', showEfb, ()=>{ const nv=!showEfb; setShowEfb(nv); lsSet('ft-efb', nv) }],
               ]},
               {group:'Reference', items:[
                 ['Airports board', showBoard, ()=>{ const nv=!showBoard; setShowBoard(nv); lsSet('ft-board', nv) }],
