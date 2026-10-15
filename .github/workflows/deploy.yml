@@ -13,6 +13,10 @@ jobs:
         with: { node-version: 22 }
       - run: npm install --no-audit --no-fund
       - run: npm run build
+        env:
+          # live feed needs a CORS proxy; see lib/proxy.ts and proxy/worker.js
+          NEXT_PUBLIC_PROXY_URL: ${{ vars.PROXY_URL }}
+          NEXT_PUBLIC_CORSPROXY_KEY: ${{ secrets.CORSPROXY_KEY }}
       - run: touch out/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

@@ -1,0 +1,6 @@
+name = "ft-proxy"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://sanjays2402.github.io,http://localhost:3000"

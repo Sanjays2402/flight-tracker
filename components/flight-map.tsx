@@ -12,6 +12,7 @@ import { SettingsCluster, ToastHost, OfflineBanner, SkipToMap, EmergencyLive, us
 import { pushToast } from '../lib/toast'
 import { playEmergencyChime, playRadioChirp } from '../lib/audio'
 import { lsGet, lsSet } from '../lib/storage'
+import { proxied, proxyConfigured } from '../lib/proxy'
 import { t as i18nT } from '../lib/i18n'
 import CommandPalette, { CPAction } from './command-palette'
 import TrafficRadar from './traffic-radar'
@@ -1817,7 +1818,7 @@ export default function FlightMap() {
     ;(async () => {
       try {
         const target = `https://aviationweather.gov/api/data/metar?ids=${encodeURIComponent(ap.i)}&format=json`
-        const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(target)}`, { cache: 'no-store' })
+        const res = await fetch(proxied(target), { cache: 'no-store' })
         if (!res.ok) return
         const arr = await res.json() as Array<{rawOb:string; temp:number; dewp:number; wdir:number; wspd:number; visib:string; altim:number; fltCat:string; clouds?:{cover:string;base:number}[]}>
         if (cancelled || !arr?.length) return
@@ -1828,6 +1829,7 @@ export default function FlightMap() {
   }, [selectedAirport])
 
   /* ---- Fetch loop ---- */
+  const proxyWarnedRef = useRef(false)
   const fetchOnce = useCallback(async () => {
     try {
       const m = mapRef.current
@@ -1870,7 +1872,7 @@ export default function FlightMap() {
         const results = await Promise.all(tiles.map(async t => {
           try {
             const target = `https://api.adsb.lol/v2/lat/${t.lat.toFixed(4)}/lon/${t.lon.toFixed(4)}/dist/${t.dist}`
-            const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(target)}`, { cache: 'no-store' })
+            const r = await fetch(proxied(target), { cache: 'no-store' })
             if (!r.ok) return [] as AcRaw[]
             const j = await r.json() as { ac?: AcRaw[] }
             return j.ac ?? []
@@ -1882,7 +1884,7 @@ export default function FlightMap() {
         }
       } else {
         const target = `https://api.adsb.lol/v2/lat/${lat.toFixed(4)}/lon/${lon.toFixed(4)}/dist/${distNm}`
-        const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(target)}`, { cache: 'no-store' })
+        const res = await fetch(proxied(target), { cache: 'no-store' })
         if (!res.ok) throw new Error(`adsb.lol HTTP ${res.status}`)
         const json = await res.json() as { ac?: AcRaw[] }
         raw = json.ac ?? []
@@ -1945,6 +1947,11 @@ export default function FlightMap() {
     } catch (e) {
       setStatus('error')
       console.error('adsb fetch failed:', e)
+      // the feed has no CORS headers, so a build without a proxy can never connect
+      if (!proxyConfigured && !proxyWarnedRef.current) {
+        proxyWarnedRef.current = true
+        pushToast('Live feed needs a CORS proxy. Set NEXT_PUBLIC_PROXY_URL at build time.', 'error', 10000)
+      }
     }
   }, [])
 

@@ -46,7 +46,7 @@ A single-page web app showing every aircraft transmitting ADS-B or Mode-S, anywh
 | [OpenStreetMap](https://www.openstreetmap.org) + [CARTO](https://carto.com) | Basemap | Free |
 | [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) | 3D elevation | Free public dataset |
 
-No API keys required.
+No API keys required. adsb.lol and aviationweather.gov don't send CORS headers, though, so the browser reaches them through a small CORS proxy (see [Deploy](#deploy)).
 
 ## Privacy
 
@@ -78,6 +78,22 @@ npm run build    # static export → ./out
 ## Deploy
 
 Pushes to `main` auto-deploy to GitHub Pages via `.github/workflows/deploy.yml`.
+
+### CORS proxy (required for live data)
+
+The static build calls the feeds through a proxy chosen at build time ([lib/proxy.ts](lib/proxy.ts)):
+
+1. **Own Worker (recommended).** [proxy/worker.js](proxy/worker.js) is a ~60-line Cloudflare Worker that only forwards to the feed hosts and only answers this site's origin. Deploy it on the free plan:
+
+   ```bash
+   cd proxy && npx wrangler deploy
+   ```
+
+   Then set the repo variable `PROXY_URL` to `https://ft-proxy.<your-subdomain>.workers.dev/?url=` (Settings → Secrets and variables → Actions → Variables) and re-run the deploy workflow.
+
+2. **corsproxy.io key.** Create a key at [console.corsproxy.io](https://console.corsproxy.io/), restrict it to your Pages domain, and save it as the repo secret `CORSPROXY_KEY`. The key ships in the client bundle, so the domain restriction is what protects it.
+
+For local development, put either value in `.env.local` as `NEXT_PUBLIC_PROXY_URL` or `NEXT_PUBLIC_CORSPROXY_KEY`.
 
 ## Caveats
 

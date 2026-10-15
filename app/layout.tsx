@@ -1,6 +1,7 @@
 import './globals.css'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Metadata, Viewport } from 'next'
+import { proxyOrigin } from '../lib/proxy'
 
 const SITE = 'https://sanjays2402.github.io/flight-tracker'
 
@@ -81,7 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <head>
         <link rel="preconnect" href="https://api.adsb.lol" />
-        <link rel="preconnect" href="https://corsproxy.io" />
+        {proxyOrigin && <link rel="preconnect" href={proxyOrigin} />}
         <link rel="preconnect" href="https://a.basemaps.cartocdn.com" />
         <link rel="preconnect" href="https://b.basemaps.cartocdn.com" />
         <link rel="preconnect" href="https://c.basemaps.cartocdn.com" />
