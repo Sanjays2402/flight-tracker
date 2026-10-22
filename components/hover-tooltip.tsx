@@ -1,7 +1,7 @@
 'use client'
 // [BATCH-C] Hover tooltip — listens to maplibre hover events on planes-layer.
 import { useEffect, useState } from 'react'
-import type maplibregl from 'maplibre-gl'
+import type * as maplibregl from 'maplibre-gl'
 
 interface Tip { cs: string; alt: number; spd: number; x: number; y: number }
 

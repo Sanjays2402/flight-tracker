@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import type maplibregl from 'maplibre-gl'
+import type * as maplibregl from 'maplibre-gl'
 
 /* ============================================================
    CIRCAD · Crew Circadian Fatigue & Window-of-Circadian-Low Monitor

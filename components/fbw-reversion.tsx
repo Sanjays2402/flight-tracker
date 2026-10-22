@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import type maplibregl from 'maplibre-gl'
+import type * as maplibregl from 'maplibre-gl'
 
 /* ============================================================
    Fly-By-Wire Control Law Reversion & Protection-Loss Monitor

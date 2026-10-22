@@ -1,6 +1,6 @@
 'use client'
 import React, { useEffect, useMemo, useState } from 'react'
-import type maplibregl from 'maplibre-gl'
+import type * as maplibregl from 'maplibre-gl'
 
 /* ============================================================
    BOUNCE · Touchdown Sink-Rate, Vertical-G & Landing-Gear

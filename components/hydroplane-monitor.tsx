@@ -1,6 +1,6 @@
 'use client'
 import React, { useEffect, useMemo, useState } from 'react'
-import type maplibregl from 'maplibre-gl'
+import type * as maplibregl from 'maplibre-gl'
 
 /* ============================================================
    HYDROPLANE · Wet/Contaminated Runway Dynamic Aquaplaning &

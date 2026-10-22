@@ -2,7 +2,7 @@
 // [BATCH-C] Top-level integration overlay: hover tooltip, fx layer, splash, about button,
 // konami code, AF1 confetti, galaxy view at extreme zoom, density/style selectors.
 import { useEffect, useRef, useState } from 'react'
-import type maplibregl from 'maplibre-gl'
+import type * as maplibregl from 'maplibre-gl'
 import { HoverTooltip } from './hover-tooltip'
 import { EffectLayer, useBursts, useKonami } from './fx-layer'
 import { Splash } from './splash'

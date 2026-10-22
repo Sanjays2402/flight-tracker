@@ -112,7 +112,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import maplibregl from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
 
 type Tier = 'INCURSION' | 'CRITICAL' | 'ARMED-ZONE' | 'ELEVATED' | 'COMPLIANT' | 'OFF'
 

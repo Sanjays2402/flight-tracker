@@ -100,7 +100,7 @@
 // =============================================================================
 
 import { useEffect, useMemo, useState } from 'react'
-import type maplibregl from 'maplibre-gl'
+import type * as maplibregl from 'maplibre-gl'
 
 // ---- Flight shape (matches flight-map.tsx) ------------------------------
 interface F {

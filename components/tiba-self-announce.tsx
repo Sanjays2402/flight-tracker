@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import type maplibregl from 'maplibre-gl'
+import type * as maplibregl from 'maplibre-gl'
 
 /* TIBA · Traffic Information Broadcast by Aircraft — Self-Announce
    Frequency Compliance & Oceanic-Remote Position-Reporting Monitor.

@@ -115,7 +115,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import maplibregl from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
 
 type Tier = 'READY-AAR' | 'PENDING-AAR' | 'COMPATIBLE' | 'INCOMPATIBLE' | 'NON-AAR' | 'OFF'
 const TIER_COLOR: Record<Tier, string> = {

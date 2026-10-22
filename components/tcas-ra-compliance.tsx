@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import type maplibregl from 'maplibre-gl'
+import type * as maplibregl from 'maplibre-gl'
 
 /* ============================================================
    TCAS-II 7.1 · Resolution-Advisory · Sensitivity-Level · Reversal-Logic · Crew-Response Compliance Monitor

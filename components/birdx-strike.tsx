@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import type maplibregl from 'maplibre-gl'
+import type * as maplibregl from 'maplibre-gl'
 
 /* BIRDX · Bird-Strike & Wildlife-Ingestion Engine-Damage Risk Monitor.
    Per 14 CFR §33.76 / §33.77 Bird-Ingestion Cert · §25.571 §25.775

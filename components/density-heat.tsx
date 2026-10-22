@@ -1,6 +1,7 @@
 'use client'
 import { useMemo } from 'react'
 import type { Map as MLMap } from 'maplibre-gl'
+import type * as maplibregl from 'maplibre-gl'
 
 /* ============================================================
    Density Heatmap — MapLibre-native heatmap overlay of all live
